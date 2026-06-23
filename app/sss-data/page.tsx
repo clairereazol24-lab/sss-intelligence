@@ -32,6 +32,11 @@ type StoreRow = {
   registered_members: number
 }
 
+type LastUpdated = {
+  period: string
+  period_type: string
+}
+
 export default function SSSDataPage() {
   const [file, setFile] = useState<File | null>(null)
   const [parsed, setParsed] = useState<any[]>([])
@@ -53,6 +58,7 @@ export default function SSSDataPage() {
   const [overallLoading, setOverallLoading] = useState(false)
   const [overallError, setOverallError] = useState<string | null>(null)
   const [allStores, setAllStores] = useState<StoreRow[]>([])
+  const [lastUpdated, setLastUpdated] = useState<LastUpdated | null>(null)
 
   const fetchOverall = async (from: string, to: string) => {
     setOverallLoading(true)
@@ -64,6 +70,7 @@ export default function SSSDataPage() {
       if (data.error) throw new Error(data.error)
       setOverallTotals(data.overallTotals)
       setAllStores(data.allStores || [])
+      setLastUpdated(data.lastUpdated || null)
     } catch (err: any) {
       setOverallError(err.message || 'Failed to load overall totals.')
     } finally {
@@ -184,6 +191,15 @@ export default function SSSDataPage() {
   const months = ['01','02','03','04','05','06','07','08','09','10','11','12']
   const monthNames = ['January','February','March','April','May','June','July','August','September','October','November','December']
 
+  const formatLastUpdated = (lu: LastUpdated | null) => {
+    if (!lu) return null
+    if (lu.period_type === 'monthly') {
+      const [y, m] = lu.period.split('-')
+      return `${monthNames[parseInt(m, 10) - 1]} ${y}`
+    }
+    return new Date(lu.period + 'T00:00:00').toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
+  }
+
   return (
     <div className="p-6">
       <div className="flex items-center justify-between mb-6">
@@ -255,6 +271,10 @@ export default function SSSDataPage() {
           <p className="text-xs text-gray-400 mt-3">No data yet — upload a CSV below.</p>
         )}
       </div>
+
+      {lastUpdated && (
+        <p className="text-xs text-gray-400 mb-6">Last updated: {formatLastUpdated(lastUpdated)}</p>
+      )}
 
       {/* Store Summary */}
       <div className="bg-white rounded-xl border border-gray-200 p-5 mb-6">
