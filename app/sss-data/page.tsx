@@ -130,6 +130,10 @@ export default function SSSDataPage() {
 
   const handleUpload = async () => {
     if (!parsed.length) return
+    if (periodType === 'monthly' && !month) {
+      setError('Please select a month before uploading.')
+      return
+    }
     const period = getPeriod()
     if (!period || period.includes('undefined') || period === '-') {
       setError('Please select a valid period.')
