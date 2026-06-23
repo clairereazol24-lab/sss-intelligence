@@ -70,7 +70,7 @@ export default function PerformancePage() {
       {loading ? (
         <div className="text-center py-20 text-gray-400">Loading...</div>
       ) : (
-        <div className="space-y-6">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Top 20 Stores */}
           <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
             <div className="px-5 py-4 border-b border-gray-100">
