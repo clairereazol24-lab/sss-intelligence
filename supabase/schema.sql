@@ -24,7 +24,7 @@ CREATE TABLE IF NOT EXISTS performance_data (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   sub_affiliate VARCHAR(100) NOT NULL,
   store_name VARCHAR(200) NOT NULL,
-  period VARCHAR(20) NOT NULL,        -- '2024-02' monthly | '2024-06-22' daily
+  period VARCHAR(20) NOT NULL,
   period_type VARCHAR(10) NOT NULL DEFAULT 'monthly',
   total_deposit NUMERIC(15,2) DEFAULT 0,
   total_withdraw NUMERIC(15,2) DEFAULT 0,
