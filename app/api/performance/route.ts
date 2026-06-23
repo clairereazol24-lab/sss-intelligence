@@ -129,7 +129,16 @@ export async function GET(request: NextRequest) {
 
     const uniquePeriods = Array.from(new Set((periods || []).map((p: any) => p.period)))
 
-    return NextResponse.json({ top20Stores, top20DSPs, periods: uniquePeriods, overallTotals, allStores })
+    // Most recently uploaded row, regardless of any period/from/to filter above
+    const { data: lastRow } = await supabase
+      .from('performance_data')
+      .select('period, period_type')
+      .order('created_at', { ascending: false })
+      .limit(1)
+
+    const lastUpdated = lastRow && lastRow.length > 0 ? lastRow[0] : null
+
+    return NextResponse.json({ top20Stores, top20DSPs, periods: uniquePeriods, overallTotals, allStores, lastUpdated })
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 500 })
   }
