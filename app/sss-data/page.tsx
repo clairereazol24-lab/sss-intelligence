@@ -185,16 +185,18 @@ export default function SSSDataPage() {
       </div>
 
       {/* Upload Area */}
-      <div
-        className="border-2 border-dashed border-gray-300 rounded-xl p-8 text-center cursor-pointer hover:border-blue-400 hover:bg-blue-50 transition-colors mb-6"
-        onClick={() => fileRef.current?.click()}
-        onDragOver={(e) => e.preventDefault()}
-        onDrop={(e) => { e.preventDefault(); const f = e.dataTransfer.files[0]; if (f) handleFile(f) }}
-      >
-        <input ref={fileRef} type="file" accept=".csv" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFile(f) }} />
-        <div className="text-4xl mb-2">📤</div>
-        <p className="text-gray-600 font-medium">{file ? file.name : 'Click or drag CSV file here'}</p>
-        <p className="text-xs text-gray-400 mt-1">Make sure to add Partner and DSP columns before uploading</p>
+      <input ref={fileRef} type="file" accept=".csv" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFile(f) }} />
+      <div className="flex items-center justify-between bg-white rounded-xl border border-gray-200 p-5 mb-6">
+        <div>
+          <p className="text-gray-700 font-medium">{file ? file.name : 'No file selected'}</p>
+          <p className="text-xs text-gray-400 mt-1">Make sure to add Partner and DSP columns before uploading</p>
+        </div>
+        <button
+          onClick={() => fileRef.current?.click()}
+          className="bg-blue-600 hover:bg-blue-700 text-white font-medium px-5 py-2.5 rounded-lg transition-colors text-sm whitespace-nowrap"
+        >
+          📤 Import CSV
+        </button>
       </div>
 
       {/* Column warnings */}
