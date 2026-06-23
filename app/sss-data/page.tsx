@@ -214,7 +214,6 @@ export default function SSSDataPage() {
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-bold text-gray-800 mb-1">SSS Data</h1>
-          <p className="text-sm text-gray-500">Upload your sub-affiliate CSV export here.</p>
         </div>
         <div className="flex items-center gap-3">
           <input
@@ -245,8 +244,6 @@ export default function SSSDataPage() {
           </button>
         </div>
       </div>
-
-      <p className="text-xs text-gray-400 mb-6">{file ? `📄 ${file.name}` : 'No file selected — make sure to add Partner and DSP columns before uploading.'}</p>
 
       {/* Overall summary */}
       <div className="bg-white rounded-xl border border-gray-200 p-5 mb-6">
