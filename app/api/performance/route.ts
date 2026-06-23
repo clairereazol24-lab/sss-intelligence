@@ -99,7 +99,7 @@ export async function GET(request: NextRequest) {
       .select('period')
       .order('period', { ascending: false })
 
-    const uniquePeriods = [...new Set((periods || []).map((p: any) => p.period))]
+    const uniquePeriods = Array.from(new Set((periods || []).map((p: any) => p.period)))
 
     return NextResponse.json({ top20Stores, top20DSPs, periods: uniquePeriods })
   } catch (err: any) {

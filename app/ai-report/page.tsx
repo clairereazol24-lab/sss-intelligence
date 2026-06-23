@@ -14,7 +14,7 @@ export default function AIReportPage() {
   useEffect(() => {
     supabase.from('performance_data').select('period').order('period', { ascending: false })
       .then(({ data }) => {
-        const unique = [...new Set((data || []).map((d: any) => d.period))]
+        const unique = Array.from(new Set((data || []).map((d: any) => d.period)))
         setPeriods(unique)
       })
   }, [])
