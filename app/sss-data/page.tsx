@@ -1,0 +1,192 @@
+'use client'
+import { useState, useRef } from 'react'
+import Papa from 'papaparse'
+
+const REQUIRED_COLS = ['Sub Affiliate', 'Sub Affiliate Name', 'Total Deposit', 'Total Withdraw',
+  'Valid Bet Amount', 'Company Net Win (GGR)', 'Payout Amount', 'Total Promotion Amount',
+  'Registered Members', 'First Deposit Amount', 'First Deposit Count',
+  'Deposit Member Count', 'Number of Members Withdrawn', 'Effective Member']
+
+export default function SSSDataPage() {
+  const [file, setFile] = useState<File | null>(null)
+  const [parsed, setParsed] = useState<any[]>([])
+  const [headers, setHeaders] = useState<string[]>([])
+  const [periodType, setPeriodType] = useState<'monthly' | 'daily'>('monthly')
+  const [month, setMonth] = useState('')
+  const [year, setYear] = useState(new Date().getFullYear().toString())
+  const [date, setDate] = useState('')
+  const [uploading, setUploading] = useState(false)
+  const [result, setResult] = useState<string | null>(null)
+  const [error, setError] = useState<string | null>(null)
+  const [hasPartner, setHasPartner] = useState(false)
+  const [hasDSP, setHasDSP] = useState(false)
+  const fileRef = useRef<HTMLInputElement>(null)
+
+  const handleFile = (f: File) => {
+    setFile(f)
+    setResult(null)
+    setError(null)
+    Papa.parse(f, {
+      header: true,
+      skipEmptyLines: true,
+      complete: (res) => {
+        const cols = res.meta.fields || []
+        setHeaders(cols)
+        setParsed(res.data as any[])
+        setHasPartner(cols.includes('Partner'))
+        setHasDSP(cols.includes('DSP'))
+      },
+    })
+  }
+
+  const getPeriod = () => {
+    if (periodType === 'monthly') return `${year}-${month.padStart(2, '0')}`
+    return date
+  }
+
+  const handleUpload = async () => {
+    if (!parsed.length) return
+    const period = getPeriod()
+    if (!period || period.includes('undefined') || period === '-') {
+      setError('Please select a valid period.')
+      return
+    }
+    setUploading(true)
+    setError(null)
+
+    const records = parsed.map((row: any) => ({
+      sub_affiliate: row['Sub Affiliate'],
+      store_name: row['Sub Affiliate Name'],
+      total_deposit: row['Total Deposit'],
+      total_withdraw: row['Total Withdraw'],
+      valid_bet_amount: row['Valid Bet Amount'],
+      company_net_win: row['Company Net Win (GGR)'],
+      payout_amount: row['Payout Amount'],
+      total_promotion_amount: row['Total Promotion Amount'],
+      registered_members: row['Registered Members'],
+      first_deposit_amount: row['First Deposit Amount'],
+      first_deposit_count: row['First Deposit Count'],
+      deposit_member_count: row['Deposit Member Count'],
+      members_withdrawn: row['Number of Members Withdrawn'],
+      effective_member: row['Effective Member'],
+      partner: row['Partner'] || null,
+      dsp: row['DSP'] || null,
+    }))
+
+    const res = await fetch('/api/upload', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ records, period, periodType }),
+    })
+    const data = await res.json()
+    setUploading(false)
+    if (data.error) {
+      setError(data.error)
+    } else {
+      setResult(`✅ Successfully uploaded ${data.count} store records for period: ${period}`)
+      setParsed([])
+      setFile(null)
+      if (fileRef.current) fileRef.current.value = ''
+    }
+  }
+
+  const months = ['01','02','03','04','05','06','07','08','09','10','11','12']
+  const monthNames = ['January','February','March','April','May','June','July','August','September','October','November','December']
+
+  return (
+    <div className="p-6 max-w-4xl mx-auto">
+      <h1 className="text-2xl font-bold text-gray-800 mb-1">SSS Data</h1>
+      <p className="text-sm text-gray-500 mb-6">Upload your sub-affiliate CSV export here.</p>
+
+      {/* Upload Area */}
+      <div
+        className="border-2 border-dashed border-gray-300 rounded-xl p-8 text-center cursor-pointer hover:border-blue-400 hover:bg-blue-50 transition-colors mb-6"
+        onClick={() => fileRef.current?.click()}
+        onDragOver={(e) => e.preventDefault()}
+        onDrop={(e) => { e.preventDefault(); const f = e.dataTransfer.files[0]; if (f) handleFile(f) }}
+      >
+        <input ref={fileRef} type="file" accept=".csv" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFile(f) }} />
+        <div className="text-4xl mb-2">📤</div>
+        <p className="text-gray-600 font-medium">{file ? file.name : 'Click or drag CSV file here'}</p>
+        <p className="text-xs text-gray-400 mt-1">Make sure to add Partner and DSP columns before uploading</p>
+      </div>
+
+      {/* Column warnings */}
+      {parsed.length > 0 && (
+        <div className="mb-4 space-y-2">
+          {!hasPartner && <div className="bg-yellow-50 border border-yellow-200 text-yellow-800 text-sm px-4 py-2 rounded-lg">⚠️ No <strong>Partner</strong> column detected. Add it to your CSV before uploading.</div>}
+          {!hasDSP && <div className="bg-yellow-50 border border-yellow-200 text-yellow-800 text-sm px-4 py-2 rounded-lg">⚠️ No <strong>DSP</strong> column detected. Add it to your CSV before uploading.</div>}
+          {hasPartner && hasDSP && <div className="bg-green-50 border border-green-200 text-green-800 text-sm px-4 py-2 rounded-lg">✅ Partner and DSP columns detected.</div>}
+        </div>
+      )}
+
+      {/* Period selector */}
+      {parsed.length > 0 && (
+        <div className="bg-white rounded-xl border border-gray-200 p-5 mb-5">
+          <h2 className="font-semibold text-gray-700 mb-3">Select Period</h2>
+          <div className="flex gap-4 mb-4">
+            <button onClick={() => setPeriodType('monthly')} className={`px-4 py-2 rounded-lg text-sm font-medium ${periodType === 'monthly' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-600'}`}>Monthly</button>
+            <button onClick={() => setPeriodType('daily')} className={`px-4 py-2 rounded-lg text-sm font-medium ${periodType === 'daily' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-600'}`}>Daily</button>
+          </div>
+          {periodType === 'monthly' ? (
+            <div className="flex gap-3">
+              <select value={month} onChange={(e) => setMonth(e.target.value)} className="border border-gray-200 rounded-lg px-3 py-2 text-sm">
+                <option value="">Month</option>
+                {months.map((m, i) => <option key={m} value={m}>{monthNames[i]}</option>)}
+              </select>
+              <select value={year} onChange={(e) => setYear(e.target.value)} className="border border-gray-200 rounded-lg px-3 py-2 text-sm">
+                {['2024','2025','2026','2027'].map(y => <option key={y} value={y}>{y}</option>)}
+              </select>
+            </div>
+          ) : (
+            <input type="date" value={date} onChange={(e) => setDate(e.target.value)} className="border border-gray-200 rounded-lg px-3 py-2 text-sm" />
+          )}
+        </div>
+      )}
+
+      {/* Preview */}
+      {parsed.length > 0 && (
+        <div className="bg-white rounded-xl border border-gray-200 p-5 mb-5">
+          <h2 className="font-semibold text-gray-700 mb-3">Preview ({parsed.length} rows)</h2>
+          <div className="overflow-x-auto">
+            <table className="text-xs w-full">
+              <thead>
+                <tr className="bg-gray-50">
+                  {['Sub Affiliate', 'Sub Affiliate Name', 'Total Deposit', 'Company Net Win (GGR)', 'Partner', 'DSP'].map(h => (
+                    <th key={h} className="px-3 py-2 text-left text-gray-500 font-medium">{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {parsed.slice(0, 10).map((row, i) => (
+                  <tr key={i} className="border-t border-gray-100">
+                    <td className="px-3 py-2 text-gray-700">{row['Sub Affiliate']}</td>
+                    <td className="px-3 py-2 text-gray-700">{row['Sub Affiliate Name']}</td>
+                    <td className="px-3 py-2 text-gray-700">{row['Total Deposit']}</td>
+                    <td className="px-3 py-2 text-gray-700">{row['Company Net Win (GGR)']}</td>
+                    <td className="px-3 py-2"><span className={`px-2 py-0.5 rounded text-xs ${row['Partner'] ? 'bg-blue-100 text-blue-700' : 'bg-red-100 text-red-500'}`}>{row['Partner'] || '—'}</span></td>
+                    <td className="px-3 py-2 text-gray-700">{row['DSP'] || '—'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            {parsed.length > 10 && <p className="text-xs text-gray-400 mt-2">Showing 10 of {parsed.length} rows</p>}
+          </div>
+        </div>
+      )}
+
+      {result && <div className="bg-green-50 border border-green-200 text-green-800 px-4 py-3 rounded-lg mb-4 text-sm">{result}</div>}
+      {error && <div className="bg-red-50 border border-red-200 text-red-800 px-4 py-3 rounded-lg mb-4 text-sm">❌ {error}</div>}
+
+      {parsed.length > 0 && (
+        <button
+          onClick={handleUpload}
+          disabled={uploading}
+          className="bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 text-white font-medium px-6 py-2.5 rounded-lg transition-colors text-sm"
+        >
+          {uploading ? 'Uploading...' : `Upload ${parsed.length} Records`}
+        </button>
+      )}
+    </div>
+  )
+}
