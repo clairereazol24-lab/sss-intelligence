@@ -36,9 +36,14 @@ and there's no way to export the data that's been uploaded so far.
 - New route `app/api/export/route.ts`: `GET /api/export?period=all|<period>`. Copies the
   same period-filter query logic from `/api/performance` (`eq('period', ...)` or no
   filter for `all`), queries `performance_data` directly (raw, unaggregated rows — one
-  row per store per period, so the export is a full, re-importable backup), serializes
-  to CSV, and returns it with `Content-Type: text/csv` and
-  `Content-Disposition: attachment; filename="performance_data.csv"`.
+  row per store per period), serializes to CSV, and returns it with
+  `Content-Type: text/csv` and `Content-Disposition: attachment;
+  filename="performance_data.csv"`. This is a raw backup/record of the whole dataset
+  (database column names as headers) — confirmed with Claire it is **not** meant to be
+  re-uploaded through the Import button. Import only ever reads the original vendor CSV
+  exports (e.g. `February.csv`), which use different column headers and require picking
+  a period in the UI; round-tripping an exported file through Import is explicitly out
+  of scope.
 - The SSS Data page calls `/api/performance?period=<selected>` on mount and whenever the
   period dropdown changes, populating both the Overall card and the dropdown's period
   list.
