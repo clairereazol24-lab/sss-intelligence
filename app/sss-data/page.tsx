@@ -34,21 +34,21 @@ export default function SSSDataPage() {
   const [hasDSP, setHasDSP] = useState(false)
   const fileRef = useRef<HTMLInputElement>(null)
 
-  const [overallPeriod, setOverallPeriod] = useState('all')
-  const [overallPeriods, setOverallPeriods] = useState<string[]>([])
+  const [overallFrom, setOverallFrom] = useState('')
+  const [overallTo, setOverallTo] = useState('')
   const [overallTotals, setOverallTotals] = useState<OverallTotals | null>(null)
   const [overallLoading, setOverallLoading] = useState(false)
   const [overallError, setOverallError] = useState<string | null>(null)
 
-  const fetchOverall = async (period: string) => {
+  const fetchOverall = async (from: string, to: string) => {
     setOverallLoading(true)
     setOverallError(null)
     try {
-      const res = await fetch(`/api/performance?period=${period}`)
+      const query = from && to ? `?from=${from}&to=${to}` : ''
+      const res = await fetch(`/api/performance${query}`)
       const data = await res.json()
       if (data.error) throw new Error(data.error)
       setOverallTotals(data.overallTotals)
-      if (data.periods) setOverallPeriods(data.periods)
     } catch (err: any) {
       setOverallError(err.message || 'Failed to load overall totals.')
     } finally {
@@ -56,17 +56,23 @@ export default function SSSDataPage() {
     }
   }
 
-  useEffect(() => { fetchOverall('all') }, [])
+  useEffect(() => { fetchOverall('', '') }, [])
 
-  const handleOverallPeriodChange = (p: string) => {
-    setOverallPeriod(p)
-    fetchOverall(p)
+  const handleOverallFromChange = (value: string) => {
+    setOverallFrom(value)
+    fetchOverall(value, overallTo)
+  }
+
+  const handleOverallToChange = (value: string) => {
+    setOverallTo(value)
+    fetchOverall(overallFrom, value)
   }
 
   const handleExport = async () => {
     setOverallError(null)
     try {
-      const res = await fetch(`/api/export?period=${overallPeriod}`)
+      const query = overallFrom && overallTo ? `?from=${overallFrom}&to=${overallTo}` : ''
+      const res = await fetch(`/api/export${query}`)
       if (!res.ok) {
         const data = await res.json()
         throw new Error(data.error || 'Export failed.')
@@ -164,14 +170,19 @@ export default function SSSDataPage() {
           <p className="text-sm text-gray-500">Upload your sub-affiliate CSV export here.</p>
         </div>
         <div className="flex items-center gap-3">
-          <select
-            value={overallPeriod}
-            onChange={(e) => handleOverallPeriodChange(e.target.value)}
+          <input
+            type="date"
+            value={overallFrom}
+            onChange={(e) => handleOverallFromChange(e.target.value)}
             className="border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white shadow-sm"
-          >
-            <option value="all">All Time</option>
-            {overallPeriods.map(p => <option key={p} value={p}>{p}</option>)}
-          </select>
+          />
+          <span className="text-gray-400 text-sm">to</span>
+          <input
+            type="date"
+            value={overallTo}
+            onChange={(e) => handleOverallToChange(e.target.value)}
+            className="border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white shadow-sm"
+          />
           <button
             onClick={handleExport}
             className="bg-white border border-gray-200 hover:bg-gray-50 text-gray-700 font-medium px-4 py-2 rounded-lg shadow-sm transition-colors text-sm whitespace-nowrap"
