@@ -19,6 +19,19 @@ type OverallTotals = {
   store_count: number
 }
 
+type StoreRow = {
+  sub_affiliate: string
+  store_name: string
+  partner: string | null
+  dsp: string | null
+  total_deposit: number
+  total_withdraw: number
+  valid_bet_amount: number
+  company_net_win: number
+  payout_amount: number
+  registered_members: number
+}
+
 export default function SSSDataPage() {
   const [file, setFile] = useState<File | null>(null)
   const [parsed, setParsed] = useState<any[]>([])
@@ -39,6 +52,7 @@ export default function SSSDataPage() {
   const [overallTotals, setOverallTotals] = useState<OverallTotals | null>(null)
   const [overallLoading, setOverallLoading] = useState(false)
   const [overallError, setOverallError] = useState<string | null>(null)
+  const [allStores, setAllStores] = useState<StoreRow[]>([])
 
   const fetchOverall = async (from: string, to: string) => {
     setOverallLoading(true)
@@ -49,6 +63,7 @@ export default function SSSDataPage() {
       const data = await res.json()
       if (data.error) throw new Error(data.error)
       setOverallTotals(data.overallTotals)
+      setAllStores(data.allStores || [])
     } catch (err: any) {
       setOverallError(err.message || 'Failed to load overall totals.')
     } finally {
@@ -234,6 +249,43 @@ export default function SSSDataPage() {
         )}
         {!overallLoading && !overallError && (overallTotals?.store_count || 0) === 0 && (
           <p className="text-xs text-gray-400 mt-3">No data yet — upload a CSV below.</p>
+        )}
+      </div>
+
+      {/* Store Summary */}
+      <div className="bg-white rounded-xl border border-gray-200 p-5 mb-6">
+        <h2 className="font-semibold text-gray-700 mb-3">Store Summary</h2>
+        {!overallLoading && !overallError && allStores.length === 0 && (
+          <p className="text-xs text-gray-400">No data yet — upload a CSV below.</p>
+        )}
+        {allStores.length > 0 && (
+          <div className="overflow-x-auto max-h-[480px] overflow-y-auto">
+            <table className="text-xs w-full">
+              <thead>
+                <tr className="bg-gray-50">
+                  {['Partner', 'DSP', 'Sub Affiliate', 'Sub Affiliate Name', 'Total Deposit', 'Total Withdraw', 'Valid Bet Amount', 'Company Net Win (GGR)', 'Payout Amount', 'Registered Members'].map(h => (
+                    <th key={h} className="px-3 py-2 text-left text-gray-500 font-medium whitespace-nowrap">{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {allStores.map((s) => (
+                  <tr key={s.sub_affiliate} className="border-t border-gray-100">
+                    <td className="px-3 py-2 text-gray-700">{s.partner || '—'}</td>
+                    <td className="px-3 py-2 text-gray-700">{s.dsp || '—'}</td>
+                    <td className="px-3 py-2 text-gray-700">{s.sub_affiliate}</td>
+                    <td className="px-3 py-2 text-gray-700">{s.store_name}</td>
+                    <td className="px-3 py-2 text-gray-700">{fmt(s.total_deposit)}</td>
+                    <td className="px-3 py-2 text-gray-700">{fmt(s.total_withdraw)}</td>
+                    <td className="px-3 py-2 text-gray-700">{fmt(s.valid_bet_amount)}</td>
+                    <td className={`px-3 py-2 font-medium ${s.company_net_win >= 0 ? 'text-green-600' : 'text-red-500'}`}>{fmt(s.company_net_win)}</td>
+                    <td className="px-3 py-2 text-gray-700">{fmt(s.payout_amount)}</td>
+                    <td className="px-3 py-2 text-gray-700">{s.registered_members.toLocaleString()}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
       </div>
 
