@@ -163,7 +163,7 @@ export default function SSSDataPage() {
   const monthNames = ['January','February','March','April','May','June','July','August','September','October','November','December']
 
   return (
-    <div className="p-6 max-w-4xl mx-auto">
+    <div className="p-6">
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-bold text-gray-800 mb-1">SSS Data</h1>
@@ -183,6 +183,13 @@ export default function SSSDataPage() {
             onChange={(e) => handleOverallToChange(e.target.value)}
             className="border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white shadow-sm"
           />
+          <input ref={fileRef} type="file" accept=".csv" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFile(f) }} />
+          <button
+            onClick={() => fileRef.current?.click()}
+            className="bg-blue-600 hover:bg-blue-700 text-white font-medium px-4 py-2 rounded-lg transition-colors text-sm whitespace-nowrap"
+          >
+            📤 Import
+          </button>
           <button
             onClick={handleExport}
             className="bg-white border border-gray-200 hover:bg-gray-50 text-gray-700 font-medium px-4 py-2 rounded-lg shadow-sm transition-colors text-sm whitespace-nowrap"
@@ -191,6 +198,8 @@ export default function SSSDataPage() {
           </button>
         </div>
       </div>
+
+      <p className="text-xs text-gray-400 mb-6">{file ? `📄 ${file.name}` : 'No file selected — make sure to add Partner and DSP columns before uploading.'}</p>
 
       {/* Overall summary */}
       <div className="bg-white rounded-xl border border-gray-200 p-5 mb-6">
@@ -223,21 +232,6 @@ export default function SSSDataPage() {
         {!overallLoading && !overallError && (overallTotals?.store_count || 0) === 0 && (
           <p className="text-xs text-gray-400 mt-3">No data yet — upload a CSV below.</p>
         )}
-      </div>
-
-      {/* Upload Area */}
-      <input ref={fileRef} type="file" accept=".csv" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFile(f) }} />
-      <div className="flex items-center justify-between bg-white rounded-xl border border-gray-200 p-5 mb-6">
-        <div>
-          <p className="text-gray-700 font-medium">{file ? file.name : 'No file selected'}</p>
-          <p className="text-xs text-gray-400 mt-1">Make sure to add Partner and DSP columns before uploading</p>
-        </div>
-        <button
-          onClick={() => fileRef.current?.click()}
-          className="bg-blue-600 hover:bg-blue-700 text-white font-medium px-5 py-2.5 rounded-lg transition-colors text-sm whitespace-nowrap"
-        >
-          📤 Import CSV
-        </button>
       </div>
 
       {/* Column warnings */}
