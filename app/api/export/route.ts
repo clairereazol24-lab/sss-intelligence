@@ -31,10 +31,14 @@ export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
     const period = searchParams.get('period')
+    const from = searchParams.get('from')
+    const to = searchParams.get('to')
 
     let query = supabase.from('performance_data').select('*').order('period', { ascending: false })
     if (period && period !== 'all') {
       query = query.eq('period', period)
+    } else if (from && to) {
+      query = query.gte('period', from).lte('period', to)
     }
 
     const { data, error } = await query
