@@ -102,8 +102,8 @@ export default function SSSDataPage() {
         const cols = res.meta.fields || []
         setHeaders(cols)
         setParsed(res.data as any[])
-        setHasPartner(cols.includes('Partner'))
-        setHasDSP(cols.includes('DSP'))
+        setHasPartner(cols.some(c => c.toLowerCase() === 'partner'))
+        setHasDSP(cols.some(c => c.toLowerCase() === 'dsp'))
       },
     })
   }
@@ -123,6 +123,9 @@ export default function SSSDataPage() {
     setUploading(true)
     setError(null)
 
+    const partnerKey = headers.find(h => h.toLowerCase() === 'partner')
+    const dspKey = headers.find(h => h.toLowerCase() === 'dsp')
+
     const records = parsed.map((row: any) => ({
       sub_affiliate: row['Sub Affiliate'],
       store_name: row['Sub Affiliate Name'],
@@ -138,8 +141,8 @@ export default function SSSDataPage() {
       deposit_member_count: row['Deposit Member Count'],
       members_withdrawn: row['Number of Members Withdrawn'],
       effective_member: row['Effective Member'],
-      partner: row['Partner'] || null,
-      dsp: row['DSP'] || null,
+      partner: (partnerKey ? row[partnerKey] : null) || null,
+      dsp: (dspKey ? row[dspKey] : null) || null,
     }))
 
     const res = await fetch('/api/upload', {
