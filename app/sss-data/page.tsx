@@ -63,6 +63,28 @@ export default function SSSDataPage() {
     fetchOverall(p)
   }
 
+  const handleExport = async () => {
+    setOverallError(null)
+    try {
+      const res = await fetch(`/api/export?period=${overallPeriod}`)
+      if (!res.ok) {
+        const data = await res.json()
+        throw new Error(data.error || 'Export failed.')
+      }
+      const blob = await res.blob()
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = 'performance_data.csv'
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+      URL.revokeObjectURL(url)
+    } catch (err: any) {
+      setOverallError(err.message || 'Export failed.')
+    }
+  }
+
   const handleFile = (f: File) => {
     setFile(f)
     setResult(null)
@@ -141,14 +163,22 @@ export default function SSSDataPage() {
           <h1 className="text-2xl font-bold text-gray-800 mb-1">SSS Data</h1>
           <p className="text-sm text-gray-500">Upload your sub-affiliate CSV export here.</p>
         </div>
-        <select
-          value={overallPeriod}
-          onChange={(e) => handleOverallPeriodChange(e.target.value)}
-          className="border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white shadow-sm"
-        >
-          <option value="all">All Time</option>
-          {overallPeriods.map(p => <option key={p} value={p}>{p}</option>)}
-        </select>
+        <div className="flex items-center gap-3">
+          <select
+            value={overallPeriod}
+            onChange={(e) => handleOverallPeriodChange(e.target.value)}
+            className="border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white shadow-sm"
+          >
+            <option value="all">All Time</option>
+            {overallPeriods.map(p => <option key={p} value={p}>{p}</option>)}
+          </select>
+          <button
+            onClick={handleExport}
+            className="bg-white border border-gray-200 hover:bg-gray-50 text-gray-700 font-medium px-4 py-2 rounded-lg shadow-sm transition-colors text-sm whitespace-nowrap"
+          >
+            ⬇️ Export
+          </button>
+        </div>
       </div>
 
       {/* Overall summary */}
