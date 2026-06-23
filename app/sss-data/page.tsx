@@ -273,7 +273,7 @@ export default function SSSDataPage() {
       </div>
 
       {lastUpdated && (
-        <p className="text-xs text-gray-400 mb-6">Last updated: {formatLastUpdated(lastUpdated)}</p>
+        <p className="text-xs text-gray-400 mb-6 text-center">Last updated: {formatLastUpdated(lastUpdated)}</p>
       )}
 
       {/* Store Summary */}
