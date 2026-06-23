@@ -35,7 +35,9 @@ export async function GET(request: NextRequest) {
           dsp: row.dsp,
           total_deposit: 0,
           total_withdraw: 0,
+          valid_bet_amount: 0,
           company_net_win: 0,
+          payout_amount: 0,
           registered_members: 0,
           deposit_member_count: 0,
           members_withdrawn: 0,
@@ -46,7 +48,9 @@ export async function GET(request: NextRequest) {
       const s = storeMap[row.sub_affiliate]
       s.total_deposit += row.total_deposit
       s.total_withdraw += row.total_withdraw
+      s.valid_bet_amount += row.valid_bet_amount
       s.company_net_win += row.company_net_win
+      s.payout_amount += row.payout_amount
       s.registered_members += row.registered_members
       s.deposit_member_count += row.deposit_member_count
       s.members_withdrawn += row.members_withdrawn
@@ -55,6 +59,7 @@ export async function GET(request: NextRequest) {
     }
 
     const stores = Object.values(storeMap)
+    const allStores = [...stores].sort((a: any, b: any) => b.total_deposit - a.total_deposit)
 
     const overallTotals = stores.reduce(
       (acc: any, s: any) => {
@@ -124,7 +129,7 @@ export async function GET(request: NextRequest) {
 
     const uniquePeriods = Array.from(new Set((periods || []).map((p: any) => p.period)))
 
-    return NextResponse.json({ top20Stores, top20DSPs, periods: uniquePeriods, overallTotals })
+    return NextResponse.json({ top20Stores, top20DSPs, periods: uniquePeriods, overallTotals, allStores })
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 500 })
   }
