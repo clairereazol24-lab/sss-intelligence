@@ -55,6 +55,29 @@ export async function GET(request: NextRequest) {
     }
 
     const stores = Object.values(storeMap)
+
+    const overallTotals = stores.reduce(
+      (acc: any, s: any) => {
+        acc.total_deposit += s.total_deposit
+        acc.total_withdraw += s.total_withdraw
+        acc.company_net_win += s.company_net_win
+        acc.registered_members += s.registered_members
+        acc.deposit_member_count += s.deposit_member_count
+        acc.effective_member += s.effective_member
+        acc.store_count += 1
+        return acc
+      },
+      {
+        total_deposit: 0,
+        total_withdraw: 0,
+        company_net_win: 0,
+        registered_members: 0,
+        deposit_member_count: 0,
+        effective_member: 0,
+        store_count: 0,
+      }
+    )
+
     const maxDeposit = Math.max(...stores.map((s: any) => s.total_deposit), 1)
 
     // Calculate score & sort
@@ -101,7 +124,7 @@ export async function GET(request: NextRequest) {
 
     const uniquePeriods = Array.from(new Set((periods || []).map((p: any) => p.period)))
 
-    return NextResponse.json({ top20Stores, top20DSPs, periods: uniquePeriods })
+    return NextResponse.json({ top20Stores, top20DSPs, periods: uniquePeriods, overallTotals })
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 500 })
   }
