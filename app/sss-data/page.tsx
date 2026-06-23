@@ -1,11 +1,23 @@
 'use client'
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import Papa from 'papaparse'
 
 const REQUIRED_COLS = ['Sub Affiliate', 'Sub Affiliate Name', 'Total Deposit', 'Total Withdraw',
   'Valid Bet Amount', 'Company Net Win (GGR)', 'Payout Amount', 'Total Promotion Amount',
   'Registered Members', 'First Deposit Amount', 'First Deposit Count',
   'Deposit Member Count', 'Number of Members Withdrawn', 'Effective Member']
+
+const fmt = (n: number) => `₱${n.toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+
+type OverallTotals = {
+  total_deposit: number
+  total_withdraw: number
+  company_net_win: number
+  registered_members: number
+  deposit_member_count: number
+  effective_member: number
+  store_count: number
+}
 
 export default function SSSDataPage() {
   const [file, setFile] = useState<File | null>(null)
@@ -21,6 +33,35 @@ export default function SSSDataPage() {
   const [hasPartner, setHasPartner] = useState(false)
   const [hasDSP, setHasDSP] = useState(false)
   const fileRef = useRef<HTMLInputElement>(null)
+
+  const [overallPeriod, setOverallPeriod] = useState('all')
+  const [overallPeriods, setOverallPeriods] = useState<string[]>([])
+  const [overallTotals, setOverallTotals] = useState<OverallTotals | null>(null)
+  const [overallLoading, setOverallLoading] = useState(false)
+  const [overallError, setOverallError] = useState<string | null>(null)
+
+  const fetchOverall = async (period: string) => {
+    setOverallLoading(true)
+    setOverallError(null)
+    try {
+      const res = await fetch(`/api/performance?period=${period}`)
+      const data = await res.json()
+      if (data.error) throw new Error(data.error)
+      setOverallTotals(data.overallTotals)
+      if (data.periods) setOverallPeriods(data.periods)
+    } catch (err: any) {
+      setOverallError(err.message || 'Failed to load overall totals.')
+    } finally {
+      setOverallLoading(false)
+    }
+  }
+
+  useEffect(() => { fetchOverall('all') }, [])
+
+  const handleOverallPeriodChange = (p: string) => {
+    setOverallPeriod(p)
+    fetchOverall(p)
+  }
 
   const handleFile = (f: File) => {
     setFile(f)
@@ -95,8 +136,53 @@ export default function SSSDataPage() {
 
   return (
     <div className="p-6 max-w-4xl mx-auto">
-      <h1 className="text-2xl font-bold text-gray-800 mb-1">SSS Data</h1>
-      <p className="text-sm text-gray-500 mb-6">Upload your sub-affiliate CSV export here.</p>
+      <div className="flex items-center justify-between mb-6">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-800 mb-1">SSS Data</h1>
+          <p className="text-sm text-gray-500">Upload your sub-affiliate CSV export here.</p>
+        </div>
+        <select
+          value={overallPeriod}
+          onChange={(e) => handleOverallPeriodChange(e.target.value)}
+          className="border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white shadow-sm"
+        >
+          <option value="all">All Time</option>
+          {overallPeriods.map(p => <option key={p} value={p}>{p}</option>)}
+        </select>
+      </div>
+
+      {/* Overall summary */}
+      <div className="bg-white rounded-xl border border-gray-200 p-5 mb-6">
+        <h2 className="font-semibold text-gray-700 mb-3">Overall</h2>
+        {overallError && (
+          <div className="bg-red-50 border border-red-200 text-red-800 px-4 py-3 rounded-lg mb-3 text-sm">❌ {overallError}</div>
+        )}
+        {overallLoading ? (
+          <p className="text-sm text-gray-400">Loading...</p>
+        ) : (
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+            <div>
+              <p className="text-xs text-gray-400 mb-1">Total Deposit</p>
+              <p className="font-semibold text-gray-800">{fmt(overallTotals?.total_deposit || 0)}</p>
+            </div>
+            <div>
+              <p className="text-xs text-gray-400 mb-1">Total GGR</p>
+              <p className={`font-semibold ${((overallTotals?.company_net_win || 0) >= 0) ? 'text-green-600' : 'text-red-500'}`}>{fmt(overallTotals?.company_net_win || 0)}</p>
+            </div>
+            <div>
+              <p className="text-xs text-gray-400 mb-1">Registered Members</p>
+              <p className="font-semibold text-gray-800">{(overallTotals?.registered_members || 0).toLocaleString()}</p>
+            </div>
+            <div>
+              <p className="text-xs text-gray-400 mb-1">Stores</p>
+              <p className="font-semibold text-gray-800">{overallTotals?.store_count || 0}</p>
+            </div>
+          </div>
+        )}
+        {!overallLoading && !overallError && (overallTotals?.store_count || 0) === 0 && (
+          <p className="text-xs text-gray-400 mt-3">No data yet — upload a CSV below.</p>
+        )}
+      </div>
 
       {/* Upload Area */}
       <div
