@@ -83,24 +83,12 @@ export async function GET(request: NextRequest) {
       }
     )
 
-    const maxDeposit = Math.max(...stores.map((s: any) => s.total_deposit), 1)
-
-    // Calculate score & sort
-    const storesWithScore = stores.map((s: any) => {
-      const depositScore = (s.total_deposit / maxDeposit) * 100
-      const activationRate = s.registered_members > 0
-        ? (s.deposit_member_count / s.registered_members) * 100 : 0
-      const ggrMargin = s.total_deposit > 0
-        ? Math.min(Math.max((s.company_net_win / s.total_deposit) * 100, 0), 100) : 0
-      const retention = s.deposit_member_count > 0
-        ? Math.max((1 - s.members_withdrawn / s.deposit_member_count) * 100, 0) : 0
-      const score = (depositScore * 0.35) + (activationRate * 0.30) + (ggrMargin * 0.25) + (retention * 0.10)
-      const label = score >= 80 ? 'Scale' : score >= 50 ? 'Maintain' : 'Fix'
-      return { ...s, score: Math.round(score), label }
-    })
-
-    const top20Stores = storesWithScore
+    const top20Stores = [...stores]
       .sort((a: any, b: any) => b.total_deposit - a.total_deposit)
+      .slice(0, 20)
+
+    const top20StoresByMembers = [...stores]
+      .sort((a: any, b: any) => b.registered_members - a.registered_members)
       .slice(0, 20)
 
     // Aggregate by DSP
@@ -121,6 +109,10 @@ export async function GET(request: NextRequest) {
       .sort((a: any, b: any) => b.store_count - a.store_count)
       .slice(0, 20)
 
+    const top20DSPsByDeposit = Object.values(dspMap)
+      .sort((a: any, b: any) => (b as any).total_deposit - (a as any).total_deposit)
+      .slice(0, 20)
+
     // Available periods
     const { data: periods } = await supabase
       .from('performance_data')
@@ -138,7 +130,7 @@ export async function GET(request: NextRequest) {
 
     const lastUpdated = lastRow && lastRow.length > 0 ? lastRow[0] : null
 
-    return NextResponse.json({ top20Stores, top20DSPs, periods: uniquePeriods, overallTotals, allStores, lastUpdated })
+    return NextResponse.json({ top20Stores, top20StoresByMembers, top20DSPs, top20DSPsByDeposit, periods: uniquePeriods, overallTotals, allStores, lastUpdated })
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 500 })
   }
