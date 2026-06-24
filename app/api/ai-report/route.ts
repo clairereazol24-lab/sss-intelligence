@@ -1,7 +1,8 @@
 import Anthropic from '@anthropic-ai/sdk'
 import { NextRequest } from 'next/server'
+import mammoth from 'mammoth'
 
-export const runtime = 'edge'
+export const runtime = 'nodejs'
 
 export async function POST(request: NextRequest) {
   try {
@@ -16,6 +17,36 @@ export async function POST(request: NextRequest) {
     const zeroStores = performanceData.filter((r: any) => r.total_deposit === 0).length
     const negativeGGR = performanceData.filter((r: any) => r.company_net_win < 0)
 
+    // Read attached marketing report files: PDFs are passed to Claude natively as
+    // document blocks; DOCX files have their text extracted server-side since
+    // Claude has no native DOCX reader.
+    const pdfBlocks: any[] = []
+    let docxText = ''
+    const fileWarnings: string[] = []
+
+    for (const m of marketingData || []) {
+      if (!m.report_file_url) continue
+      const label = `${m.store_name || m.sub_affiliate || 'Unknown store'} (${m.date})`
+      try {
+        const res = await fetch(m.report_file_url)
+        if (!res.ok) throw new Error(`HTTP ${res.status}`)
+        const buffer = Buffer.from(await res.arrayBuffer())
+
+        if (m.report_file_type === 'pdf') {
+          pdfBlocks.push({ type: 'text', text: `Attached report for ${label}:` })
+          pdfBlocks.push({
+            type: 'document',
+            source: { type: 'base64', media_type: 'application/pdf', data: buffer.toString('base64') },
+          })
+        } else if (m.report_file_type === 'docx') {
+          const { value } = await mammoth.extractRawText({ buffer })
+          docxText += `\n\nATTACHED REPORT for ${label}:\n${value}`
+        }
+      } catch (err: any) {
+        fileWarnings.push(`Note: could not read attached report for ${label} (${err.message})`)
+      }
+    }
+
     const prompt = `You are the LakiWin Store Intelligence Engine. Analyze the store performance data below and produce a structured intelligence report.
 
 PERIOD: ${period}
@@ -28,6 +59,8 @@ ${JSON.stringify(performanceData, null, 2)}
 
 ${marketingData && marketingData.length > 0 ? `MARKETING EFFORTS DATA:
 ${JSON.stringify(marketingData, null, 2)}` : 'MARKETING EFFORTS: No data for this period.'}
+${docxText}
+${fileWarnings.length > 0 ? `\n\n${fileWarnings.join('\n')}` : ''}
 
 Produce this exact structured report:
 
@@ -77,11 +110,13 @@ For each FIX store and selected MAINTAIN stores, give one specific actionable ma
 
 RULES: Every insight must name specific stores. No generic advice. Flag suspicious patterns. Prioritize by GGR impact.`
 
+    const content: any[] = [{ type: 'text', text: prompt }, ...pdfBlocks]
+
     const stream = await anthropic.messages.create({
       model: 'claude-sonnet-4-6',
       max_tokens: 4096,
       stream: true,
-      messages: [{ role: 'user', content: prompt }],
+      messages: [{ role: 'user', content }],
     })
 
     const encoder = new TextEncoder()
