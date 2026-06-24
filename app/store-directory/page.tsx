@@ -1,5 +1,6 @@
 'use client'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
+import Papa from 'papaparse'
 
 type Store = {
   id: string
@@ -26,6 +27,12 @@ export default function StoreDirectoryPage() {
   const [form, setForm] = useState({ sub_affiliate: '', store_name: '', partner: '', dsp: '', deployment_status: 'Not Deployed' })
   const [saving, setSaving] = useState(false)
 
+  const [bulkParsed, setBulkParsed] = useState<any[]>([])
+  const [bulkHeaders, setBulkHeaders] = useState<string[]>([])
+  const [bulkUploading, setBulkUploading] = useState(false)
+  const [bulkError, setBulkError] = useState<string | null>(null)
+  const bulkFileRef = useRef<HTMLInputElement>(null)
+
   const fetchStores = async () => {
     setLoading(true)
     const res = await fetch('/api/stores')
@@ -35,6 +42,57 @@ export default function StoreDirectoryPage() {
   }
 
   useEffect(() => { fetchStores() }, [])
+
+  const subAffiliateKey = bulkHeaders.find(h => h.toLowerCase() === 'sub affiliate')
+  const storeNameKey = bulkHeaders.find(h => h.toLowerCase() === 'store name')
+  const partnerKey = bulkHeaders.find(h => h.toLowerCase() === 'partner')
+  const dspKey = bulkHeaders.find(h => h.toLowerCase() === 'dsp')
+  const statusKey = bulkHeaders.find(h => h.toLowerCase() === 'deployment status')
+
+  const handleBulkFile = (f: File) => {
+    setBulkError(null)
+    Papa.parse(f, {
+      header: true,
+      skipEmptyLines: true,
+      complete: (res) => {
+        setBulkHeaders(res.meta.fields || [])
+        setBulkParsed(res.data as any[])
+      },
+    })
+  }
+
+  const handleBulkCancel = () => {
+    setBulkParsed([])
+    setBulkHeaders([])
+    setBulkError(null)
+    if (bulkFileRef.current) bulkFileRef.current.value = ''
+  }
+
+  const handleBulkImport = async () => {
+    if (!subAffiliateKey || !storeNameKey) return
+    setBulkUploading(true)
+    setBulkError(null)
+    const records = bulkParsed.map((row: any) => ({
+      sub_affiliate: row[subAffiliateKey],
+      store_name: row[storeNameKey],
+      partner: (partnerKey ? row[partnerKey] : null) || null,
+      dsp: (dspKey ? row[dspKey] : null) || null,
+      deployment_status: statusKey && STATUS_OPTIONS.includes(row[statusKey]) ? row[statusKey] : 'Not Deployed',
+    }))
+    const res = await fetch('/api/stores/bulk', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ stores: records }),
+    })
+    const data = await res.json()
+    setBulkUploading(false)
+    if (data.error) {
+      setBulkError(data.error)
+    } else {
+      handleBulkCancel()
+      fetchStores()
+    }
+  }
 
   const openAdd = () => {
     setEditing(null)
@@ -73,7 +131,11 @@ export default function StoreDirectoryPage() {
           <h1 className="text-2xl font-bold text-gray-800">Store Directory</h1>
           <p className="text-sm text-gray-500">{stores.length} total stores</p>
         </div>
-        <button onClick={openAdd} className="bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors">+ Add Store</button>
+        <div className="flex items-center gap-3">
+          <input ref={bulkFileRef} type="file" accept=".csv" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) handleBulkFile(f) }} />
+          <button onClick={() => bulkFileRef.current?.click()} className="bg-white border border-gray-200 hover:bg-gray-50 text-gray-700 text-sm font-medium px-4 py-2 rounded-lg shadow-sm transition-colors">📤 Bulk Import</button>
+          <button onClick={openAdd} className="bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors">+ Add Store</button>
+        </div>
       </div>
 
       {/* Filters */}
@@ -152,6 +214,63 @@ export default function StoreDirectoryPage() {
             <div className="flex gap-2 mt-5 justify-end">
               <button onClick={() => setModal(false)} className="px-4 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-lg">Cancel</button>
               <button onClick={handleSave} disabled={saving} className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-blue-300">{saving ? 'Saving...' : 'Save'}</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Bulk Import Modal */}
+      {bulkParsed.length > 0 && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl p-6 w-full max-w-3xl max-h-[90vh] overflow-y-auto shadow-xl">
+            <h2 className="font-bold text-gray-800 mb-4">Bulk Import Stores</h2>
+
+            {(!subAffiliateKey || !storeNameKey) && (
+              <div className="bg-yellow-50 border border-yellow-200 text-yellow-800 text-sm px-4 py-2 rounded-lg mb-4">
+                ⚠️ CSV must have <strong>Sub Affiliate</strong> and <strong>Store Name</strong> columns.
+              </div>
+            )}
+
+            <div className="mb-5">
+              <h3 className="font-semibold text-gray-700 mb-3">Preview ({bulkParsed.length} rows)</h3>
+              <div className="overflow-x-auto">
+                <table className="text-xs w-full">
+                  <thead>
+                    <tr className="bg-gray-50">
+                      {['Sub Affiliate', 'Store Name', 'Partner', 'DSP', 'Deployment Status'].map(h => (
+                        <th key={h} className="px-3 py-2 text-left text-gray-500 font-medium">{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {bulkParsed.slice(0, 10).map((row, i) => (
+                      <tr key={i} className="border-t border-gray-100">
+                        <td className="px-3 py-2 text-gray-700">{subAffiliateKey ? row[subAffiliateKey] : '—'}</td>
+                        <td className="px-3 py-2 text-gray-700">{storeNameKey ? row[storeNameKey] : '—'}</td>
+                        <td className="px-3 py-2 text-gray-700">{(partnerKey && row[partnerKey]) || '—'}</td>
+                        <td className="px-3 py-2 text-gray-700">{(dspKey && row[dspKey]) || '—'}</td>
+                        <td className="px-3 py-2 text-gray-700">{statusKey && STATUS_OPTIONS.includes(row[statusKey]) ? row[statusKey] : 'Not Deployed'}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                {bulkParsed.length > 10 && <p className="text-xs text-gray-400 mt-2">Showing 10 of {bulkParsed.length} rows</p>}
+              </div>
+            </div>
+
+            {bulkError && <div className="bg-red-50 border border-red-200 text-red-800 px-4 py-3 rounded-lg mb-4 text-sm">❌ {bulkError}</div>}
+
+            <div className="flex gap-2 justify-end">
+              <button onClick={handleBulkCancel} className="px-4 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-lg">Cancel</button>
+              {subAffiliateKey && storeNameKey && (
+                <button
+                  onClick={handleBulkImport}
+                  disabled={bulkUploading}
+                  className="bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 text-white font-medium px-6 py-2.5 rounded-lg transition-colors text-sm"
+                >
+                  {bulkUploading ? 'Importing...' : `Import ${bulkParsed.length} Stores`}
+                </button>
+              )}
             </div>
           </div>
         </div>
