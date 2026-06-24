@@ -1,5 +1,6 @@
 'use client'
 import { useEffect, useState } from 'react'
+import { supabase } from '@/lib/supabase'
 
 type Effort = {
   id: string
@@ -9,7 +10,11 @@ type Effort = {
   sub_affiliate: string
   activities_done: string
   headcount: number
+  total_deposit: number
   notes: string
+  report_file_url: string | null
+  report_file_name: string | null
+  report_file_type: string | null
 }
 
 export default function MarketingEffortsPage() {
@@ -17,8 +22,22 @@ export default function MarketingEffortsPage() {
   const [loading, setLoading] = useState(true)
   const [modal, setModal] = useState(false)
   const [saving, setSaving] = useState(false)
-  const [form, setForm] = useState({ date: '', location: '', store_name: '', sub_affiliate: '', activities_done: '', headcount: '', notes: '' })
+  const [form, setForm] = useState({ date: '', location: '', store_name: '', sub_affiliate: '', activities_done: '', headcount: '', total_deposit: '', notes: '' })
   const [search, setSearch] = useState('')
+  const [reportFile, setReportFile] = useState<File | null>(null)
+  const [fileError, setFileError] = useState('')
+
+  const handleFileSelect = (f: File | null) => {
+    setFileError('')
+    if (!f) { setReportFile(null); return }
+    const ext = f.name.toLowerCase().split('.').pop()
+    if (ext !== 'pdf' && ext !== 'docx') {
+      setFileError('Only .pdf and .docx files are supported.')
+      setReportFile(null)
+      return
+    }
+    setReportFile(f)
+  }
 
   const fetchEfforts = async () => {
     setLoading(true)
@@ -32,14 +51,43 @@ export default function MarketingEffortsPage() {
 
   const handleSave = async () => {
     setSaving(true)
+
+    let report_file_url: string | null = null
+    let report_file_name: string | null = null
+    let report_file_type: string | null = null
+
+    if (reportFile) {
+      const ext = reportFile.name.toLowerCase().split('.').pop()
+      const path = `${crypto.randomUUID()}.${ext}`
+      const { error: uploadError } = await supabase.storage.from('marketing-reports').upload(path, reportFile)
+      if (uploadError) {
+        setFileError(`Upload failed: ${uploadError.message}`)
+        setSaving(false)
+        return
+      }
+      const { data: urlData } = supabase.storage.from('marketing-reports').getPublicUrl(path)
+      report_file_url = urlData.publicUrl
+      report_file_name = reportFile.name
+      report_file_type = ext || null
+    }
+
     await fetch('/api/marketing', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ...form, headcount: parseInt(form.headcount) || 0 }),
+      body: JSON.stringify({
+        ...form,
+        headcount: parseInt(form.headcount) || 0,
+        total_deposit: parseFloat(form.total_deposit) || 0,
+        report_file_url,
+        report_file_name,
+        report_file_type,
+      }),
     })
     setSaving(false)
     setModal(false)
-    setForm({ date: '', location: '', store_name: '', sub_affiliate: '', activities_done: '', headcount: '', notes: '' })
+    setForm({ date: '', location: '', store_name: '', sub_affiliate: '', activities_done: '', headcount: '', total_deposit: '', notes: '' })
+    setReportFile(null)
+    setFileError('')
     fetchEfforts()
   }
 
@@ -77,16 +125,18 @@ export default function MarketingEffortsPage() {
               <th className="px-4 py-3 text-gray-500 font-medium">Store</th>
               <th className="px-4 py-3 text-gray-500 font-medium">Location</th>
               <th className="px-4 py-3 text-gray-500 font-medium">Activities</th>
-              <th className="px-4 py-3 text-gray-500 font-medium text-center">Headcount</th>
+              <th className="px-4 py-3 text-gray-500 font-medium text-center">Registration</th>
+              <th className="px-4 py-3 text-gray-500 font-medium text-right">Total Deposit</th>
               <th className="px-4 py-3 text-gray-500 font-medium">Notes</th>
+              <th className="px-4 py-3 text-gray-500 font-medium">Report</th>
               <th className="px-4 py-3"></th>
             </tr>
           </thead>
           <tbody>
             {loading ? (
-              <tr><td colSpan={7} className="px-4 py-12 text-center text-gray-400">Loading...</td></tr>
+              <tr><td colSpan={9} className="px-4 py-12 text-center text-gray-400">Loading...</td></tr>
             ) : filtered.length === 0 ? (
-              <tr><td colSpan={7} className="px-4 py-12 text-center text-gray-400">No entries yet. Add your first booth activation.</td></tr>
+              <tr><td colSpan={9} className="px-4 py-12 text-center text-gray-400">No entries yet. Add your first booth activation.</td></tr>
             ) : filtered.map(e => (
               <tr key={e.id} className="border-t border-gray-50 hover:bg-gray-50">
                 <td className="px-4 py-3 text-gray-600 whitespace-nowrap">{e.date}</td>
@@ -99,8 +149,16 @@ export default function MarketingEffortsPage() {
                   <p className="truncate">{e.activities_done || '—'}</p>
                 </td>
                 <td className="px-4 py-3 text-center font-medium text-gray-700">{e.headcount}</td>
+                <td className="px-4 py-3 text-right text-gray-700">₱{(e.total_deposit || 0).toLocaleString()}</td>
                 <td className="px-4 py-3 text-gray-500 max-w-xs">
                   <p className="truncate text-xs">{e.notes || '—'}</p>
+                </td>
+                <td className="px-4 py-3">
+                  {e.report_file_url ? (
+                    <a href={e.report_file_url} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline text-xs whitespace-nowrap">📄 View Report</a>
+                  ) : (
+                    <span className="text-gray-300 text-xs">—</span>
+                  )}
                 </td>
                 <td className="px-4 py-3 text-right">
                   <button onClick={() => handleDelete(e.id)} className="text-red-400 hover:text-red-600 text-xs">Delete</button>
@@ -123,9 +181,13 @@ export default function MarketingEffortsPage() {
                   <input type="date" value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm" />
                 </div>
                 <div>
-                  <label className="text-xs font-medium text-gray-500 block mb-1">Headcount</label>
+                  <label className="text-xs font-medium text-gray-500 block mb-1">Registration</label>
                   <input type="number" value={form.headcount} onChange={(e) => setForm({ ...form, headcount: e.target.value })} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm" />
                 </div>
+              </div>
+              <div>
+                <label className="text-xs font-medium text-gray-500 block mb-1">Total Deposit</label>
+                <input type="number" value={form.total_deposit} onChange={(e) => setForm({ ...form, total_deposit: e.target.value })} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm" />
               </div>
               {[
                 { label: 'Store Name', key: 'store_name' },
@@ -145,9 +207,15 @@ export default function MarketingEffortsPage() {
                 <label className="text-xs font-medium text-gray-500 block mb-1">Notes</label>
                 <textarea value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} rows={2} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm resize-none" />
               </div>
+              <div>
+                <label className="text-xs font-medium text-gray-500 block mb-1">Report File (.pdf or .docx)</label>
+                <input type="file" accept=".pdf,.docx" onChange={(e) => handleFileSelect(e.target.files?.[0] || null)} className="w-full text-sm" />
+                {reportFile && <p className="text-xs text-gray-500 mt-1">Selected: {reportFile.name}</p>}
+                {fileError && <p className="text-xs text-red-600 mt-1">{fileError}</p>}
+              </div>
             </div>
             <div className="flex gap-2 mt-5 justify-end">
-              <button onClick={() => setModal(false)} className="px-4 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-lg">Cancel</button>
+              <button onClick={() => { setModal(false); setReportFile(null); setFileError('') }} className="px-4 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-lg">Cancel</button>
               <button onClick={handleSave} disabled={saving || !form.date} className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-blue-300">{saving ? 'Saving...' : 'Save'}</button>
             </div>
           </div>
