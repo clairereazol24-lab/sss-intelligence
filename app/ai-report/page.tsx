@@ -32,7 +32,14 @@ export default function AIReportPage() {
         body: JSON.stringify({ performanceData: perfData, marketingData, period: 'all' }),
       })
 
-      if (!res.ok) throw new Error('Report generation failed')
+      if (!res.ok) {
+        let message = 'Report generation failed'
+        try {
+          const data = await res.json()
+          if (data?.error) message = data.error
+        } catch {}
+        throw new Error(message)
+      }
 
       const reader = res.body!.getReader()
       const decoder = new TextDecoder()
@@ -67,7 +74,7 @@ export default function AIReportPage() {
   }
 
   return (
-    <div className="p-6 max-w-4xl mx-auto">
+    <div className="p-6">
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-bold text-gray-800 mb-1">AI Report</h1>
@@ -84,7 +91,7 @@ export default function AIReportPage() {
 
       {(report || generating) && (
         <div className="bg-white rounded-xl border border-gray-200 p-6">
-          <div ref={reportRef}>
+          <div ref={reportRef} className="max-w-4xl">
             {report ? renderReport(report) : <p className="text-gray-400 text-sm animate-pulse">Claude is analyzing your data...</p>}
           </div>
         </div>
