@@ -102,11 +102,12 @@ export async function GET(request: NextRequest) {
       const partnerKey = (s as any).partner || 'Unknown'
       const key = `${dspKey}__${partnerKey}`
       if (!dspMap[key]) {
-        dspMap[key] = { dsp: dspKey, partner: partnerKey, store_count: 0, total_deposit: 0, total_grr: 0 }
+        dspMap[key] = { dsp: dspKey, partner: partnerKey, store_count: 0, total_deposit: 0, total_grr: 0, registered_members: 0 }
       }
       dspMap[key].store_count += 1
       dspMap[key].total_deposit += (s as any).total_deposit
       dspMap[key].total_grr += (s as any).company_net_win
+      dspMap[key].registered_members += (s as any).registered_members
     }
 
     const top50DSPs = Object.values(dspMap)
@@ -115,6 +116,10 @@ export async function GET(request: NextRequest) {
 
     const top50DSPsByDeposit = Object.values(dspMap)
       .sort((a: any, b: any) => (b as any).total_deposit - (a as any).total_deposit)
+      .slice(0, 50)
+
+    const top50DSPsByMembers = Object.values(dspMap)
+      .sort((a: any, b: any) => (b as any).registered_members - (a as any).registered_members)
       .slice(0, 50)
 
     const top50DSPsByGGR = Object.values(dspMap)
@@ -138,7 +143,7 @@ export async function GET(request: NextRequest) {
 
     const lastUpdated = lastRow && lastRow.length > 0 ? lastRow[0] : null
 
-    return NextResponse.json({ top50Stores, top50StoresByMembers, top50StoresByGGR, top50DSPs, top50DSPsByDeposit, top50DSPsByGGR, periods: uniquePeriods, overallTotals, allStores, lastUpdated })
+    return NextResponse.json({ top50Stores, top50StoresByMembers, top50StoresByGGR, top50DSPs, top50DSPsByDeposit, top50DSPsByGGR, top50DSPsByMembers, periods: uniquePeriods, overallTotals, allStores, lastUpdated })
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 500 })
   }
