@@ -91,6 +91,10 @@ export async function GET(request: NextRequest) {
       .sort((a: any, b: any) => b.registered_members - a.registered_members)
       .slice(0, 50)
 
+    const top50StoresByGGR = [...stores]
+      .sort((a: any, b: any) => b.company_net_win - a.company_net_win)
+      .slice(0, 50)
+
     // Aggregate by DSP
     const dspMap: Record<string, any> = {}
     for (const s of stores) {
@@ -113,6 +117,10 @@ export async function GET(request: NextRequest) {
       .sort((a: any, b: any) => (b as any).total_deposit - (a as any).total_deposit)
       .slice(0, 50)
 
+    const top50DSPsByGGR = Object.values(dspMap)
+      .sort((a: any, b: any) => (b as any).total_grr - (a as any).total_grr)
+      .slice(0, 50)
+
     // Available periods
     const { data: periods } = await supabase
       .from('performance_data')
@@ -130,7 +138,7 @@ export async function GET(request: NextRequest) {
 
     const lastUpdated = lastRow && lastRow.length > 0 ? lastRow[0] : null
 
-    return NextResponse.json({ top50Stores, top50StoresByMembers, top50DSPs, top50DSPsByDeposit, periods: uniquePeriods, overallTotals, allStores, lastUpdated })
+    return NextResponse.json({ top50Stores, top50StoresByMembers, top50StoresByGGR, top50DSPs, top50DSPsByDeposit, top50DSPsByGGR, periods: uniquePeriods, overallTotals, allStores, lastUpdated })
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 500 })
   }
