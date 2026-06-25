@@ -31,6 +31,8 @@ export default function StoreDirectoryPage() {
   const [bulkHeaders, setBulkHeaders] = useState<string[]>([])
   const [bulkUploading, setBulkUploading] = useState(false)
   const [bulkError, setBulkError] = useState<string | null>(null)
+  const [bulkMode, setBulkMode] = useState<'new' | 'update'>('new')
+  const [bulkResult, setBulkResult] = useState<string | null>(null)
   const bulkFileRef = useRef<HTMLInputElement>(null)
 
   const fetchStores = async () => {
@@ -51,6 +53,7 @@ export default function StoreDirectoryPage() {
 
   const handleBulkFile = (f: File) => {
     setBulkError(null)
+    setBulkResult(null)
     Papa.parse(f, {
       header: true,
       skipEmptyLines: true,
@@ -65,11 +68,17 @@ export default function StoreDirectoryPage() {
     setBulkParsed([])
     setBulkHeaders([])
     setBulkError(null)
+    setBulkMode('new')
     if (bulkFileRef.current) bulkFileRef.current.value = ''
   }
 
   const handleBulkImport = async () => {
     if (!subAffiliateKey || !storeNameKey) return
+    if (bulkMode === 'update' && !window.confirm(
+      'This will replace the entire Store Directory — any store missing from this file will be deleted. Continue?'
+    )) {
+      return
+    }
     setBulkUploading(true)
     setBulkError(null)
     const records = bulkParsed.map((row: any) => ({
@@ -82,14 +91,18 @@ export default function StoreDirectoryPage() {
     const res = await fetch('/api/stores/bulk', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ stores: records }),
+      body: JSON.stringify({ stores: records, mode: bulkMode }),
     })
     const data = await res.json()
     setBulkUploading(false)
     if (data.error) {
       setBulkError(data.error)
     } else {
+      const wasUpdateMode = bulkMode === 'update'
       handleBulkCancel()
+      if (wasUpdateMode) {
+        setBulkResult(`✅ Directory updated: ${data.count} stores upserted, ${data.removed} removed.`)
+      }
       fetchStores()
     }
   }
@@ -137,6 +150,8 @@ export default function StoreDirectoryPage() {
           <button onClick={openAdd} className="bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors">+ Add Store</button>
         </div>
       </div>
+
+      {bulkResult && <div className="bg-green-50 border border-green-200 text-green-800 px-4 py-3 rounded-lg mb-4 text-sm">{bulkResult}</div>}
 
       {/* Filters */}
       <div className="flex gap-3 mb-5">
@@ -230,6 +245,17 @@ export default function StoreDirectoryPage() {
                 ⚠️ CSV must have <strong>Sub Affiliate</strong> and <strong>Store Name</strong> columns.
               </div>
             )}
+
+            <div className="mb-5">
+              <h3 className="font-semibold text-gray-700 mb-3">Upload Mode</h3>
+              <div className="flex gap-4 mb-2">
+                <button onClick={() => setBulkMode('new')} className={`px-4 py-2 rounded-lg text-sm font-medium ${bulkMode === 'new' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-600'}`}>New Upload</button>
+                <button onClick={() => setBulkMode('update')} className={`px-4 py-2 rounded-lg text-sm font-medium ${bulkMode === 'update' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-600'}`}>Update File</button>
+              </div>
+              {bulkMode === 'update' && (
+                <p className="text-xs text-amber-600">⚠️ This will replace the entire Store Directory — any store missing from this file will be deleted.</p>
+              )}
+            </div>
 
             <div className="mb-5">
               <h3 className="font-semibold text-gray-700 mb-3">Preview ({bulkParsed.length} rows)</h3>

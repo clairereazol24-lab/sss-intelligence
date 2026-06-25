@@ -8,11 +8,13 @@ const supabase = createClient(
 
 export async function POST(request: NextRequest) {
   try {
-    const { stores } = await request.json()
+    const { stores, mode } = await request.json()
 
     if (!stores || !Array.isArray(stores) || stores.length === 0) {
       return NextResponse.json({ error: 'No stores provided' }, { status: 400 })
     }
+
+    const uploadMode = mode === 'update' ? 'update' : 'new'
 
     const records = stores.map((s: any) => ({
       sub_affiliate: s.sub_affiliate,
@@ -30,7 +32,20 @@ export async function POST(request: NextRequest) {
 
     if (error) throw error
 
-    return NextResponse.json({ success: true, count: data?.length || 0 })
+    let removed = 0
+    if (uploadMode === 'update') {
+      const idList = records.map((r) => `"${r.sub_affiliate}"`).join(',')
+      const { data: removedRows, error: deleteError } = await supabase
+        .from('stores')
+        .delete()
+        .not('sub_affiliate', 'in', `(${idList})`)
+        .select()
+
+      if (deleteError) throw deleteError
+      removed = removedRows?.length || 0
+    }
+
+    return NextResponse.json({ success: true, count: data?.length || 0, removed })
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 500 })
   }

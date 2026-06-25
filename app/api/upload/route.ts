@@ -8,10 +8,16 @@ const supabase = createClient(
 
 export async function POST(request: NextRequest) {
   try {
-    const { records, period, periodType } = await request.json()
+    const { records, period, periodType, mode } = await request.json()
 
     if (!records || !period || !periodType) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
+    }
+
+    const uploadMode = mode === 'update' ? 'update' : 'new'
+
+    if (uploadMode === 'update' && records.length === 0) {
+      return NextResponse.json({ error: 'Cannot update with an empty file.' }, { status: 400 })
     }
 
     // Auto-upsert stores master table
@@ -55,7 +61,22 @@ export async function POST(request: NextRequest) {
 
     if (error) throw error
 
-    return NextResponse.json({ success: true, count: perfRecords.length })
+    let removed = 0
+    if (uploadMode === 'update') {
+      const idList = perfRecords.map((r: any) => `"${r.sub_affiliate}"`).join(',')
+      const { data: removedRows, error: deleteError } = await supabase
+        .from('performance_data')
+        .delete()
+        .eq('period', period)
+        .eq('period_type', periodType)
+        .not('sub_affiliate', 'in', `(${idList})`)
+        .select()
+
+      if (deleteError) throw deleteError
+      removed = removedRows?.length || 0
+    }
+
+    return NextResponse.json({ success: true, count: perfRecords.length, removed })
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 500 })
   }

@@ -50,6 +50,7 @@ export default function SSSDataPage() {
   const [error, setError] = useState<string | null>(null)
   const [hasPartner, setHasPartner] = useState(false)
   const [hasDSP, setHasDSP] = useState(false)
+  const [mode, setMode] = useState<'new' | 'update'>('new')
   const fileRef = useRef<HTMLInputElement>(null)
 
   const [overallFrom, setOverallFrom] = useState('')
@@ -141,6 +142,7 @@ export default function SSSDataPage() {
     setHeaders([])
     setHasPartner(false)
     setHasDSP(false)
+    setMode('new')
     setError(null)
     if (fileRef.current) fileRef.current.value = ''
   }
@@ -154,6 +156,11 @@ export default function SSSDataPage() {
     const period = getPeriod()
     if (!period || period.includes('undefined') || period === '-') {
       setError('Please select a valid period.')
+      return
+    }
+    if (mode === 'update' && !window.confirm(
+      'This will replace data for the selected period — any store missing from this file will be removed from that period. Continue?'
+    )) {
       return
     }
     setUploading(true)
@@ -181,16 +188,21 @@ export default function SSSDataPage() {
     const res = await fetch('/api/upload', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ records, period, periodType }),
+      body: JSON.stringify({ records, period, periodType, mode }),
     })
     const data = await res.json()
     setUploading(false)
     if (data.error) {
       setError(data.error)
     } else {
-      setResult(`✅ Successfully uploaded ${data.count} store records for period: ${period}`)
+      setResult(
+        mode === 'update'
+          ? `✅ Updated period ${period}: ${data.count} records upserted, ${data.removed} removed.`
+          : `✅ Successfully uploaded ${data.count} store records for period: ${period}`
+      )
       setParsed([])
       setFile(null)
+      setMode('new')
       if (fileRef.current) fileRef.current.value = ''
     }
   }
@@ -331,6 +343,18 @@ export default function SSSDataPage() {
               {!hasPartner && <div className="bg-yellow-50 border border-yellow-200 text-yellow-800 text-sm px-4 py-2 rounded-lg">⚠️ No <strong>Partner</strong> column detected. Add it to your CSV before uploading.</div>}
               {!hasDSP && <div className="bg-yellow-50 border border-yellow-200 text-yellow-800 text-sm px-4 py-2 rounded-lg">⚠️ No <strong>DSP</strong> column detected. Add it to your CSV before uploading.</div>}
               {hasPartner && hasDSP && <div className="bg-green-50 border border-green-200 text-green-800 text-sm px-4 py-2 rounded-lg">✅ Partner and DSP columns detected.</div>}
+            </div>
+
+            {/* Upload mode */}
+            <div className="mb-5">
+              <h3 className="font-semibold text-gray-700 mb-3">Upload Mode</h3>
+              <div className="flex gap-4 mb-2">
+                <button onClick={() => setMode('new')} className={`px-4 py-2 rounded-lg text-sm font-medium ${mode === 'new' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-600'}`}>New Upload</button>
+                <button onClick={() => setMode('update')} className={`px-4 py-2 rounded-lg text-sm font-medium ${mode === 'update' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-600'}`}>Update File</button>
+              </div>
+              {mode === 'update' && (
+                <p className="text-xs text-amber-600">⚠️ This will replace data for the selected period — any store missing from this file will be removed from that period.</p>
+              )}
             </div>
 
             {/* Period selector */}
