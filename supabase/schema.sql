@@ -60,6 +60,24 @@ CREATE TABLE IF NOT EXISTS marketing_efforts (
 );
 
 -- ============================================================
+-- PERFORMANCE DATA: updated_at (tracks value changes on upsert,
+-- not just new rows, so AI Report caching can detect edits)
+-- ============================================================
+ALTER TABLE performance_data ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT NOW();
+
+-- ============================================================
+-- AI REPORT CACHE (avoids regenerating on every page visit;
+-- only regenerates when performance_data or marketing_efforts changes)
+-- ============================================================
+CREATE TABLE IF NOT EXISTS ai_report_cache (
+  period VARCHAR(20) PRIMARY KEY,
+  report_text TEXT NOT NULL,
+  data_fingerprint TEXT NOT NULL,
+  generated_at TIMESTAMPTZ DEFAULT NOW()
+);
+ALTER TABLE ai_report_cache DISABLE ROW LEVEL SECURITY;
+
+-- ============================================================
 -- INDEXES
 -- ============================================================
 CREATE INDEX IF NOT EXISTS idx_perf_period ON performance_data(period);

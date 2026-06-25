@@ -53,6 +53,7 @@ export async function POST(request: NextRequest) {
       effective_member: parseInt(r.effective_member) || 0,
       partner: r.partner || null,
       dsp: r.dsp || null,
+      updated_at: new Date().toISOString(),
     }))
 
     const { error } = await supabase

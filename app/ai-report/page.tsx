@@ -15,6 +15,25 @@ export default function AIReportPage() {
     setReport('')
     setError('')
 
+    try {
+      const statusRes = await fetch('/api/ai-report?period=all')
+      const status = await statusRes.json()
+
+      if (!status.hasData) {
+        setError('No performance data found. Upload data in SSS Data first.')
+        setGenerating(false)
+        return
+      }
+
+      if (status.cached && status.report) {
+        setReport(status.report)
+        setGenerating(false)
+        return
+      }
+    } catch {
+      // status check failed — fall through and attempt a fresh generation
+    }
+
     const { data: perfData } = await supabase.from('performance_data').select('*')
     const { data: mData } = await supabase.from('marketing_efforts').select('*').order('date', { ascending: false }).limit(50)
     const marketingData = mData || []
