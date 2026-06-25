@@ -5,6 +5,11 @@ import { getUserAccess, hasModuleAccess, moduleForPath } from '@/lib/auth'
 export async function middleware(request: NextRequest) {
   const response = NextResponse.next({ request: { headers: request.headers } })
 
+  function withCookies(target: NextResponse) {
+    response.cookies.getAll().forEach((cookie) => target.cookies.set(cookie))
+    return target
+  }
+
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
@@ -28,29 +33,30 @@ export async function middleware(request: NextRequest) {
 
   if (!user) {
     if (path === '/login') return response
-    return NextResponse.redirect(new URL('/login', request.url))
+    return withCookies(NextResponse.redirect(new URL('/login', request.url)))
   }
 
   if (path === '/login') {
-    return NextResponse.redirect(new URL('/', request.url))
+    return withCookies(NextResponse.redirect(new URL('/', request.url)))
   }
 
   const access = await getUserAccess(supabase, user.id)
   if (!access) {
-    return NextResponse.redirect(new URL('/login', request.url))
+    return withCookies(NextResponse.redirect(new URL('/login', request.url)))
   }
 
-  const isAccountsRoute = path === '/accounts' || path.startsWith('/api/accounts')
+  const isAccountsRoute =
+    path === '/accounts' || path === '/api/accounts' || path.startsWith('/api/accounts/')
   if (isAccountsRoute && access.role !== 'admin') {
     if (path.startsWith('/api/')) {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+      return withCookies(NextResponse.json({ error: 'Forbidden' }, { status: 403 }))
     }
-    return NextResponse.redirect(new URL('/', request.url))
+    return withCookies(NextResponse.redirect(new URL('/', request.url)))
   }
 
   const moduleKey = moduleForPath(path)
   if (moduleKey && !hasModuleAccess(access, moduleKey)) {
-    return NextResponse.redirect(new URL('/', request.url))
+    return withCookies(NextResponse.redirect(new URL('/', request.url)))
   }
 
   return response
