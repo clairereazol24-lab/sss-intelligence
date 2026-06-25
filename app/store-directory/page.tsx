@@ -107,9 +107,11 @@ export default function StoreDirectoryPage() {
     } else {
       const wasUpdateMode = bulkMode === 'update'
       handleBulkCancel()
-      if (wasUpdateMode) {
-        setBulkResult(`✅ Directory updated: ${data.count} stores upserted, ${data.removed} removed.`)
-      }
+      setBulkResult(
+        wasUpdateMode
+          ? `✅ Directory updated: ${data.count} stores upserted, ${data.removed} removed.`
+          : `✅ Successfully imported ${data.count} stores.`
+      )
       fetchStores()
     }
   }
