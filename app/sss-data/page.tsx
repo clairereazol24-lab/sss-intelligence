@@ -51,6 +51,7 @@ export default function SSSDataPage() {
   const [hasPartner, setHasPartner] = useState(false)
   const [hasDSP, setHasDSP] = useState(false)
   const [mode, setMode] = useState<'new' | 'update'>('new')
+  const [confirming, setConfirming] = useState(false)
   const fileRef = useRef<HTMLInputElement>(null)
 
   const [overallFrom, setOverallFrom] = useState('')
@@ -143,11 +144,12 @@ export default function SSSDataPage() {
     setHasPartner(false)
     setHasDSP(false)
     setMode('new')
+    setConfirming(false)
     setError(null)
     if (fileRef.current) fileRef.current.value = ''
   }
 
-  const handleUpload = async () => {
+  const handleUploadClick = () => {
     if (!parsed.length) return
     if (periodType === 'monthly' && !month) {
       setError('Please select a month before uploading.')
@@ -158,11 +160,16 @@ export default function SSSDataPage() {
       setError('Please select a valid period.')
       return
     }
-    if (mode === 'update' && !window.confirm(
-      'This will replace data for the selected period — any store missing from this file will be removed from that period. Continue?'
-    )) {
+    if (mode === 'update' && !confirming) {
+      setConfirming(true)
       return
     }
+    performUpload()
+  }
+
+  const performUpload = async () => {
+    setConfirming(false)
+    const period = getPeriod()
     setUploading(true)
     setError(null)
 
@@ -349,8 +356,8 @@ export default function SSSDataPage() {
             <div className="mb-5">
               <h3 className="font-semibold text-gray-700 mb-3">Upload Mode</h3>
               <div className="flex gap-4 mb-2">
-                <button onClick={() => setMode('new')} className={`px-4 py-2 rounded-lg text-sm font-medium ${mode === 'new' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-600'}`}>New Upload</button>
-                <button onClick={() => setMode('update')} className={`px-4 py-2 rounded-lg text-sm font-medium ${mode === 'update' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-600'}`}>Update File</button>
+                <button onClick={() => { setMode('new'); setConfirming(false) }} className={`px-4 py-2 rounded-lg text-sm font-medium ${mode === 'new' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-600'}`}>New Upload</button>
+                <button onClick={() => { setMode('update'); setConfirming(false) }} className={`px-4 py-2 rounded-lg text-sm font-medium ${mode === 'update' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-600'}`}>Update File</button>
               </div>
               {mode === 'update' && (
                 <p className="text-xs text-amber-600">⚠️ This will replace data for the selected period — any store missing from this file will be removed from that period.</p>
@@ -411,13 +418,13 @@ export default function SSSDataPage() {
             {error && <div className="bg-red-50 border border-red-200 text-red-800 px-4 py-3 rounded-lg mb-4 text-sm">❌ {error}</div>}
 
             <div className="flex gap-2 justify-end">
-              <button onClick={handleCancel} className="px-4 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-lg">Cancel</button>
+              <button onClick={confirming ? () => setConfirming(false) : handleCancel} className="px-4 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-lg">Cancel</button>
               <button
-                onClick={handleUpload}
+                onClick={handleUploadClick}
                 disabled={uploading}
-                className="bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 text-white font-medium px-6 py-2.5 rounded-lg transition-colors text-sm"
+                className={confirming ? 'bg-red-600 hover:bg-red-700 disabled:bg-red-300 text-white font-medium px-6 py-2.5 rounded-lg transition-colors text-sm' : 'bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 text-white font-medium px-6 py-2.5 rounded-lg transition-colors text-sm'}
               >
-                {uploading ? 'Uploading...' : `Upload ${parsed.length} Records`}
+                {uploading ? 'Uploading...' : confirming ? 'Yes, Replace Data' : `Upload ${parsed.length} Records`}
               </button>
             </div>
           </div>
