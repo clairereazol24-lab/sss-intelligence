@@ -32,6 +32,7 @@ export default function StoreDirectoryPage() {
   const [bulkUploading, setBulkUploading] = useState(false)
   const [bulkError, setBulkError] = useState<string | null>(null)
   const [bulkMode, setBulkMode] = useState<'new' | 'update'>('new')
+  const [bulkConfirming, setBulkConfirming] = useState(false)
   const [bulkResult, setBulkResult] = useState<string | null>(null)
   const bulkFileRef = useRef<HTMLInputElement>(null)
 
@@ -69,16 +70,22 @@ export default function StoreDirectoryPage() {
     setBulkHeaders([])
     setBulkError(null)
     setBulkMode('new')
+    setBulkConfirming(false)
     if (bulkFileRef.current) bulkFileRef.current.value = ''
   }
 
-  const handleBulkImport = async () => {
+  const handleBulkImportClick = () => {
     if (!subAffiliateKey || !storeNameKey) return
-    if (bulkMode === 'update' && !window.confirm(
-      'This will replace the entire Store Directory — any store missing from this file will be deleted. Continue?'
-    )) {
+    if (bulkMode === 'update' && !bulkConfirming) {
+      setBulkConfirming(true)
       return
     }
+    performBulkImport()
+  }
+
+  const performBulkImport = async () => {
+    if (!subAffiliateKey || !storeNameKey) return
+    setBulkConfirming(false)
     setBulkUploading(true)
     setBulkError(null)
     const records = bulkParsed.map((row: any) => ({
@@ -249,8 +256,8 @@ export default function StoreDirectoryPage() {
             <div className="mb-5">
               <h3 className="font-semibold text-gray-700 mb-3">Upload Mode</h3>
               <div className="flex gap-4 mb-2">
-                <button onClick={() => setBulkMode('new')} className={`px-4 py-2 rounded-lg text-sm font-medium ${bulkMode === 'new' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-600'}`}>New Upload</button>
-                <button onClick={() => setBulkMode('update')} className={`px-4 py-2 rounded-lg text-sm font-medium ${bulkMode === 'update' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-600'}`}>Update File</button>
+                <button onClick={() => { setBulkMode('new'); setBulkConfirming(false) }} className={`px-4 py-2 rounded-lg text-sm font-medium ${bulkMode === 'new' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-600'}`}>New Upload</button>
+                <button onClick={() => { setBulkMode('update'); setBulkConfirming(false) }} className={`px-4 py-2 rounded-lg text-sm font-medium ${bulkMode === 'update' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-600'}`}>Update File</button>
               </div>
               {bulkMode === 'update' && (
                 <p className="text-xs text-amber-600">⚠️ This will replace the entire Store Directory — any store missing from this file will be deleted.</p>
@@ -287,14 +294,14 @@ export default function StoreDirectoryPage() {
             {bulkError && <div className="bg-red-50 border border-red-200 text-red-800 px-4 py-3 rounded-lg mb-4 text-sm">❌ {bulkError}</div>}
 
             <div className="flex gap-2 justify-end">
-              <button onClick={handleBulkCancel} className="px-4 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-lg">Cancel</button>
+              <button onClick={bulkConfirming ? () => setBulkConfirming(false) : handleBulkCancel} className="px-4 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-lg">Cancel</button>
               {subAffiliateKey && storeNameKey && (
                 <button
-                  onClick={handleBulkImport}
+                  onClick={handleBulkImportClick}
                   disabled={bulkUploading}
-                  className="bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 text-white font-medium px-6 py-2.5 rounded-lg transition-colors text-sm"
+                  className={bulkConfirming ? 'bg-red-600 hover:bg-red-700 disabled:bg-red-300 text-white font-medium px-6 py-2.5 rounded-lg transition-colors text-sm' : 'bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 text-white font-medium px-6 py-2.5 rounded-lg transition-colors text-sm'}
                 >
-                  {bulkUploading ? 'Importing...' : `Import ${bulkParsed.length} Stores`}
+                  {bulkUploading ? 'Importing...' : bulkConfirming ? 'Yes, Replace Directory' : `Import ${bulkParsed.length} Stores`}
                 </button>
               )}
             </div>
