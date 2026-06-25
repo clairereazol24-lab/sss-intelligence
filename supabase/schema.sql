@@ -78,6 +78,27 @@ CREATE TABLE IF NOT EXISTS ai_report_cache (
 ALTER TABLE ai_report_cache DISABLE ROW LEVEL SECURITY;
 
 -- ============================================================
+-- PROFILES (role + display name for each Supabase Auth user)
+-- ============================================================
+CREATE TABLE IF NOT EXISTS profiles (
+  id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+  username VARCHAR(100) NOT NULL,
+  role VARCHAR(10) NOT NULL DEFAULT 'member' CHECK (role IN ('admin', 'member')),
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+ALTER TABLE profiles DISABLE ROW LEVEL SECURITY;
+
+-- ============================================================
+-- MODULE PERMISSIONS (per-member module grants; admins bypass this)
+-- ============================================================
+CREATE TABLE IF NOT EXISTS module_permissions (
+  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  module VARCHAR(30) NOT NULL CHECK (module IN ('sss_data', 'performance', 'store_directory', 'ai_report', 'marketing_efforts')),
+  PRIMARY KEY (user_id, module)
+);
+ALTER TABLE module_permissions DISABLE ROW LEVEL SECURITY;
+
+-- ============================================================
 -- INDEXES
 -- ============================================================
 CREATE INDEX IF NOT EXISTS idx_perf_period ON performance_data(period);
