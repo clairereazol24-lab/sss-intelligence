@@ -1,0 +1,53 @@
+import type { SupabaseClient } from '@supabase/supabase-js'
+
+export type ModuleKey = 'sss_data' | 'performance' | 'store_directory' | 'ai_report' | 'marketing_efforts'
+
+export type ModuleDef = { key: ModuleKey; label: string; href: string; icon: string }
+
+export const MODULES: ModuleDef[] = [
+  { key: 'sss_data', label: 'SSS Data', href: '/sss-data', icon: '📤' },
+  { key: 'performance', label: 'Performance', href: '/performance', icon: '🏆' },
+  { key: 'store_directory', label: 'Store Directory', href: '/store-directory', icon: '🏪' },
+  { key: 'ai_report', label: 'AI Report', href: '/ai-report', icon: '🤖' },
+  { key: 'marketing_efforts', label: 'Marketing Efforts', href: '/marketing-efforts', icon: '📣' },
+]
+
+export type UserAccess = {
+  role: 'admin' | 'member'
+  username: string
+  allowedModules: ModuleKey[]
+}
+
+export async function getUserAccess(supabase: SupabaseClient, userId: string): Promise<UserAccess | null> {
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('username, role')
+    .eq('id', userId)
+    .maybeSingle()
+
+  if (!profile) return null
+
+  if (profile.role === 'admin') {
+    return { role: 'admin', username: profile.username, allowedModules: MODULES.map((m) => m.key) }
+  }
+
+  const { data: perms } = await supabase
+    .from('module_permissions')
+    .select('module')
+    .eq('user_id', userId)
+
+  return {
+    role: 'member',
+    username: profile.username,
+    allowedModules: (perms || []).map((p: any) => p.module as ModuleKey),
+  }
+}
+
+export function hasModuleAccess(access: UserAccess, module: ModuleKey): boolean {
+  return access.role === 'admin' || access.allowedModules.includes(module)
+}
+
+export function moduleForPath(pathname: string): ModuleKey | null {
+  const match = MODULES.find((m) => pathname === m.href || pathname.startsWith(`${m.href}/`))
+  return match ? match.key : null
+}
