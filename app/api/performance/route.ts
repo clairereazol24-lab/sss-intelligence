@@ -83,13 +83,13 @@ export async function GET(request: NextRequest) {
       }
     )
 
-    const top20Stores = [...stores]
+    const top50Stores = [...stores]
       .sort((a: any, b: any) => b.total_deposit - a.total_deposit)
-      .slice(0, 20)
+      .slice(0, 50)
 
-    const top20StoresByMembers = [...stores]
+    const top50StoresByMembers = [...stores]
       .sort((a: any, b: any) => b.registered_members - a.registered_members)
-      .slice(0, 20)
+      .slice(0, 50)
 
     // Aggregate by DSP
     const dspMap: Record<string, any> = {}
@@ -105,13 +105,13 @@ export async function GET(request: NextRequest) {
       dspMap[key].total_grr += (s as any).company_net_win
     }
 
-    const top20DSPs = Object.values(dspMap)
+    const top50DSPs = Object.values(dspMap)
       .sort((a: any, b: any) => b.store_count - a.store_count)
-      .slice(0, 20)
+      .slice(0, 50)
 
-    const top20DSPsByDeposit = Object.values(dspMap)
+    const top50DSPsByDeposit = Object.values(dspMap)
       .sort((a: any, b: any) => (b as any).total_deposit - (a as any).total_deposit)
-      .slice(0, 20)
+      .slice(0, 50)
 
     // Available periods
     const { data: periods } = await supabase
@@ -130,7 +130,7 @@ export async function GET(request: NextRequest) {
 
     const lastUpdated = lastRow && lastRow.length > 0 ? lastRow[0] : null
 
-    return NextResponse.json({ top20Stores, top20StoresByMembers, top20DSPs, top20DSPsByDeposit, periods: uniquePeriods, overallTotals, allStores, lastUpdated })
+    return NextResponse.json({ top50Stores, top50StoresByMembers, top50DSPs, top50DSPsByDeposit, periods: uniquePeriods, overallTotals, allStores, lastUpdated })
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 500 })
   }

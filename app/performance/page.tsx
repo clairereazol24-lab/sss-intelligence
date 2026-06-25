@@ -35,10 +35,10 @@ export default function PerformancePage() {
     setLoading(true)
     const res = await fetch(`/api/performance?period=${period}`)
     const data = await res.json()
-    setStores(data.top20Stores || [])
-    setStoresByMembers(data.top20StoresByMembers || [])
-    setDSPs(data.top20DSPs || [])
-    setDSPsByDeposit(data.top20DSPsByDeposit || [])
+    setStores(data.top50Stores || [])
+    setStoresByMembers(data.top50StoresByMembers || [])
+    setDSPs(data.top50DSPs || [])
+    setDSPsByDeposit(data.top50DSPsByDeposit || [])
     if (data.periods) setPeriods(data.periods)
     setLoading(false)
   }
@@ -55,7 +55,7 @@ export default function PerformancePage() {
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-bold text-gray-800">Performance</h1>
-          <p className="text-sm text-gray-500">Top 20 stores and DSPs by deposits</p>
+          <p className="text-sm text-gray-500">Top 50 stores and DSPs by deposits</p>
         </div>
         <select
           value={selectedPeriod}
@@ -71,10 +71,10 @@ export default function PerformancePage() {
         <div className="text-center py-20 text-gray-400">Loading...</div>
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Top 20 Stores */}
+          {/* Top 50 Stores */}
           <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
             <div className="px-5 py-4 border-b border-gray-100">
-              <h2 className="font-semibold text-gray-700">🏆 Top 20 Stores by Deposit</h2>
+              <h2 className="font-semibold text-gray-700">🏆 Top 50 Stores by Deposit</h2>
             </div>
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
@@ -114,10 +114,10 @@ export default function PerformancePage() {
             </div>
           </div>
 
-          {/* Top 20 Stores by Registered Members */}
+          {/* Top 50 Stores by Registered Members */}
           <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
             <div className="px-5 py-4 border-b border-gray-100">
-              <h2 className="font-semibold text-gray-700">⭐ Top 20 Stores by Registered Members</h2>
+              <h2 className="font-semibold text-gray-700">⭐ Top 50 Stores by Registered Members</h2>
             </div>
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
@@ -155,10 +155,10 @@ export default function PerformancePage() {
             </div>
           </div>
 
-          {/* Top 20 DSPs */}
+          {/* Top 50 DSPs */}
           <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
             <div className="px-5 py-4 border-b border-gray-100">
-              <h2 className="font-semibold text-gray-700">👤 Top 20 DSPs by Store Count</h2>
+              <h2 className="font-semibold text-gray-700">👤 Top 50 DSPs by Store Count</h2>
             </div>
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
@@ -193,10 +193,10 @@ export default function PerformancePage() {
             </div>
           </div>
 
-          {/* Top 20 DSPs by Deposit */}
+          {/* Top 50 DSPs by Deposit */}
           <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
             <div className="px-5 py-4 border-b border-gray-100">
-              <h2 className="font-semibold text-gray-700">💰 Top 20 DSPs by Deposit</h2>
+              <h2 className="font-semibold text-gray-700">💰 Top 50 DSPs by Deposit</h2>
             </div>
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
