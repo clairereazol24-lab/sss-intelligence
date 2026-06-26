@@ -114,6 +114,7 @@ export default function Sidebar({ modules, role, username }: SidebarProps) {
       <div className="border-t border-slate-700 p-4 space-y-1">
         <button
           onClick={() => setProfileOpen(!profileOpen)}
+          aria-label={username}
           className={`flex items-center w-full hover:bg-slate-800 rounded-lg px-2 py-2 transition-colors ${
             collapsed ? 'justify-center' : 'gap-3'
           }`}
