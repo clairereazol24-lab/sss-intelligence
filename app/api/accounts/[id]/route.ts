@@ -23,15 +23,25 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
   if (!admin) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
   try {
-    const { username, modules, password } = await request.json()
+    const { username, name, modules, password } = await request.json()
     const userId = params.id
 
-    if (username) {
+    const profileUpdate: { username?: string; name?: string | null } = {}
+    if (username) profileUpdate.username = username
+    if (name !== undefined) profileUpdate.name = name || null
+
+    if (Object.keys(profileUpdate).length > 0) {
       const { error: profileError } = await supabaseAdmin
         .from('profiles')
-        .update({ username })
+        .update(profileUpdate)
         .eq('id', userId)
       if (profileError) throw profileError
+    }
+
+    if (username) {
+      const newEmail = `${(username as string).trim().toLowerCase()}@lakiwin.internal`
+      const { error: emailError } = await supabaseAdmin.auth.admin.updateUserById(userId, { email: newEmail })
+      if (emailError) throw emailError
     }
 
     if (password) {
@@ -46,10 +56,10 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
         .eq('user_id', userId)
       if (deleteError) throw deleteError
 
-      if (modules.length > 0) {
+      if ((modules as string[]).length > 0) {
         const { error: insertError } = await supabaseAdmin
           .from('module_permissions')
-          .insert(modules.map((module: string) => ({ user_id: userId, module })))
+          .insert((modules as string[]).map((module) => ({ user_id: userId, module })))
         if (insertError) throw insertError
       }
     }

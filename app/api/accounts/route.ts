@@ -25,8 +25,7 @@ export async function GET() {
   try {
     const { data: profiles, error: profileError } = await supabaseAdmin
       .from('profiles')
-      .select('id, username, role')
-      .eq('role', 'member')
+      .select('id, username, name, role')
     if (profileError) throw profileError
 
     const { data: perms, error: permError } = await supabaseAdmin
@@ -34,14 +33,14 @@ export async function GET() {
       .select('user_id, module')
     if (permError) throw permError
 
-    const { data: usersData, error: usersError } = await supabaseAdmin.auth.admin.listUsers()
-    if (usersError) throw usersError
-
     const accounts = (profiles || []).map((p: any) => ({
       id: p.id,
       username: p.username,
-      email: usersData.users.find((u: any) => u.id === p.id)?.email || '',
-      modules: (perms || []).filter((perm: any) => perm.user_id === p.id).map((perm: any) => perm.module),
+      name: p.name ?? null,
+      role: p.role as 'admin' | 'member',
+      modules: (perms || [])
+        .filter((perm: any) => perm.user_id === p.id)
+        .map((perm: any) => perm.module as string),
     }))
 
     return NextResponse.json({ accounts })
@@ -55,11 +54,13 @@ export async function POST(request: NextRequest) {
   if (!admin) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
   try {
-    const { email, password, username, modules } = await request.json()
+    const { username, name, password, modules } = await request.json()
 
-    if (!email || !password || !username) {
-      return NextResponse.json({ error: 'Email, password, and username are required.' }, { status: 400 })
+    if (!username || !password) {
+      return NextResponse.json({ error: 'Username and password are required.' }, { status: 400 })
     }
+
+    const email = `${(username as string).trim().toLowerCase()}@lakiwin.internal`
 
     const { data: created, error: createError } = await supabaseAdmin.auth.admin.createUser({
       email,
@@ -72,13 +73,13 @@ export async function POST(request: NextRequest) {
 
     const { error: profileError } = await supabaseAdmin
       .from('profiles')
-      .insert({ id: userId, username, role: 'member' })
+      .insert({ id: userId, username, name: name || null, role: 'member' })
     if (profileError) throw profileError
 
-    if (modules && modules.length > 0) {
+    if (modules && (modules as string[]).length > 0) {
       const { error: permError } = await supabaseAdmin
         .from('module_permissions')
-        .insert(modules.map((module: string) => ({ user_id: userId, module })))
+        .insert((modules as string[]).map((module) => ({ user_id: userId, module })))
       if (permError) throw permError
     }
 
