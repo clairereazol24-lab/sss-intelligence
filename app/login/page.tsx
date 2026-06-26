@@ -4,7 +4,7 @@ import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase-browser'
 
 export default function LoginPage() {
-  const [email, setEmail] = useState('')
+  const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
@@ -16,6 +16,7 @@ export default function LoginPage() {
     setLoading(true)
     try {
       const supabase = createClient()
+      const email = username.trim().toLowerCase() + '@lakiwin.internal'
       const { error: signInError } = await supabase.auth.signInWithPassword({ email, password })
       if (signInError) throw signInError
       router.push('/')
@@ -39,12 +40,12 @@ export default function LoginPage() {
           </div>
         )}
 
-        <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">Email</label>
+        <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">Username</label>
         <input
-          type="email"
+          type="text"
           required
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
+          value={username}
+          onChange={(e) => setUsername(e.target.value)}
           className="w-full border border-gray-200 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg px-3 py-2 text-sm mb-4"
         />
 
