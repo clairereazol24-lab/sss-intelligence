@@ -1,7 +1,8 @@
 'use client'
+import { useState } from 'react'
 import Link from 'next/link'
-import { usePathname, useRouter } from 'next/navigation'
-import { createClient } from '@/lib/supabase-browser'
+import { usePathname } from 'next/navigation'
+import ProfileModal from './ProfileModal'
 import type { ModuleDef } from '@/lib/auth'
 
 type SidebarProps = {
@@ -12,18 +13,13 @@ type SidebarProps = {
 
 export default function Sidebar({ modules, role, username }: SidebarProps) {
   const pathname = usePathname()
-  const router = useRouter()
-
-  const handleLogout = async () => {
-    const supabase = createClient()
-    await supabase.auth.signOut()
-    router.push('/login')
-    router.refresh()
-  }
+  const [profileOpen, setProfileOpen] = useState(false)
 
   const linkClass = (href: string) =>
     `flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
-      pathname === href ? 'bg-blue-600 text-white' : 'text-slate-300 hover:bg-slate-800 hover:text-white'
+      pathname === href
+        ? 'bg-blue-600 text-white'
+        : 'text-slate-300 hover:bg-slate-800 hover:text-white'
     }`
 
   return (
@@ -46,14 +42,19 @@ export default function Sidebar({ modules, role, username }: SidebarProps) {
           </Link>
         )}
       </nav>
-      <div className="p-4 border-t border-slate-700 space-y-2">
-        <p className="text-xs text-slate-500">Relevant Tech · Alpharus</p>
-        <div className="flex items-center justify-between">
-          <span className="text-xs text-slate-400">{username}</span>
-          <button onClick={handleLogout} className="text-xs text-slate-400 hover:text-white transition-colors">
-            Logout
-          </button>
-        </div>
+      <div className="p-4 border-t border-slate-700">
+        <button
+          onClick={() => setProfileOpen(!profileOpen)}
+          className="flex items-center gap-3 w-full hover:bg-slate-800 rounded-lg px-2 py-2 transition-colors"
+        >
+          <div className="w-10 h-10 rounded-full bg-slate-700 flex items-center justify-center flex-shrink-0">
+            <span className="text-white font-semibold text-sm">
+              {(username[0] ?? '?').toUpperCase()}
+            </span>
+          </div>
+          <span className="text-sm text-slate-300 truncate">{username}</span>
+        </button>
+        {profileOpen && <ProfileModal onClose={() => setProfileOpen(false)} />}
       </div>
     </div>
   )
