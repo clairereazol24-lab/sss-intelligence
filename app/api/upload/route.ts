@@ -14,10 +14,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
     }
 
-    const uploadMode = mode === 'update' ? 'update' : 'new'
-
-    if (uploadMode === 'update' && records.length === 0) {
-      return NextResponse.json({ error: 'Cannot update with an empty file.' }, { status: 400 })
+    if (records.length === 0) {
+      return NextResponse.json({ error: 'Cannot upload an empty file.' }, { status: 400 })
     }
 
     // Auto-upsert stores master table
@@ -33,19 +31,18 @@ export async function POST(request: NextRequest) {
       .from('stores')
       .upsert(storeUpserts, { onConflict: 'sub_affiliate', ignoreDuplicates: false })
 
-    // Upsert performance data
     const perfRecords = records.map((r: any) => ({
       sub_affiliate: r.sub_affiliate,
       store_name: r.store_name,
       period,
       period_type: periodType,
-      total_deposit: parseFloat(r.total_deposit) || 0,
+      total_deposit: Math.max(0, parseFloat(r.total_deposit) || 0),
       total_withdraw: parseFloat(r.total_withdraw) || 0,
       valid_bet_amount: parseFloat(r.valid_bet_amount) || 0,
       company_net_win: parseFloat(r.company_net_win) || 0,
       payout_amount: parseFloat(r.payout_amount) || 0,
       total_promotion_amount: parseFloat(r.total_promotion_amount) || 0,
-      registered_members: parseInt(r.registered_members) || 0,
+      registered_members: Math.max(0, parseInt(r.registered_members) || 0),
       first_deposit_amount: parseFloat(r.first_deposit_amount) || 0,
       first_deposit_count: parseInt(r.first_deposit_count) || 0,
       deposit_member_count: parseInt(r.deposit_member_count) || 0,
@@ -56,28 +53,23 @@ export async function POST(request: NextRequest) {
       updated_at: new Date().toISOString(),
     }))
 
-    const { error } = await supabase
-      .from('performance_data')
-      .upsert(perfRecords, { onConflict: 'sub_affiliate,period,partner' })
+    // Determine the partner scope for this upload
+    const partnerValue: string | null = perfRecords[0]?.partner ?? null
 
+    // Delete existing rows for this exact (period, period_type, partner) combination
+    // so re-uploading the same file never duplicates or conflicts with other partners
+    const deleteQuery = partnerValue
+      ? supabase.from('performance_data').delete().eq('period', period).eq('period_type', periodType).eq('partner', partnerValue)
+      : supabase.from('performance_data').delete().eq('period', period).eq('period_type', periodType).is('partner', null)
+
+    const { error: deleteError } = await deleteQuery
+    if (deleteError) throw deleteError
+
+    // Insert fresh
+    const { error } = await supabase.from('performance_data').insert(perfRecords)
     if (error) throw error
 
-    let removed = 0
-    if (uploadMode === 'update') {
-      const idList = perfRecords.map((r: any) => `"${r.sub_affiliate}"`).join(',')
-      const { data: removedRows, error: deleteError } = await supabase
-        .from('performance_data')
-        .delete()
-        .eq('period', period)
-        .eq('period_type', periodType)
-        .not('sub_affiliate', 'in', `(${idList})`)
-        .select()
-
-      if (deleteError) throw deleteError
-      removed = removedRows?.length || 0
-    }
-
-    return NextResponse.json({ success: true, count: perfRecords.length, removed })
+    return NextResponse.json({ success: true, count: perfRecords.length, removed: 0 })
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 500 })
   }
