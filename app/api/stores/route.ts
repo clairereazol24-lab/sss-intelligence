@@ -6,11 +6,12 @@ const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 )
 
-export async function GET() {
-  const { data, error } = await supabase
-    .from('stores')
-    .select('*')
-    .order('store_name', { ascending: true })
+export async function GET(request: NextRequest) {
+  const { searchParams } = new URL(request.url)
+  const partner = searchParams.get('partner')
+  let query = supabase.from('stores').select('*').order('store_name', { ascending: true })
+  if (partner) query = query.eq('partner', partner)
+  const { data, error } = await query
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json(data)
 }

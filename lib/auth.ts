@@ -22,7 +22,16 @@ export const MODULES: ModuleDef[] = [
       { label: 'Relevant Tech', href: '/performance/relevant-tech' },
     ],
   },
-  { key: 'store_directory', label: 'Store Directory', href: '/store-directory', icon: '🏪' },
+  {
+    key: 'store_directory',
+    label: 'Store Directory',
+    href: '/store-directory',
+    icon: '🏪',
+    children: [
+      { label: 'Alpharus', href: '/store-directory/alpharus' },
+      { label: 'Relevant Tech', href: '/store-directory/relevant-tech' },
+    ],
+  },
   // ai_report and marketing_efforts hidden — restore by uncommenting
   // { key: 'ai_report', label: 'AI Report', href: '/ai-report', icon: '🤖' },
   // { key: 'marketing_efforts', label: 'Marketing Efforts', href: '/marketing-efforts', icon: '📣' },

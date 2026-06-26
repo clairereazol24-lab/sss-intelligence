@@ -29,7 +29,7 @@ export async function POST(request: NextRequest) {
 
     await supabase
       .from('stores')
-      .upsert(storeUpserts, { onConflict: 'sub_affiliate', ignoreDuplicates: false })
+      .upsert(storeUpserts, { onConflict: 'sub_affiliate,partner', ignoreDuplicates: false })
 
     const perfRecords = records.map((r: any) => ({
       sub_affiliate: r.sub_affiliate,
