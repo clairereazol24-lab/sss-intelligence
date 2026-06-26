@@ -101,8 +101,8 @@ export default function AccountsPage() {
     <div className="p-6">
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-gray-800">Accounts</h1>
-          <p className="text-sm text-gray-500">Manage member logins and module access.</p>
+          <h1 className="text-2xl font-bold text-gray-800 dark:text-gray-100">Accounts</h1>
+          <p className="text-sm text-gray-500 dark:text-gray-400">Manage member logins and module access.</p>
         </div>
         <button
           onClick={() => setShowAdd(true)}
@@ -112,19 +112,19 @@ export default function AccountsPage() {
         </button>
       </div>
 
-      {error && <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-4 text-sm">{error}</div>}
+      {error && <div className="bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-400 px-4 py-3 rounded-lg mb-4 text-sm">{error}</div>}
 
       {showAdd && (
-        <div className="bg-white rounded-xl border border-gray-200 p-5 mb-6">
-          <h2 className="font-semibold text-gray-700 mb-3">New Account</h2>
+        <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-5 mb-6">
+          <h2 className="font-semibold text-gray-700 dark:text-gray-200 mb-3">New Account</h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-3">
-            <input placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} className="border border-gray-200 rounded-lg px-3 py-2 text-sm" />
-            <input placeholder="Password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} className="border border-gray-200 rounded-lg px-3 py-2 text-sm" />
-            <input placeholder="Username" value={username} onChange={(e) => setUsername(e.target.value)} className="border border-gray-200 rounded-lg px-3 py-2 text-sm" />
+            <input placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} className="border border-gray-200 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg px-3 py-2 text-sm" />
+            <input placeholder="Password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} className="border border-gray-200 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg px-3 py-2 text-sm" />
+            <input placeholder="Username" value={username} onChange={(e) => setUsername(e.target.value)} className="border border-gray-200 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg px-3 py-2 text-sm" />
           </div>
           <div className="flex flex-wrap gap-3 mb-4">
             {MODULES.map((m) => (
-              <label key={m.key} className="flex items-center gap-2 text-sm text-gray-600">
+              <label key={m.key} className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-300">
                 <input
                   type="checkbox"
                   checked={selectedModules.includes(m.key)}
@@ -138,31 +138,31 @@ export default function AccountsPage() {
             <button onClick={handleAdd} disabled={saving} className="bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-medium px-4 py-2 rounded-lg text-sm transition-colors">
               {saving ? 'Creating...' : 'Create Account'}
             </button>
-            <button onClick={() => setShowAdd(false)} className="border border-gray-200 text-gray-600 hover:bg-gray-50 font-medium px-4 py-2 rounded-lg text-sm transition-colors">
+            <button onClick={() => setShowAdd(false)} className="border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 font-medium px-4 py-2 rounded-lg text-sm transition-colors">
               Cancel
             </button>
           </div>
         </div>
       )}
 
-      <div className="bg-white rounded-xl border border-gray-200 p-5">
+      <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-5">
         {loading ? (
-          <p className="text-sm text-gray-400">Loading...</p>
+          <p className="text-sm text-gray-400 dark:text-gray-500">Loading...</p>
         ) : accounts.length === 0 ? (
-          <p className="text-sm text-gray-400">No member accounts yet.</p>
+          <p className="text-sm text-gray-400 dark:text-gray-500">No member accounts yet.</p>
         ) : (
           <div className="space-y-3">
             {accounts.map((acct) => (
-              <div key={acct.id} className="border border-gray-100 rounded-lg p-4">
+              <div key={acct.id} className="border border-gray-100 dark:border-gray-700 rounded-lg p-4">
                 {editingId === acct.id ? (
                   <div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
-                      <input value={editUsername} onChange={(e) => setEditUsername(e.target.value)} className="border border-gray-200 rounded-lg px-3 py-2 text-sm" placeholder="Username" />
-                      <input value={editPassword} onChange={(e) => setEditPassword(e.target.value)} type="password" className="border border-gray-200 rounded-lg px-3 py-2 text-sm" placeholder="New password (optional)" />
+                      <input value={editUsername} onChange={(e) => setEditUsername(e.target.value)} className="border border-gray-200 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg px-3 py-2 text-sm" placeholder="Username" />
+                      <input value={editPassword} onChange={(e) => setEditPassword(e.target.value)} type="password" className="border border-gray-200 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg px-3 py-2 text-sm" placeholder="New password (optional)" />
                     </div>
                     <div className="flex flex-wrap gap-3 mb-4">
                       {MODULES.map((m) => (
-                        <label key={m.key} className="flex items-center gap-2 text-sm text-gray-600">
+                        <label key={m.key} className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-300">
                           <input
                             type="checkbox"
                             checked={editModules.includes(m.key)}
@@ -176,7 +176,7 @@ export default function AccountsPage() {
                       <button onClick={handleEditSave} disabled={saving} className="bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-medium px-4 py-2 rounded-lg text-sm transition-colors">
                         {saving ? 'Saving...' : 'Save'}
                       </button>
-                      <button onClick={() => setEditingId(null)} className="border border-gray-200 text-gray-600 hover:bg-gray-50 font-medium px-4 py-2 rounded-lg text-sm transition-colors">
+                      <button onClick={() => setEditingId(null)} className="border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 font-medium px-4 py-2 rounded-lg text-sm transition-colors">
                         Cancel
                       </button>
                     </div>
@@ -184,21 +184,21 @@ export default function AccountsPage() {
                 ) : (
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="font-medium text-gray-800">{acct.username}</p>
-                      <p className="text-xs text-gray-400">{acct.email}</p>
+                      <p className="font-medium text-gray-800 dark:text-gray-100">{acct.username}</p>
+                      <p className="text-xs text-gray-400 dark:text-gray-500">{acct.email}</p>
                       <div className="flex flex-wrap gap-1 mt-2">
                         {acct.modules.length === 0 ? (
-                          <span className="text-xs text-gray-400">No modules granted</span>
+                          <span className="text-xs text-gray-400 dark:text-gray-500">No modules granted</span>
                         ) : (
                           acct.modules.map((m) => (
-                            <span key={m} className="bg-blue-50 text-blue-700 text-xs px-2 py-0.5 rounded">
+                            <span key={m} className="bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 text-xs px-2 py-0.5 rounded">
                               {MODULES.find((mod) => mod.key === m)?.label || m}
                             </span>
                           ))
                         )}
                       </div>
                     </div>
-                    <button onClick={() => startEdit(acct)} className="border border-gray-200 text-gray-600 hover:bg-gray-50 font-medium px-3 py-1.5 rounded-lg text-xs transition-colors">
+                    <button onClick={() => startEdit(acct)} className="border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 font-medium px-3 py-1.5 rounded-lg text-xs transition-colors">
                       Edit
                     </button>
                   </div>
