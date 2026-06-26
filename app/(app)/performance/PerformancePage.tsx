@@ -1,5 +1,5 @@
 'use client'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import * as XLSX from 'xlsx'
 
 type StoreRow = {
@@ -24,19 +24,71 @@ type DSPRow = {
 
 const fmt = (n: number) => `₱${n.toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
 
-function StoreTable({ rows, metricLabel, metric }: {
+function nk(type: 'store' | 'dsp', key: string, partner: string) {
+  return `${type}__${key}__${partner ?? ''}`
+}
+
+function NoteCell({ id, notesMap, onSave }: {
+  id: string
+  notesMap: Record<string, string>
+  onSave: (id: string, value: string) => void
+}) {
+  const [editing, setEditing] = useState(false)
+  const [value, setValue] = useState(notesMap[id] ?? '')
+  const ref = useRef<HTMLTextAreaElement>(null)
+
+  useEffect(() => {
+    if (!editing) setValue(notesMap[id] ?? '')
+  }, [notesMap, id, editing])
+
+  const handleBlur = () => {
+    setEditing(false)
+    if (value !== (notesMap[id] ?? '')) onSave(id, value)
+  }
+
+  if (editing) {
+    return (
+      <textarea
+        ref={ref}
+        autoFocus
+        value={value}
+        onChange={(e) => setValue(e.target.value)}
+        onBlur={handleBlur}
+        rows={2}
+        className="w-full text-xs border border-blue-300 dark:border-blue-500 rounded px-1.5 py-1 resize-none focus:outline-none bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+      />
+    )
+  }
+
+  return (
+    <div
+      onClick={() => setEditing(true)}
+      className="text-xs cursor-pointer min-h-[24px] leading-relaxed"
+    >
+      {value
+        ? <span className="text-gray-600 dark:text-gray-300">{value}</span>
+        : <span className="text-gray-300 dark:text-gray-600 italic">Add note...</span>
+      }
+    </div>
+  )
+}
+
+function StoreTable({ rows, metricLabel, metric, notesMap, onSaveNote }: {
   rows: StoreRow[]
   metricLabel: string
   metric: (s: StoreRow) => React.ReactNode
+  notesMap: Record<string, string>
+  onSaveNote: (id: string, value: string) => void
 }) {
   return (
-    <table className="w-full text-sm table-fixed">
+    <table className="w-full text-sm">
       <thead>
         <tr className="bg-gray-50 dark:bg-gray-700 text-left">
-          <th className="px-2 py-2 text-gray-500 dark:text-gray-400 font-medium w-[8%]">#</th>
-          <th className="px-2 py-2 text-gray-500 dark:text-gray-400 font-medium w-[38%]">Store</th>
-          <th className="px-2 py-2 text-gray-500 dark:text-gray-400 font-medium w-[20%]">DSP</th>
-          <th className="px-2 py-2 text-gray-500 dark:text-gray-400 font-medium text-right w-[34%]">{metricLabel}</th>
+          <th className="px-2 py-2 text-gray-500 dark:text-gray-400 font-medium w-[5%]">#</th>
+          <th className="px-2 py-2 text-gray-500 dark:text-gray-400 font-medium w-[28%]">Store</th>
+          <th className="px-2 py-2 text-gray-500 dark:text-gray-400 font-medium w-[18%]">DSP</th>
+          <th className="px-2 py-2 text-gray-500 dark:text-gray-400 font-medium text-right w-[22%]">{metricLabel}</th>
+          <th className="px-2 py-2 text-gray-500 dark:text-gray-400 font-medium w-[27%]">Notes</th>
         </tr>
       </thead>
       <tbody>
@@ -44,34 +96,40 @@ function StoreTable({ rows, metricLabel, metric }: {
           <tr key={`${s.sub_affiliate}-${s.partner}`} className="border-t border-gray-50 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700">
             <td className="px-2 py-2 text-gray-400 dark:text-gray-500 font-medium">{i + 1}</td>
             <td className="px-2 py-2">
-              <div className="font-medium text-gray-800 dark:text-gray-100">{s.store_name}</div>
+              <div className="font-medium text-gray-800 dark:text-gray-100 truncate">{s.store_name}</div>
               <div className="text-xs text-gray-400 dark:text-gray-500">{s.sub_affiliate}</div>
             </td>
-            <td className="px-2 py-2 text-gray-600 dark:text-gray-300 truncate">{s.dsp || '—'}</td>
+            <td className="px-2 py-2 text-gray-600 dark:text-gray-300 truncate text-xs">{s.dsp || '—'}</td>
             <td className="px-2 py-2 text-right font-medium text-gray-800 dark:text-gray-100">{metric(s)}</td>
+            <td className="px-2 py-2">
+              <NoteCell id={nk('store', s.sub_affiliate, s.partner)} notesMap={notesMap} onSave={onSaveNote} />
+            </td>
           </tr>
         ))}
         {rows.length === 0 && (
-          <tr><td colSpan={4} className="px-4 py-12 text-center text-gray-400 dark:text-gray-500">No data. Upload a CSV first.</td></tr>
+          <tr><td colSpan={5} className="px-4 py-12 text-center text-gray-400 dark:text-gray-500">No data. Upload a CSV first.</td></tr>
         )}
       </tbody>
     </table>
   )
 }
 
-function DSPTable({ rows, metricLabel, metric }: {
+function DSPTable({ rows, metricLabel, metric, notesMap, onSaveNote }: {
   rows: DSPRow[]
   metricLabel: string
   metric: (d: DSPRow) => React.ReactNode
+  notesMap: Record<string, string>
+  onSaveNote: (id: string, value: string) => void
 }) {
   return (
-    <table className="w-full text-sm table-fixed">
+    <table className="w-full text-sm">
       <thead>
         <tr className="bg-gray-50 dark:bg-gray-700 text-left">
-          <th className="px-2 py-2 text-gray-500 dark:text-gray-400 font-medium w-[8%]">#</th>
-          <th className="px-2 py-2 text-gray-500 dark:text-gray-400 font-medium w-[30%]">DSP</th>
-          <th className="px-2 py-2 text-gray-500 dark:text-gray-400 font-medium w-[27%]">Partner</th>
-          <th className="px-2 py-2 text-gray-500 dark:text-gray-400 font-medium text-right w-[35%]">{metricLabel}</th>
+          <th className="px-2 py-2 text-gray-500 dark:text-gray-400 font-medium w-[5%]">#</th>
+          <th className="px-2 py-2 text-gray-500 dark:text-gray-400 font-medium w-[25%]">DSP</th>
+          <th className="px-2 py-2 text-gray-500 dark:text-gray-400 font-medium w-[15%]">Partner</th>
+          <th className="px-2 py-2 text-gray-500 dark:text-gray-400 font-medium text-right w-[20%]">{metricLabel}</th>
+          <th className="px-2 py-2 text-gray-500 dark:text-gray-400 font-medium w-[35%]">Notes</th>
         </tr>
       </thead>
       <tbody>
@@ -79,14 +137,17 @@ function DSPTable({ rows, metricLabel, metric }: {
           <tr key={`${d.dsp}-${d.partner}`} className="border-t border-gray-50 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700">
             <td className="px-2 py-2 text-gray-400 dark:text-gray-500 font-medium">{i + 1}</td>
             <td className="px-2 py-2 font-medium text-gray-800 dark:text-gray-100 truncate">{d.dsp}</td>
-            <td className="px-2 py-2 truncate">
+            <td className="px-2 py-2">
               {d.partner ? <span className="bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 text-xs px-2 py-0.5 rounded">{d.partner}</span> : '—'}
             </td>
             <td className="px-2 py-2 text-right font-medium text-gray-800 dark:text-gray-100">{metric(d)}</td>
+            <td className="px-2 py-2">
+              <NoteCell id={nk('dsp', d.dsp, d.partner)} notesMap={notesMap} onSave={onSaveNote} />
+            </td>
           </tr>
         ))}
         {rows.length === 0 && (
-          <tr><td colSpan={4} className="px-4 py-12 text-center text-gray-400 dark:text-gray-500">No data. Upload a CSV first.</td></tr>
+          <tr><td colSpan={5} className="px-4 py-12 text-center text-gray-400 dark:text-gray-500">No data. Upload a CSV first.</td></tr>
         )}
       </tbody>
     </table>
@@ -115,6 +176,7 @@ export default function PerformancePage({ partner }: { partner?: string }) {
   const [dspsByGGR, setDSPsByGGR] = useState<DSPRow[]>([])
   const [dsps, setDSPs] = useState<DSPRow[]>([])
   const [loading, setLoading] = useState(false)
+  const [notesMap, setNotesMap] = useState<Record<string, string>>({})
 
   const buildUrl = (period: string) => {
     const params = new URLSearchParams({ period })
@@ -137,26 +199,48 @@ export default function PerformancePage({ partner }: { partner?: string }) {
     setLoading(false)
   }
 
-  useEffect(() => { fetchData('all') }, [partner])
+  const fetchNotes = async () => {
+    const res = await fetch('/api/notes')
+    if (!res.ok) return
+    const data: { entity_type: string; entity_key: string; partner: string; notes: string }[] = await res.json()
+    const map: Record<string, string> = {}
+    for (const n of data) map[nk(n.entity_type as 'store' | 'dsp', n.entity_key, n.partner)] = n.notes
+    setNotesMap(map)
+  }
+
+  useEffect(() => {
+    fetchData('all')
+    fetchNotes()
+  }, [partner])
 
   const handlePeriodChange = (p: string) => {
     setSelectedPeriod(p)
     fetchData(p)
   }
 
+  const handleSaveNote = async (id: string, value: string) => {
+    setNotesMap((prev) => ({ ...prev, [id]: value }))
+    const [entity_type, entity_key, partner_val] = id.split('__')
+    await fetch('/api/notes', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ entity_type, entity_key, partner: partner_val ?? '', notes: value }),
+    })
+  }
+
   const exportAll = () => {
     const wb = XLSX.utils.book_new()
     const addStore = (name: string, rows: StoreRow[], metricLabel: string, metricVal: (s: StoreRow) => string | number) => {
       const ws = XLSX.utils.aoa_to_sheet([
-        ['#', 'Store', 'Sub-affiliate', 'DSP', metricLabel],
-        ...rows.map((s, i) => [i + 1, s.store_name, s.sub_affiliate, s.dsp || '', metricVal(s)]),
+        ['#', 'Store', 'Sub-affiliate', 'DSP', metricLabel, 'Notes'],
+        ...rows.map((s, i) => [i + 1, s.store_name, s.sub_affiliate, s.dsp || '', metricVal(s), notesMap[nk('store', s.sub_affiliate, s.partner)] ?? '']),
       ])
       XLSX.utils.book_append_sheet(wb, ws, name)
     }
     const addDSP = (name: string, rows: DSPRow[], metricLabel: string, metricVal: (d: DSPRow) => string | number) => {
       const ws = XLSX.utils.aoa_to_sheet([
-        ['#', 'DSP', 'Partner', metricLabel],
-        ...rows.map((d, i) => [i + 1, d.dsp, d.partner || '', metricVal(d)]),
+        ['#', 'DSP', 'Partner', metricLabel, 'Notes'],
+        ...rows.map((d, i) => [i + 1, d.dsp, d.partner || '', metricVal(d), notesMap[nk('dsp', d.dsp, d.partner)] ?? '']),
       ])
       XLSX.utils.book_append_sheet(wb, ws, name)
     }
@@ -202,36 +286,35 @@ export default function PerformancePage({ partner }: { partner?: string }) {
       {loading ? (
         <div className="text-center py-20 text-gray-400 dark:text-gray-500">Loading...</div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          <Card emoji="🏆" title="Top 50 Stores by Deposit">
-            <StoreTable rows={stores} metricLabel="Total Deposit" metric={(s) => fmt(s.total_deposit)} />
-          </Card>
-          <Card emoji="⭐" title="Top 50 Stores by Registered Members">
-            <StoreTable rows={storesByMembers} metricLabel="Registered Members" metric={(s) => s.registered_members.toLocaleString()} />
-          </Card>
-          <Card emoji="📈" title="Top 50 Stores by GGR">
-            <StoreTable
-              rows={storesByGGR}
-              metricLabel="GGR"
-              metric={(s) => <span className={s.company_net_win >= 0 ? 'text-green-600' : 'text-red-500'}>{fmt(s.company_net_win)}</span>}
-            />
-          </Card>
-          <Card emoji="💰" title="Top 50 DSPs by Deposit">
-            <DSPTable rows={dspsByDeposit} metricLabel="Total Deposit" metric={(d) => fmt(d.total_deposit)} />
-          </Card>
-          <Card emoji="👥" title="Top 50 DSPs by Registered Members">
-            <DSPTable rows={dspsByMembers} metricLabel="Registered Members" metric={(d) => d.registered_members.toLocaleString()} />
-          </Card>
-          <Card emoji="📊" title="Top 50 DSPs by GGR">
-            <DSPTable
-              rows={dspsByGGR}
-              metricLabel="Total GGR"
-              metric={(d) => <span className={d.total_grr >= 0 ? 'text-green-600' : 'text-red-500'}>{fmt(d.total_grr)}</span>}
-            />
-          </Card>
-          <Card emoji="👤" title="Top 50 DSPs by Store Count">
-            <DSPTable rows={dsps} metricLabel="Stores" metric={(d) => d.store_count.toLocaleString()} />
-          </Card>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Left column — DSP */}
+          <div className="flex flex-col gap-6">
+            <Card emoji="💰" title="Top 50 DSPs by Deposit">
+              <DSPTable rows={dspsByDeposit} metricLabel="Total Deposit" metric={(d) => fmt(d.total_deposit)} notesMap={notesMap} onSaveNote={handleSaveNote} />
+            </Card>
+            <Card emoji="📊" title="Top 50 DSPs by GGR">
+              <DSPTable rows={dspsByGGR} metricLabel="Total GGR" metric={(d) => <span className={d.total_grr >= 0 ? 'text-green-600' : 'text-red-500'}>{fmt(d.total_grr)}</span>} notesMap={notesMap} onSaveNote={handleSaveNote} />
+            </Card>
+            <Card emoji="👥" title="Top 50 DSPs by Registered Members">
+              <DSPTable rows={dspsByMembers} metricLabel="Registered Members" metric={(d) => d.registered_members.toLocaleString()} notesMap={notesMap} onSaveNote={handleSaveNote} />
+            </Card>
+            <Card emoji="👤" title="Top 50 DSPs by Store Count">
+              <DSPTable rows={dsps} metricLabel="Stores" metric={(d) => d.store_count.toLocaleString()} notesMap={notesMap} onSaveNote={handleSaveNote} />
+            </Card>
+          </div>
+
+          {/* Right column — Stores */}
+          <div className="flex flex-col gap-6">
+            <Card emoji="🏆" title="Top 50 Stores by Deposit">
+              <StoreTable rows={stores} metricLabel="Total Deposit" metric={(s) => fmt(s.total_deposit)} notesMap={notesMap} onSaveNote={handleSaveNote} />
+            </Card>
+            <Card emoji="📈" title="Top 50 Stores by GGR">
+              <StoreTable rows={storesByGGR} metricLabel="GGR" metric={(s) => <span className={s.company_net_win >= 0 ? 'text-green-600' : 'text-red-500'}>{fmt(s.company_net_win)}</span>} notesMap={notesMap} onSaveNote={handleSaveNote} />
+            </Card>
+            <Card emoji="⭐" title="Top 50 Stores by Registered Members">
+              <StoreTable rows={storesByMembers} metricLabel="Registered Members" metric={(s) => s.registered_members.toLocaleString()} notesMap={notesMap} onSaveNote={handleSaveNote} />
+            </Card>
+          </div>
         </div>
       )}
     </div>
