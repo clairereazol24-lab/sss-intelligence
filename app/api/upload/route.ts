@@ -8,7 +8,7 @@ const supabase = createClient(
 
 export async function POST(request: NextRequest) {
   try {
-    const { records, period, periodType, mode } = await request.json()
+    const { records, period, periodType } = await request.json()
 
     if (!records || !period || !periodType) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
@@ -53,27 +53,15 @@ export async function POST(request: NextRequest) {
       updated_at: new Date().toISOString(),
     }))
 
-    // Determine the partner scope for this upload
-    const partnerValue: string | null = perfRecords[0]?.partner ?? null
-
-    // Delete existing rows for this exact (period, period_type, partner) combination
-    // so re-uploading the same file never duplicates or conflicts with other partners
-    const deleteQuery = partnerValue
-      ? supabase.from('performance_data').delete().eq('period', period).eq('period_type', periodType).eq('partner', partnerValue)
-      : supabase.from('performance_data').delete().eq('period', period).eq('period_type', periodType).is('partner', null)
-
-    const { error: deleteError } = await deleteQuery
-    if (deleteError) throw deleteError
-
-    // Deduplicate by sub_affiliate (keep last occurrence) before inserting
+    // Deduplicate within the file by (sub_affiliate, partner) — keep last row per store
     const dedupMap = new Map<string, any>()
-    for (const r of perfRecords) dedupMap.set(r.sub_affiliate, r)
+    for (const r of perfRecords) dedupMap.set(`${r.sub_affiliate}__${r.partner ?? ''}`, r)
     const dedupedRecords = Array.from(dedupMap.values())
 
     const { error } = await supabase.from('performance_data').insert(dedupedRecords)
     if (error) throw error
 
-    return NextResponse.json({ success: true, count: perfRecords.length, removed: 0 })
+    return NextResponse.json({ success: true, count: dedupedRecords.length })
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 500 })
   }
