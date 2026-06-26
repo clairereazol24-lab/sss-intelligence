@@ -66,8 +66,10 @@ export default function AccountsPage() {
     setSaving(true)
     setError('')
     try {
-      const body: Record<string, unknown> = { username: editUsername, name: editName, modules: editModules }
+      const editingAccount = accounts.find(a => a.id === editingId)
+      const body: Record<string, unknown> = { username: editUsername, name: editName }
       if (editPassword) body.password = editPassword
+      if (editingAccount?.role !== 'admin') body.modules = editModules
       const res = await fetch(`/api/accounts/${editingId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
@@ -151,36 +153,30 @@ export default function AccountsPage() {
             </thead>
             <tbody>
               {accounts.map((acct) => {
-                if (acct.role === 'admin') {
-                  return (
-                    <tr key={acct.id} className="border-b border-gray-100 dark:border-gray-700">
-                      <td className="px-4 py-3 font-medium text-gray-800 dark:text-gray-100">
-                        {acct.username}
-                        <span className="ml-2 bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 text-xs px-1.5 py-0.5 rounded">Admin</span>
-                      </td>
-                      <td className="px-4 py-3 text-gray-600 dark:text-gray-300">{acct.name ?? ''}</td>
-                      <td className="px-4 py-3 text-gray-400 dark:text-gray-500">—</td>
-                      <td className="px-4 py-3 text-gray-400 dark:text-gray-500">—</td>
-                      <td className="px-4 py-3"></td>
-                    </tr>
-                  )
-                }
-
                 if (editingId === acct.id) {
                   return (
                     <tr key={acct.id} className="border-b border-gray-100 dark:border-gray-700 bg-blue-50/30 dark:bg-blue-900/10">
-                      <td className="px-4 py-3"><input value={editUsername} onChange={(e) => setEditUsername(e.target.value)} className={inputCls} /></td>
+                      <td className="px-4 py-3">
+                        <input value={editUsername} onChange={(e) => setEditUsername(e.target.value)} className={inputCls} />
+                        {acct.role === 'admin' && (
+                          <span className="mt-1 inline-block text-xs text-gray-400 dark:text-gray-500">Admin</span>
+                        )}
+                      </td>
                       <td className="px-4 py-3"><input value={editName} onChange={(e) => setEditName(e.target.value)} className={inputCls} /></td>
                       <td className="px-4 py-3"><input type="password" value={editPassword} onChange={(e) => setEditPassword(e.target.value)} placeholder="New password (optional)" className={inputCls} /></td>
                       <td className="px-4 py-3">
-                        <div className="flex flex-wrap gap-2">
-                          {MODULES.map((m) => (
-                            <label key={m.key} className="flex items-center gap-1.5 text-xs text-gray-600 dark:text-gray-300">
-                              <input type="checkbox" checked={editModules.includes(m.key)} onChange={() => toggleModule(editModules, setEditModules, m.key)} />
-                              {m.label}
-                            </label>
-                          ))}
-                        </div>
+                        {acct.role === 'admin' ? (
+                          <span className="bg-purple-50 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400 text-xs px-2 py-0.5 rounded">All Access</span>
+                        ) : (
+                          <div className="flex flex-wrap gap-2">
+                            {MODULES.map((m) => (
+                              <label key={m.key} className="flex items-center gap-1.5 text-xs text-gray-600 dark:text-gray-300">
+                                <input type="checkbox" checked={editModules.includes(m.key)} onChange={() => toggleModule(editModules, setEditModules, m.key)} />
+                                {m.label}
+                              </label>
+                            ))}
+                          </div>
+                        )}
                       </td>
                       <td className="px-4 py-3">
                         <div className="flex gap-2">
@@ -196,11 +192,18 @@ export default function AccountsPage() {
 
                 return (
                   <tr key={acct.id} className="border-b border-gray-100 dark:border-gray-700">
-                    <td className="px-4 py-3 font-medium text-gray-800 dark:text-gray-100">{acct.username}</td>
+                    <td className="px-4 py-3 font-medium text-gray-800 dark:text-gray-100">
+                      {acct.username}
+                      {acct.role === 'admin' && (
+                        <span className="ml-2 bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 text-xs px-1.5 py-0.5 rounded">Admin</span>
+                      )}
+                    </td>
                     <td className="px-4 py-3 text-gray-600 dark:text-gray-300">{acct.name ?? ''}</td>
                     <td className="px-4 py-3 text-gray-400 dark:text-gray-500">••••••••</td>
                     <td className="px-4 py-3">
-                      {acct.modules.length === 0 ? (
+                      {acct.role === 'admin' ? (
+                        <span className="bg-purple-50 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400 text-xs px-2 py-0.5 rounded">All Access</span>
+                      ) : acct.modules.length === 0 ? (
                         <span className="text-xs text-gray-400 dark:text-gray-500">No access</span>
                       ) : (
                         <div className="flex flex-wrap gap-1">

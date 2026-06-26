@@ -83,6 +83,7 @@ ALTER TABLE ai_report_cache DISABLE ROW LEVEL SECURITY;
 CREATE TABLE IF NOT EXISTS profiles (
   id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
   username VARCHAR(100) NOT NULL,
+  name VARCHAR(200),
   role VARCHAR(10) NOT NULL DEFAULT 'member' CHECK (role IN ('admin', 'member')),
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
