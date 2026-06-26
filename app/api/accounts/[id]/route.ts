@@ -39,8 +39,7 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
     }
 
     if (username) {
-      const newEmail = `${(username as string).trim().toLowerCase()}@lakiwin.internal`
-      const { error: emailError } = await supabaseAdmin.auth.admin.updateUserById(userId, { email: newEmail })
+      const { error: emailError } = await supabaseAdmin.auth.admin.updateUserById(userId, { email: (username as string).trim().toLowerCase() })
       if (emailError) throw emailError
     }
 

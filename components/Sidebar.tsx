@@ -9,6 +9,7 @@ type SidebarProps = {
   modules: ModuleDef[]
   role: 'admin' | 'member'
   username: string
+  name: string | null
 }
 
 function NavLink({
@@ -48,7 +49,7 @@ function NavLink({
   )
 }
 
-export default function Sidebar({ modules, role, username }: SidebarProps) {
+export default function Sidebar({ modules, role, username, name }: SidebarProps) {
   const pathname = usePathname()
   const [profileOpen, setProfileOpen] = useState(false)
   const [collapsed, setCollapsed] = useState(false)
@@ -115,18 +116,18 @@ export default function Sidebar({ modules, role, username }: SidebarProps) {
         <div className={`flex items-center ${collapsed ? 'flex-col gap-1' : 'gap-1'}`}>
           <button
             onClick={() => setProfileOpen(!profileOpen)}
-            aria-label={username}
-            className={`flex items-center hover:bg-slate-800 rounded-lg px-2 py-2 transition-colors ${
-              collapsed ? 'justify-center w-full' : 'gap-3 flex-1 min-w-0'
+            aria-label={name ?? username}
+            className={`hover:bg-slate-800 rounded-lg px-2 py-2 transition-colors ${
+              collapsed ? 'flex justify-center w-full' : 'flex flex-col items-start flex-1 min-w-0 gap-1'
             }`}
           >
-            <div className="w-10 h-10 rounded-full bg-slate-700 flex items-center justify-center flex-shrink-0">
+            <div className="w-9 h-9 rounded-full bg-slate-700 flex items-center justify-center flex-shrink-0">
               <span className="text-white font-semibold text-sm">
-                {(username[0] ?? '?').toUpperCase()}
+                {((name ?? username)[0] ?? '?').toUpperCase()}
               </span>
             </div>
             {!collapsed && (
-              <span className="text-sm text-slate-300 truncate">{username}</span>
+              <span className="text-xs text-slate-300 truncate w-full">{name ?? username}</span>
             )}
           </button>
           <button

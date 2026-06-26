@@ -144,7 +144,7 @@ export default function AccountsPage() {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-gray-200 dark:border-gray-700">
-                <th className={thCls}>Username</th>
+                <th className={thCls}>Email</th>
                 <th className={thCls}>Name</th>
                 <th className={thCls}>Password</th>
                 <th className={thCls}>Access</th>
@@ -224,7 +224,7 @@ export default function AccountsPage() {
 
               {showAdd && (
                 <tr className="border-b border-gray-100 dark:border-gray-700 bg-green-50/30 dark:bg-green-900/10">
-                  <td className="px-4 py-3"><input value={addUsername} onChange={(e) => setAddUsername(e.target.value)} placeholder="Username" className={inputCls} /></td>
+                  <td className="px-4 py-3"><input type="email" value={addUsername} onChange={(e) => setAddUsername(e.target.value)} placeholder="Email address" className={inputCls} /></td>
                   <td className="px-4 py-3"><input value={addName} onChange={(e) => setAddName(e.target.value)} placeholder="Name" className={inputCls} /></td>
                   <td className="px-4 py-3"><input type="password" value={addPassword} onChange={(e) => setAddPassword(e.target.value)} placeholder="Password" className={inputCls} /></td>
                   <td className="px-4 py-3">

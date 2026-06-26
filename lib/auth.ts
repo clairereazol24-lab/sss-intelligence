@@ -16,20 +16,21 @@ export const MODULES: ModuleDef[] = [
 export type UserAccess = {
   role: 'admin' | 'member'
   username: string
+  name: string | null
   allowedModules: ModuleKey[]
 }
 
 export async function getUserAccess(supabase: SupabaseClient, userId: string): Promise<UserAccess | null> {
   const { data: profile } = await supabase
     .from('profiles')
-    .select('username, role')
+    .select('username, name, role')
     .eq('id', userId)
     .maybeSingle()
 
   if (!profile) return null
 
   if (profile.role === 'admin') {
-    return { role: 'admin', username: profile.username, allowedModules: MODULES.map((m) => m.key) }
+    return { role: 'admin', username: profile.username, name: profile.name ?? null, allowedModules: MODULES.map((m) => m.key) }
   }
 
   const { data: perms } = await supabase
@@ -40,6 +41,7 @@ export async function getUserAccess(supabase: SupabaseClient, userId: string): P
   return {
     role: 'member',
     username: profile.username,
+    name: profile.name ?? null,
     allowedModules: (perms || []).map((p: any) => p.module as ModuleKey),
   }
 }

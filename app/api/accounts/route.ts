@@ -57,13 +57,11 @@ export async function POST(request: NextRequest) {
     const { username, name, password, modules } = await request.json()
 
     if (!username || !password) {
-      return NextResponse.json({ error: 'Username and password are required.' }, { status: 400 })
+      return NextResponse.json({ error: 'Email and password are required.' }, { status: 400 })
     }
 
-    const email = `${(username as string).trim().toLowerCase()}@lakiwin.internal`
-
     const { data: created, error: createError } = await supabaseAdmin.auth.admin.createUser({
-      email,
+      email: (username as string).trim().toLowerCase(),
       password,
       email_confirm: true,
     })
@@ -73,7 +71,7 @@ export async function POST(request: NextRequest) {
 
     const { error: profileError } = await supabaseAdmin
       .from('profiles')
-      .insert({ id: userId, username, name: name || null, role: 'member' })
+      .insert({ id: userId, username: (username as string).trim().toLowerCase(), name: name || null, role: 'member' })
     if (profileError) throw profileError
 
     if (modules && (modules as string[]).length > 0) {
