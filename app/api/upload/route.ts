@@ -58,7 +58,7 @@ export async function POST(request: NextRequest) {
 
     const { error } = await supabase
       .from('performance_data')
-      .upsert(perfRecords, { onConflict: 'sub_affiliate,period' })
+      .upsert(perfRecords, { onConflict: 'sub_affiliate,period,partner' })
 
     if (error) throw error
 
