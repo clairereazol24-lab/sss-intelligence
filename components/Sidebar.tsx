@@ -1,5 +1,5 @@
 'use client'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import ProfileModal from './ProfileModal'
@@ -11,50 +11,130 @@ type SidebarProps = {
   username: string
 }
 
+function NavLink({
+  href,
+  icon,
+  label,
+  active,
+  collapsed,
+}: {
+  href: string
+  icon: string
+  label: string
+  active: boolean
+  collapsed: boolean
+}) {
+  return (
+    <div className="relative group">
+      <Link
+        href={href}
+        className={`flex items-center rounded-lg text-sm font-medium transition-colors ${
+          collapsed ? 'justify-center py-2.5 px-0' : 'gap-3 px-3 py-2.5'
+        } ${
+          active
+            ? 'bg-blue-600 text-white'
+            : 'text-slate-300 hover:bg-slate-800 hover:text-white'
+        }`}
+      >
+        <span className="text-base flex-shrink-0">{icon}</span>
+        {!collapsed && <span>{label}</span>}
+      </Link>
+      {collapsed && (
+        <div className="absolute left-full ml-2 top-1/2 -translate-y-1/2 bg-slate-700 text-white text-xs px-2 py-1 rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50">
+          {label}
+        </div>
+      )}
+    </div>
+  )
+}
+
 export default function Sidebar({ modules, role, username }: SidebarProps) {
   const pathname = usePathname()
   const [profileOpen, setProfileOpen] = useState(false)
+  const [collapsed, setCollapsed] = useState(false)
+  const [mounted, setMounted] = useState(false)
 
-  const linkClass = (href: string) =>
-    `flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
-      pathname === href
-        ? 'bg-blue-600 text-white'
-        : 'text-slate-300 hover:bg-slate-800 hover:text-white'
-    }`
+  useEffect(() => {
+    setCollapsed(localStorage.getItem('sidebar-collapsed') === 'true')
+    setMounted(true)
+  }, [])
+
+  const toggle = () => {
+    const next = !collapsed
+    setCollapsed(next)
+    localStorage.setItem('sidebar-collapsed', String(next))
+  }
 
   return (
-    <div className="w-60 bg-slate-900 text-white flex flex-col flex-shrink-0">
-      <div className="p-6 border-b border-slate-700">
-        <h1 className="text-lg font-bold text-white tracking-wide">LakiWin</h1>
-        <p className="text-xs text-slate-400 mt-0.5">Intelligence Engine</p>
+    <div
+      className={`${collapsed ? 'w-16' : 'w-60'} bg-slate-900 text-white flex flex-col flex-shrink-0 overflow-hidden ${
+        mounted ? 'transition-all duration-300 ease-in-out' : ''
+      }`}
+    >
+      {/* Header */}
+      <div
+        className={`border-b border-slate-700 ${
+          collapsed ? 'p-4 flex justify-center items-center' : 'p-6'
+        }`}
+      >
+        {collapsed ? (
+          <span className="text-lg font-bold text-white">L</span>
+        ) : (
+          <>
+            <h1 className="text-lg font-bold text-white tracking-wide">LakiWin</h1>
+            <p className="text-xs text-slate-400 mt-0.5">Intelligence Engine</p>
+          </>
+        )}
       </div>
+
+      {/* Nav */}
       <nav className="flex-1 p-3 space-y-0.5">
         {modules.map((item) => (
-          <Link key={item.href} href={item.href} className={linkClass(item.href)}>
-            <span className="text-base">{item.icon}</span>
-            {item.label}
-          </Link>
+          <NavLink
+            key={item.href}
+            href={item.href}
+            icon={item.icon}
+            label={item.label}
+            active={pathname === item.href}
+            collapsed={collapsed}
+          />
         ))}
         {role === 'admin' && (
-          <Link href="/accounts" className={linkClass('/accounts')}>
-            <span className="text-base">⚙️</span>
-            Accounts
-          </Link>
+          <NavLink
+            href="/accounts"
+            icon="⚙️"
+            label="Accounts"
+            active={pathname === '/accounts'}
+            collapsed={collapsed}
+          />
         )}
       </nav>
-      <div className="p-4 border-t border-slate-700">
+
+      {/* Footer */}
+      <div className="border-t border-slate-700 p-4 space-y-1">
         <button
           onClick={() => setProfileOpen(!profileOpen)}
-          className="flex items-center gap-3 w-full hover:bg-slate-800 rounded-lg px-2 py-2 transition-colors"
+          className={`flex items-center w-full hover:bg-slate-800 rounded-lg px-2 py-2 transition-colors ${
+            collapsed ? 'justify-center' : 'gap-3'
+          }`}
         >
           <div className="w-10 h-10 rounded-full bg-slate-700 flex items-center justify-center flex-shrink-0">
             <span className="text-white font-semibold text-sm">
               {(username[0] ?? '?').toUpperCase()}
             </span>
           </div>
-          <span className="text-sm text-slate-300 truncate">{username}</span>
+          {!collapsed && (
+            <span className="text-sm text-slate-300 truncate">{username}</span>
+          )}
         </button>
         {profileOpen && <ProfileModal onClose={() => setProfileOpen(false)} />}
+        <button
+          onClick={toggle}
+          className="w-full flex justify-center py-1.5 text-slate-400 hover:text-white transition-colors text-lg"
+          title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+        >
+          {collapsed ? '›' : '‹'}
+        </button>
       </div>
     </div>
   )
