@@ -27,8 +27,19 @@ export async function GET(request: NextRequest) {
       query = query.gte('period', fromPeriod).lte('period', toPeriod)
     }
 
-    const { data, error } = await query.range(0, 99999)
-    if (error) throw error
+    // Paginate to fetch all rows regardless of dataset size
+    const allData: any[] = []
+    let start = 0
+    const PAGE = 1000
+    while (true) {
+      const { data: page, error } = await query.range(start, start + PAGE - 1)
+      if (error) throw error
+      if (!page || page.length === 0) break
+      allData.push(...page)
+      if (page.length < PAGE) break
+      start += PAGE
+    }
+    const data = allData
 
     // Aggregate by store (sum across periods if multiple)
     const storeMap: Record<string, any> = {}
