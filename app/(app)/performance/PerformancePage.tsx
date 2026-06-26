@@ -35,28 +35,50 @@ function NoteCell({ id, notesMap, onSave }: {
 }) {
   const [editing, setEditing] = useState(false)
   const [value, setValue] = useState(notesMap[id] ?? '')
-  const ref = useRef<HTMLTextAreaElement>(null)
+  const [saving, setSaving] = useState(false)
 
   useEffect(() => {
     if (!editing) setValue(notesMap[id] ?? '')
   }, [notesMap, id, editing])
 
-  const handleBlur = () => {
+  const handleSave = async () => {
+    setSaving(true)
+    await onSave(id, value)
+    setSaving(false)
     setEditing(false)
-    if (value !== (notesMap[id] ?? '')) onSave(id, value)
+  }
+
+  const handleCancel = () => {
+    setValue(notesMap[id] ?? '')
+    setEditing(false)
   }
 
   if (editing) {
     return (
-      <textarea
-        ref={ref}
-        autoFocus
-        value={value}
-        onChange={(e) => setValue(e.target.value)}
-        onBlur={handleBlur}
-        rows={2}
-        className="w-full text-xs border border-blue-300 dark:border-blue-500 rounded px-1.5 py-1 resize-none focus:outline-none bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
-      />
+      <div className="flex flex-col gap-1">
+        <textarea
+          autoFocus
+          value={value}
+          onChange={(e) => setValue(e.target.value)}
+          rows={2}
+          className="w-full text-xs border border-blue-300 dark:border-blue-500 rounded px-1.5 py-1 resize-none focus:outline-none bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+        />
+        <div className="flex gap-1">
+          <button
+            onClick={handleSave}
+            disabled={saving}
+            className="text-xs bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white px-2 py-0.5 rounded transition-colors"
+          >
+            {saving ? 'Saving…' : 'Save'}
+          </button>
+          <button
+            onClick={handleCancel}
+            className="text-xs text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 px-2 py-0.5 rounded transition-colors"
+          >
+            Cancel
+          </button>
+        </div>
+      </div>
     )
   }
 
@@ -213,13 +235,13 @@ export default function PerformancePage({ partner }: { partner?: string }) {
   }
 
   const handleSaveNote = async (id: string, value: string) => {
-    setNotesMap((prev) => ({ ...prev, [id]: value }))
     const [entity_type, entity_key, partner_val] = id.split('__')
     await fetch('/api/notes', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ entity_type, entity_key, partner: partner_val ?? '', notes: value }),
     })
+    setNotesMap((prev) => ({ ...prev, [id]: value }))
   }
 
   const exportAll = () => {
