@@ -24,36 +24,13 @@ type DSPRow = {
 
 const fmt = (n: number) => `₱${n.toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
 
-function exportExcel(sheetName: string, headers: string[], rows: (string | number)[][]) {
-  const ws = XLSX.utils.aoa_to_sheet([headers, ...rows])
-  const wb = XLSX.utils.book_new()
-  XLSX.utils.book_append_sheet(wb, ws, sheetName.slice(0, 31))
-  XLSX.writeFile(wb, `${sheetName}.xlsx`)
-}
-
-function StoreTable({ rows, metricLabel, metric, metricRaw, sheetName }: {
+function StoreTable({ rows, metricLabel, metric }: {
   rows: StoreRow[]
   metricLabel: string
   metric: (s: StoreRow) => React.ReactNode
-  metricRaw: (s: StoreRow) => string | number
-  sheetName: string
 }) {
-  const handleExport = () => {
-    exportExcel(sheetName, ['#', 'Store', 'Sub-affiliate', 'DSP', metricLabel], rows.map((s, i) => [
-      i + 1, s.store_name, s.sub_affiliate, s.dsp || '', metricRaw(s),
-    ]))
-  }
-
   return (
     <>
-      <div className="px-4 py-2 border-b border-gray-100 dark:border-gray-700 flex justify-end">
-        <button
-          onClick={handleExport}
-          className="text-xs text-green-700 dark:text-green-400 border border-green-200 dark:border-green-700 hover:bg-green-50 dark:hover:bg-green-900/30 px-2 py-1 rounded transition-colors"
-        >
-          ↓ Export Excel
-        </button>
-      </div>
       <table className="w-full text-sm table-fixed">
         <thead>
           <tr className="bg-gray-50 dark:bg-gray-700 text-left">
@@ -84,29 +61,13 @@ function StoreTable({ rows, metricLabel, metric, metricRaw, sheetName }: {
   )
 }
 
-function DSPTable({ rows, metricLabel, metric, metricRaw, sheetName }: {
+function DSPTable({ rows, metricLabel, metric }: {
   rows: DSPRow[]
   metricLabel: string
   metric: (d: DSPRow) => React.ReactNode
-  metricRaw: (d: DSPRow) => string | number
-  sheetName: string
 }) {
-  const handleExport = () => {
-    exportExcel(sheetName, ['#', 'DSP', 'Partner', metricLabel], rows.map((d, i) => [
-      i + 1, d.dsp, d.partner || '', metricRaw(d),
-    ]))
-  }
-
   return (
     <>
-      <div className="px-4 py-2 border-b border-gray-100 dark:border-gray-700 flex justify-end">
-        <button
-          onClick={handleExport}
-          className="text-xs text-green-700 dark:text-green-400 border border-green-200 dark:border-green-700 hover:bg-green-50 dark:hover:bg-green-900/30 px-2 py-1 rounded transition-colors"
-        >
-          ↓ Export Excel
-        </button>
-      </div>
       <table className="w-full text-sm table-fixed">
         <thead>
           <tr className="bg-gray-50 dark:bg-gray-700 text-left">
@@ -181,6 +142,32 @@ export default function PerformancePage() {
     fetchData(p)
   }
 
+  const exportAll = () => {
+    const wb = XLSX.utils.book_new()
+    const addStore = (name: string, rows: StoreRow[], metricLabel: string, metricVal: (s: StoreRow) => string | number) => {
+      const ws = XLSX.utils.aoa_to_sheet([
+        ['#', 'Store', 'Sub-affiliate', 'DSP', metricLabel],
+        ...rows.map((s, i) => [i + 1, s.store_name, s.sub_affiliate, s.dsp || '', metricVal(s)]),
+      ])
+      XLSX.utils.book_append_sheet(wb, ws, name)
+    }
+    const addDSP = (name: string, rows: DSPRow[], metricLabel: string, metricVal: (d: DSPRow) => string | number) => {
+      const ws = XLSX.utils.aoa_to_sheet([
+        ['#', 'DSP', 'Partner', metricLabel],
+        ...rows.map((d, i) => [i + 1, d.dsp, d.partner || '', metricVal(d)]),
+      ])
+      XLSX.utils.book_append_sheet(wb, ws, name)
+    }
+    addStore('Stores by Deposit',   stores,          'Total Deposit',      (s) => s.total_deposit)
+    addStore('Stores by Members',   storesByMembers, 'Registered Members', (s) => s.registered_members)
+    addStore('Stores by GGR',       storesByGGR,     'GGR',                (s) => s.company_net_win)
+    addDSP(  'DSPs by Deposit',     dspsByDeposit,   'Total Deposit',      (d) => d.total_deposit)
+    addDSP(  'DSPs by Members',     dspsByMembers,   'Registered Members', (d) => d.registered_members)
+    addDSP(  'DSPs by GGR',         dspsByGGR,       'Total GGR',          (d) => d.total_grr)
+    addDSP(  'DSPs by Store Count', dsps,            'Stores',             (d) => d.store_count)
+    XLSX.writeFile(wb, `Performance ${selectedPeriod === 'all' ? 'All Time' : selectedPeriod}.xlsx`)
+  }
+
   return (
     <div className="p-6">
       <div className="flex items-center justify-between mb-6">
@@ -188,14 +175,23 @@ export default function PerformancePage() {
           <h1 className="text-2xl font-bold text-gray-800 dark:text-gray-100">Performance</h1>
           <p className="text-sm text-gray-500 dark:text-gray-400">Top 50 stores and DSPs by deposits</p>
         </div>
-        <select
-          value={selectedPeriod}
-          onChange={(e) => handlePeriodChange(e.target.value)}
-          className="border border-gray-200 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-700 dark:text-gray-100 shadow-sm"
-        >
-          <option value="all">All Time</option>
-          {periods.map(p => <option key={p} value={p}>{p}</option>)}
-        </select>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={exportAll}
+            disabled={loading}
+            className="text-sm text-green-700 dark:text-green-400 border border-green-200 dark:border-green-700 hover:bg-green-50 dark:hover:bg-green-900/30 disabled:opacity-50 font-medium px-4 py-2 rounded-lg transition-colors"
+          >
+            ↓ Export Excel
+          </button>
+          <select
+            value={selectedPeriod}
+            onChange={(e) => handlePeriodChange(e.target.value)}
+            className="border border-gray-200 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-700 dark:text-gray-100 shadow-sm"
+          >
+            <option value="all">All Time</option>
+            {periods.map(p => <option key={p} value={p}>{p}</option>)}
+          </select>
+        </div>
       </div>
 
       {loading ? (
@@ -203,23 +199,11 @@ export default function PerformancePage() {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           <Card emoji="🏆" title="Top 50 Stores by Deposit">
-            <StoreTable
-              rows={stores}
-              metricLabel="Total Deposit"
-              metric={(s) => fmt(s.total_deposit)}
-              metricRaw={(s) => s.total_deposit}
-              sheetName="Top 50 Stores by Deposit"
-            />
+            <StoreTable rows={stores} metricLabel="Total Deposit" metric={(s) => fmt(s.total_deposit)} />
           </Card>
 
           <Card emoji="⭐" title="Top 50 Stores by Registered Members">
-            <StoreTable
-              rows={storesByMembers}
-              metricLabel="Registered Members"
-              metric={(s) => s.registered_members.toLocaleString()}
-              metricRaw={(s) => s.registered_members}
-              sheetName="Top 50 Stores by Members"
-            />
+            <StoreTable rows={storesByMembers} metricLabel="Registered Members" metric={(s) => s.registered_members.toLocaleString()} />
           </Card>
 
           <Card emoji="📈" title="Top 50 Stores by GGR">
@@ -227,29 +211,15 @@ export default function PerformancePage() {
               rows={storesByGGR}
               metricLabel="GGR"
               metric={(s) => <span className={s.company_net_win >= 0 ? 'text-green-600' : 'text-red-500'}>{fmt(s.company_net_win)}</span>}
-              metricRaw={(s) => s.company_net_win}
-              sheetName="Top 50 Stores by GGR"
             />
           </Card>
 
           <Card emoji="💰" title="Top 50 DSPs by Deposit">
-            <DSPTable
-              rows={dspsByDeposit}
-              metricLabel="Total Deposit"
-              metric={(d) => fmt(d.total_deposit)}
-              metricRaw={(d) => d.total_deposit}
-              sheetName="Top 50 DSPs by Deposit"
-            />
+            <DSPTable rows={dspsByDeposit} metricLabel="Total Deposit" metric={(d) => fmt(d.total_deposit)} />
           </Card>
 
           <Card emoji="👥" title="Top 50 DSPs by Registered Members">
-            <DSPTable
-              rows={dspsByMembers}
-              metricLabel="Registered Members"
-              metric={(d) => d.registered_members.toLocaleString()}
-              metricRaw={(d) => d.registered_members}
-              sheetName="Top 50 DSPs by Members"
-            />
+            <DSPTable rows={dspsByMembers} metricLabel="Registered Members" metric={(d) => d.registered_members.toLocaleString()} />
           </Card>
 
           <Card emoji="📊" title="Top 50 DSPs by GGR">
@@ -257,19 +227,11 @@ export default function PerformancePage() {
               rows={dspsByGGR}
               metricLabel="Total GGR"
               metric={(d) => <span className={d.total_grr >= 0 ? 'text-green-600' : 'text-red-500'}>{fmt(d.total_grr)}</span>}
-              metricRaw={(d) => d.total_grr}
-              sheetName="Top 50 DSPs by GGR"
             />
           </Card>
 
           <Card emoji="👤" title="Top 50 DSPs by Store Count">
-            <DSPTable
-              rows={dsps}
-              metricLabel="Stores"
-              metric={(d) => d.store_count.toLocaleString()}
-              metricRaw={(d) => d.store_count}
-              sheetName="Top 50 DSPs by Store Count"
-            />
+            <DSPTable rows={dsps} metricLabel="Stores" metric={(d) => d.store_count.toLocaleString()} />
           </Card>
         </div>
       )}
