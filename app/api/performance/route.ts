@@ -13,7 +13,13 @@ export async function GET(request: NextRequest) {
     const fromPeriod = searchParams.get('from')
     const toPeriod = searchParams.get('to')
 
+    const partner = searchParams.get('partner')
+
     let query = supabase.from('performance_data').select('*')
+
+    if (partner) {
+      query = query.eq('partner', partner)
+    }
 
     if (period && period !== 'all') {
       query = query.eq('period', period)
@@ -27,8 +33,9 @@ export async function GET(request: NextRequest) {
     // Aggregate by store (sum across periods if multiple)
     const storeMap: Record<string, any> = {}
     for (const row of data || []) {
-      if (!storeMap[row.sub_affiliate]) {
-        storeMap[row.sub_affiliate] = {
+      const storeKey = `${row.sub_affiliate}__${row.partner ?? ''}`
+      if (!storeMap[storeKey]) {
+        storeMap[storeKey] = {
           sub_affiliate: row.sub_affiliate,
           store_name: row.store_name,
           partner: row.partner,
@@ -45,7 +52,7 @@ export async function GET(request: NextRequest) {
           first_deposit_count: 0,
         }
       }
-      const s = storeMap[row.sub_affiliate]
+      const s = storeMap[storeKey]
       s.total_deposit += row.total_deposit
       s.total_withdraw += row.total_withdraw
       s.valid_bet_amount += row.valid_bet_amount

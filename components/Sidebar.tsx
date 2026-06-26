@@ -18,31 +18,87 @@ function NavLink({
   label,
   active,
   collapsed,
+  indent = false,
 }: {
   href: string
-  icon: string
+  icon?: string
   label: string
   active: boolean
   collapsed: boolean
+  indent?: boolean
 }) {
   return (
     <div className="relative group">
       <Link
         href={href}
         className={`flex items-center rounded-lg text-sm font-medium transition-colors ${
-          collapsed ? 'justify-center py-2.5 px-0' : 'gap-3 px-3 py-2.5'
+          collapsed ? 'justify-center py-2.5 px-0' : indent ? 'gap-2 px-3 py-2' : 'gap-3 px-3 py-2.5'
         } ${
           active
             ? 'bg-blue-600 text-white'
             : 'text-slate-300 hover:bg-slate-800 hover:text-white'
         }`}
       >
-        <span className="text-base flex-shrink-0">{icon}</span>
-        {!collapsed && <span>{label}</span>}
+        {icon && <span className="text-base flex-shrink-0">{icon}</span>}
+        {!collapsed && <span className={indent ? 'text-xs' : ''}>{label}</span>}
       </Link>
       {collapsed && (
         <div className="absolute left-full ml-2 top-1/2 -translate-y-1/2 bg-slate-700 text-white text-xs px-2 py-1 rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50">
           {label}
+        </div>
+      )}
+    </div>
+  )
+}
+
+function NavGroup({
+  icon,
+  label,
+  children,
+  collapsed,
+  anyChildActive,
+}: {
+  icon: string
+  label: string
+  children: { label: string; href: string }[]
+  collapsed: boolean
+  anyChildActive: boolean
+}) {
+  const [open, setOpen] = useState(anyChildActive)
+  const pathname = usePathname()
+
+  return (
+    <div>
+      <button
+        onClick={() => setOpen((o) => !o)}
+        className={`w-full flex items-center rounded-lg text-sm font-medium transition-colors ${
+          collapsed ? 'justify-center py-2.5 px-0' : 'gap-3 px-3 py-2.5'
+        } ${
+          anyChildActive
+            ? 'text-white'
+            : 'text-slate-300 hover:bg-slate-800 hover:text-white'
+        }`}
+      >
+        <span className="text-base flex-shrink-0">{icon}</span>
+        {!collapsed && (
+          <>
+            <span className="flex-1 text-left">{label}</span>
+            <span className="text-slate-400 text-xs">{open ? '▾' : '▸'}</span>
+          </>
+        )}
+      </button>
+      {!collapsed && open && (
+        <div className="ml-4 mt-0.5 space-y-0.5 border-l border-slate-700 pl-2">
+          {children.map((child) => (
+            <NavLink
+              key={child.href}
+              href={child.href}
+              label={child.label}
+              active={pathname === child.href}
+              collapsed={false}
+              indent
+            />
+          ))}
         </div>
       )}
     </div>
@@ -90,16 +146,27 @@ export default function Sidebar({ modules, role, username, name }: SidebarProps)
 
       {/* Nav */}
       <nav className="flex-1 p-3 space-y-0.5">
-        {modules.map((item) => (
-          <NavLink
-            key={item.href}
-            href={item.href}
-            icon={item.icon}
-            label={item.label}
-            active={pathname === item.href}
-            collapsed={collapsed}
-          />
-        ))}
+        {modules.map((item) =>
+          item.children ? (
+            <NavGroup
+              key={item.href}
+              icon={item.icon}
+              label={item.label}
+              children={item.children}
+              collapsed={collapsed}
+              anyChildActive={item.children.some((c) => pathname === c.href)}
+            />
+          ) : (
+            <NavLink
+              key={item.href}
+              href={item.href}
+              icon={item.icon}
+              label={item.label}
+              active={pathname === item.href}
+              collapsed={collapsed}
+            />
+          )
+        )}
         {role === 'admin' && (
           <NavLink
             href="/accounts"

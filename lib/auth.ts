@@ -2,11 +2,26 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 
 export type ModuleKey = 'sss_data' | 'performance' | 'store_directory' | 'ai_report' | 'marketing_efforts'
 
-export type ModuleDef = { key: ModuleKey; label: string; href: string; icon: string }
+export type ModuleDef = {
+  key: ModuleKey
+  label: string
+  href: string
+  icon: string
+  children?: { label: string; href: string }[]
+}
 
 export const MODULES: ModuleDef[] = [
   { key: 'sss_data', label: 'SSS Data', href: '/sss-data', icon: '📤' },
-  { key: 'performance', label: 'Performance', href: '/performance', icon: '🏆' },
+  {
+    key: 'performance',
+    label: 'Performance',
+    href: '/performance',
+    icon: '🏆',
+    children: [
+      { label: 'Alpharus', href: '/performance/alpharus' },
+      { label: 'Relevant Tech', href: '/performance/relevant-tech' },
+    ],
+  },
   { key: 'store_directory', label: 'Store Directory', href: '/store-directory', icon: '🏪' },
   // ai_report and marketing_efforts hidden — restore by uncommenting
   // { key: 'ai_report', label: 'AI Report', href: '/ai-report', icon: '🤖' },
