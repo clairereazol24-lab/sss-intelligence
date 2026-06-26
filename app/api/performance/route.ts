@@ -76,6 +76,32 @@ export async function GET(request: NextRequest) {
       s.first_deposit_count += row.first_deposit_count
     }
 
+    // Merge in stores from directory that have no performance data
+    let dirQuery = supabase.from('stores').select('sub_affiliate, store_name, partner, dsp')
+    if (partner) dirQuery = dirQuery.eq('partner', partner)
+    const { data: dirStores } = await dirQuery
+    for (const ds of dirStores || []) {
+      const key = `${ds.sub_affiliate}__${ds.partner ?? ''}`
+      if (!storeMap[key]) {
+        storeMap[key] = {
+          sub_affiliate: ds.sub_affiliate,
+          store_name: ds.store_name,
+          partner: ds.partner,
+          dsp: ds.dsp,
+          total_deposit: 0,
+          total_withdraw: 0,
+          valid_bet_amount: 0,
+          company_net_win: 0,
+          payout_amount: 0,
+          registered_members: 0,
+          deposit_member_count: 0,
+          members_withdrawn: 0,
+          effective_member: 0,
+          first_deposit_count: 0,
+        }
+      }
+    }
+
     const stores = Object.values(storeMap)
     const allStores = [...stores].sort((a: any, b: any) => b.total_deposit - a.total_deposit)
 
