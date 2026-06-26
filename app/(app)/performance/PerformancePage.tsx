@@ -280,7 +280,7 @@ export default function PerformancePage({ partner }: { partner?: string }) {
       {loading ? (
         <div className="text-center py-20 text-gray-400 dark:text-gray-500">Loading...</div>
       ) : (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-[2fr_3fr] gap-6">
           {/* Left column — DSP */}
           <div className="flex flex-col gap-6">
             <Card emoji="💰" title="Top 50 DSPs by Deposit">
