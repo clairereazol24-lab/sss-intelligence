@@ -10,7 +10,10 @@ export default async function Home() {
   const access = await getUserAccess(supabase, user.id)
   const firstAllowed = MODULES.find((m) => access && (access.role === 'admin' || access.allowedModules.includes(m.key)))
 
-  if (firstAllowed) redirect(firstAllowed.href)
+  if (firstAllowed) {
+    const dest = firstAllowed.children?.[0]?.href ?? firstAllowed.href
+    redirect(dest)
+  }
 
   return (
     <div className="p-6">
