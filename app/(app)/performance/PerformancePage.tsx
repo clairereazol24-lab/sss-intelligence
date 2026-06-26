@@ -114,22 +114,19 @@ function StoreTable({ rows, metricLabel, metric, notesMap, onSaveNote }: {
   )
 }
 
-function DSPTable({ rows, metricLabel, metric, notesMap, onSaveNote }: {
+function DSPTable({ rows, metricLabel, metric }: {
   rows: DSPRow[]
   metricLabel: string
   metric: (d: DSPRow) => React.ReactNode
-  notesMap: Record<string, string>
-  onSaveNote: (id: string, value: string) => void
 }) {
   return (
-    <table className="w-full text-sm">
+    <table className="w-full text-sm table-fixed">
       <thead>
         <tr className="bg-gray-50 dark:bg-gray-700 text-left">
-          <th className="px-2 py-2 text-gray-500 dark:text-gray-400 font-medium w-[5%]">#</th>
-          <th className="px-2 py-2 text-gray-500 dark:text-gray-400 font-medium w-[25%]">DSP</th>
-          <th className="px-2 py-2 text-gray-500 dark:text-gray-400 font-medium w-[15%]">Partner</th>
-          <th className="px-2 py-2 text-gray-500 dark:text-gray-400 font-medium text-right w-[20%]">{metricLabel}</th>
-          <th className="px-2 py-2 text-gray-500 dark:text-gray-400 font-medium w-[35%]">Notes</th>
+          <th className="px-2 py-2 text-gray-500 dark:text-gray-400 font-medium w-[8%]">#</th>
+          <th className="px-2 py-2 text-gray-500 dark:text-gray-400 font-medium w-[38%]">DSP</th>
+          <th className="px-2 py-2 text-gray-500 dark:text-gray-400 font-medium w-[20%]">Partner</th>
+          <th className="px-2 py-2 text-gray-500 dark:text-gray-400 font-medium text-right w-[34%]">{metricLabel}</th>
         </tr>
       </thead>
       <tbody>
@@ -141,13 +138,10 @@ function DSPTable({ rows, metricLabel, metric, notesMap, onSaveNote }: {
               {d.partner ? <span className="bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 text-xs px-2 py-0.5 rounded">{d.partner}</span> : '—'}
             </td>
             <td className="px-2 py-2 text-right font-medium text-gray-800 dark:text-gray-100">{metric(d)}</td>
-            <td className="px-2 py-2">
-              <NoteCell id={nk('dsp', d.dsp, d.partner)} notesMap={notesMap} onSave={onSaveNote} />
-            </td>
           </tr>
         ))}
         {rows.length === 0 && (
-          <tr><td colSpan={5} className="px-4 py-12 text-center text-gray-400 dark:text-gray-500">No data. Upload a CSV first.</td></tr>
+          <tr><td colSpan={4} className="px-4 py-12 text-center text-gray-400 dark:text-gray-500">No data. Upload a CSV first.</td></tr>
         )}
       </tbody>
     </table>
@@ -239,8 +233,8 @@ export default function PerformancePage({ partner }: { partner?: string }) {
     }
     const addDSP = (name: string, rows: DSPRow[], metricLabel: string, metricVal: (d: DSPRow) => string | number) => {
       const ws = XLSX.utils.aoa_to_sheet([
-        ['#', 'DSP', 'Partner', metricLabel, 'Notes'],
-        ...rows.map((d, i) => [i + 1, d.dsp, d.partner || '', metricVal(d), notesMap[nk('dsp', d.dsp, d.partner)] ?? '']),
+        ['#', 'DSP', 'Partner', metricLabel],
+        ...rows.map((d, i) => [i + 1, d.dsp, d.partner || '', metricVal(d)]),
       ])
       XLSX.utils.book_append_sheet(wb, ws, name)
     }
@@ -290,16 +284,16 @@ export default function PerformancePage({ partner }: { partner?: string }) {
           {/* Left column — DSP */}
           <div className="flex flex-col gap-6">
             <Card emoji="💰" title="Top 50 DSPs by Deposit">
-              <DSPTable rows={dspsByDeposit} metricLabel="Total Deposit" metric={(d) => fmt(d.total_deposit)} notesMap={notesMap} onSaveNote={handleSaveNote} />
+              <DSPTable rows={dspsByDeposit} metricLabel="Total Deposit" metric={(d) => fmt(d.total_deposit)} />
             </Card>
             <Card emoji="📊" title="Top 50 DSPs by GGR">
-              <DSPTable rows={dspsByGGR} metricLabel="Total GGR" metric={(d) => <span className={d.total_grr >= 0 ? 'text-green-600' : 'text-red-500'}>{fmt(d.total_grr)}</span>} notesMap={notesMap} onSaveNote={handleSaveNote} />
+              <DSPTable rows={dspsByGGR} metricLabel="Total GGR" metric={(d) => <span className={d.total_grr >= 0 ? 'text-green-600' : 'text-red-500'}>{fmt(d.total_grr)}</span>} />
             </Card>
             <Card emoji="👥" title="Top 50 DSPs by Registered Members">
-              <DSPTable rows={dspsByMembers} metricLabel="Registered Members" metric={(d) => d.registered_members.toLocaleString()} notesMap={notesMap} onSaveNote={handleSaveNote} />
+              <DSPTable rows={dspsByMembers} metricLabel="Registered Members" metric={(d) => d.registered_members.toLocaleString()} />
             </Card>
             <Card emoji="👤" title="Top 50 DSPs by Store Count">
-              <DSPTable rows={dsps} metricLabel="Stores" metric={(d) => d.store_count.toLocaleString()} notesMap={notesMap} onSaveNote={handleSaveNote} />
+              <DSPTable rows={dsps} metricLabel="Stores" metric={(d) => d.store_count.toLocaleString()} />
             </Card>
           </div>
 
