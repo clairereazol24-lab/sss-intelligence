@@ -8,8 +8,9 @@ export const MODULES: ModuleDef[] = [
   { key: 'sss_data', label: 'SSS Data', href: '/sss-data', icon: '📤' },
   { key: 'performance', label: 'Performance', href: '/performance', icon: '🏆' },
   { key: 'store_directory', label: 'Store Directory', href: '/store-directory', icon: '🏪' },
-  { key: 'ai_report', label: 'AI Report', href: '/ai-report', icon: '🤖' },
-  { key: 'marketing_efforts', label: 'Marketing Efforts', href: '/marketing-efforts', icon: '📣' },
+  // ai_report and marketing_efforts hidden — restore by uncommenting
+  // { key: 'ai_report', label: 'AI Report', href: '/ai-report', icon: '🤖' },
+  // { key: 'marketing_efforts', label: 'Marketing Efforts', href: '/marketing-efforts', icon: '📣' },
 ]
 
 export type UserAccess = {
