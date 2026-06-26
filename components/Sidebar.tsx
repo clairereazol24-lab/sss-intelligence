@@ -117,8 +117,8 @@ export default function Sidebar({ modules, role, username, name }: SidebarProps)
           <button
             onClick={() => setProfileOpen(!profileOpen)}
             aria-label={name ?? username}
-            className={`hover:bg-slate-800 rounded-lg px-2 py-2 transition-colors ${
-              collapsed ? 'flex justify-center w-full' : 'flex flex-col items-start flex-1 min-w-0 gap-1'
+            className={`flex items-center hover:bg-slate-800 rounded-lg px-2 py-2 transition-colors ${
+              collapsed ? 'justify-center w-full' : 'gap-3 flex-1 min-w-0'
             }`}
           >
             <div className="w-9 h-9 rounded-full bg-slate-700 flex items-center justify-center flex-shrink-0">
@@ -127,7 +127,7 @@ export default function Sidebar({ modules, role, username, name }: SidebarProps)
               </span>
             </div>
             {!collapsed && (
-              <span className="text-xs text-slate-300 truncate w-full">{name ?? username}</span>
+              <span className="text-sm text-slate-300 truncate">{name ?? username}</span>
             )}
           </button>
           <button
