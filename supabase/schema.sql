@@ -41,7 +41,7 @@ CREATE TABLE IF NOT EXISTS performance_data (
   partner VARCHAR(100),
   dsp VARCHAR(200),
   created_at TIMESTAMPTZ DEFAULT NOW(),
-  UNIQUE(sub_affiliate, period, partner)
+  -- no unique constraint; upload route enforces replace-by-partner via delete+insert
 );
 
 -- ============================================================

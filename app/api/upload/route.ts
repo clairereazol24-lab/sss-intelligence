@@ -65,8 +65,12 @@ export async function POST(request: NextRequest) {
     const { error: deleteError } = await deleteQuery
     if (deleteError) throw deleteError
 
-    // Insert fresh
-    const { error } = await supabase.from('performance_data').insert(perfRecords)
+    // Deduplicate by sub_affiliate (keep last occurrence) before inserting
+    const dedupMap = new Map<string, any>()
+    for (const r of perfRecords) dedupMap.set(r.sub_affiliate, r)
+    const dedupedRecords = Array.from(dedupMap.values())
+
+    const { error } = await supabase.from('performance_data').insert(dedupedRecords)
     if (error) throw error
 
     return NextResponse.json({ success: true, count: perfRecords.length, removed: 0 })
