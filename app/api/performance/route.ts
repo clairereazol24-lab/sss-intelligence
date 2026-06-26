@@ -27,7 +27,7 @@ export async function GET(request: NextRequest) {
       query = query.gte('period', fromPeriod).lte('period', toPeriod)
     }
 
-    const { data, error } = await query
+    const { data, error } = await query.range(0, 99999)
     if (error) throw error
 
     // Aggregate by store (sum across periods if multiple)
@@ -138,6 +138,7 @@ export async function GET(request: NextRequest) {
       .from('performance_data')
       .select('period')
       .order('period', { ascending: false })
+      .range(0, 9999)
 
     const uniquePeriods = Array.from(new Set((periods || []).map((p: any) => p.period)))
 
