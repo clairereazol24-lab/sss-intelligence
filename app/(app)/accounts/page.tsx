@@ -206,10 +206,10 @@ export default function AccountsPage() {
                       ) : acct.modules.length === 0 ? (
                         <span className="text-xs text-gray-400 dark:text-gray-500">No access</span>
                       ) : (
-                        <div className="flex flex-wrap gap-1">
+                        <div className="flex flex-col gap-1">
                           {acct.modules.map((m) => (
-                            <span key={m} className="bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 text-xs px-2 py-0.5 rounded">
-                              {MODULES.find((mod) => mod.key === m)?.label ?? m}
+                            <span key={m} className="bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 text-xs px-2 py-0.5 rounded w-fit">
+                              {m === 'store_directory' ? 'Store' : MODULES.find((mod) => mod.key === m)?.label ?? m}
                             </span>
                           ))}
                         </div>
