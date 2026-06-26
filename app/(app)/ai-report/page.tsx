@@ -6,85 +6,26 @@ import { supabase } from '@/lib/supabase'
 let _cachedReport = ''
 
 export default function AIReportPage() {
-  const [generating, setGenerating] = useState(!_cachedReport)
+  const [generating, setGenerating] = useState(false)
   const [report, setReport] = useState(_cachedReport)
   const [error, setError] = useState('')
   const reportRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
+    // Auto-generation disabled — load cached report only
     if (_cachedReport) return
-    generate()
+    loadCached()
   }, [])
 
-  const generate = async () => {
-    _cachedReport = ''
-    setGenerating(true)
-    setReport('')
-    setError('')
-
+  const loadCached = async () => {
     try {
       const statusRes = await fetch('/api/ai-report?period=all')
       const status = await statusRes.json()
-
-      if (!status.hasData) {
-        setError('No performance data found. Upload data in SSS Data first.')
-        setGenerating(false)
-        return
-      }
-
       if (status.cached && status.report) {
         _cachedReport = status.report
         setReport(status.report)
-        setGenerating(false)
-        return
       }
-    } catch {
-      // status check failed — fall through and attempt a fresh generation
-    }
-
-    const { data: perfData } = await supabase.from('performance_data').select('*')
-    const { data: mData } = await supabase.from('marketing_efforts').select('*').order('date', { ascending: false }).limit(50)
-    const marketingData = mData || []
-
-    if (!perfData || perfData.length === 0) {
-      setError('No performance data found. Upload data in SSS Data first.')
-      setGenerating(false)
-      return
-    }
-
-    try {
-      const res = await fetch('/api/ai-report', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ performanceData: perfData, marketingData, period: 'all' }),
-      })
-
-      if (!res.ok) {
-        let message = 'Report generation failed'
-        try {
-          const data = await res.json()
-          if (data?.error) message = data.error
-        } catch {}
-        throw new Error(message)
-      }
-
-      const reader = res.body!.getReader()
-      const decoder = new TextDecoder()
-      let text = ''
-
-      while (true) {
-        const { done, value } = await reader.read()
-        if (done) break
-        text += decoder.decode(value, { stream: true })
-        setReport(text)
-        reportRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' })
-      }
-
-      _cachedReport = text
-    } catch (err: any) {
-      setError(err.message)
-    }
-    setGenerating(false)
+    } catch {}
   }
 
   const copyReport = () => navigator.clipboard.writeText(report)
@@ -217,16 +158,14 @@ export default function AIReportPage() {
           <p className="text-sm text-gray-500 dark:text-gray-400">Automatic intelligence report covering all your store data.</p>
         </div>
         <div className="flex items-center gap-2">
-          {report && !generating && (
+          {report && (
             <button onClick={copyReport} className="border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 font-medium px-4 py-2 rounded-lg text-sm transition-colors">
               📋 Copy
             </button>
           )}
-          {!generating && (
-            <button onClick={generate} className="border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 font-medium px-4 py-2 rounded-lg text-sm transition-colors">
-              ↺ Regenerate
-            </button>
-          )}
+          <span className="text-xs text-gray-400 dark:text-gray-500 px-3 py-2 border border-gray-200 dark:border-gray-700 rounded-lg">
+            Generation paused
+          </span>
         </div>
       </div>
 

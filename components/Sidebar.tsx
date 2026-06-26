@@ -111,32 +111,36 @@ export default function Sidebar({ modules, role, username }: SidebarProps) {
       </nav>
 
       {/* Footer */}
-      <div className="border-t border-slate-700 p-4 space-y-1">
-        <button
-          onClick={() => setProfileOpen(!profileOpen)}
-          aria-label={username}
-          className={`flex items-center w-full hover:bg-slate-800 rounded-lg px-2 py-2 transition-colors ${
-            collapsed ? 'justify-center' : 'gap-3'
-          }`}
-        >
-          <div className="w-10 h-10 rounded-full bg-slate-700 flex items-center justify-center flex-shrink-0">
-            <span className="text-white font-semibold text-sm">
-              {(username[0] ?? '?').toUpperCase()}
-            </span>
-          </div>
-          {!collapsed && (
-            <span className="text-sm text-slate-300 truncate">{username}</span>
-          )}
-        </button>
+      <div className="border-t border-slate-700 p-4">
+        <div className={`flex items-center ${collapsed ? 'flex-col gap-1' : 'gap-1'}`}>
+          <button
+            onClick={() => setProfileOpen(!profileOpen)}
+            aria-label={username}
+            className={`flex items-center hover:bg-slate-800 rounded-lg px-2 py-2 transition-colors ${
+              collapsed ? 'justify-center w-full' : 'gap-3 flex-1 min-w-0'
+            }`}
+          >
+            <div className="w-10 h-10 rounded-full bg-slate-700 flex items-center justify-center flex-shrink-0">
+              <span className="text-white font-semibold text-sm">
+                {(username[0] ?? '?').toUpperCase()}
+              </span>
+            </div>
+            {!collapsed && (
+              <span className="text-sm text-slate-300 truncate">{username}</span>
+            )}
+          </button>
+          <button
+            onClick={toggle}
+            className={`flex items-center justify-center text-slate-400 hover:text-white transition-colors text-lg rounded-lg hover:bg-slate-800 flex-shrink-0 ${
+              collapsed ? 'w-full py-1.5' : 'w-8 h-10'
+            }`}
+            title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+            aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+          >
+            {collapsed ? '›' : '‹'}
+          </button>
+        </div>
         {profileOpen && <ProfileModal onClose={() => setProfileOpen(false)} />}
-        <button
-          onClick={toggle}
-          className="w-full flex justify-center py-1.5 text-slate-400 hover:text-white transition-colors text-lg"
-          title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-          aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-        >
-          {collapsed ? '›' : '‹'}
-        </button>
       </div>
     </div>
   )

@@ -47,6 +47,10 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
+  return NextResponse.json({ error: 'AI Report generation is currently disabled.' }, { status: 503 })
+}
+
+async function generateReport(request: NextRequest) {
   try {
     const { performanceData, marketingData, period } = await request.json()
     const { fingerprint } = await computeFingerprint()
