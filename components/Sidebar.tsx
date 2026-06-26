@@ -67,7 +67,7 @@ export default function Sidebar({ modules, role, username }: SidebarProps) {
 
   return (
     <div
-      className={`${collapsed ? 'w-16' : 'w-60'} bg-slate-900 text-white flex flex-col flex-shrink-0 overflow-hidden ${
+      className={`${collapsed ? 'w-16' : 'w-60'} bg-slate-900 text-white flex flex-col flex-shrink-0 ${
         mounted ? 'transition-all duration-300 ease-in-out' : ''
       }`}
     >
@@ -132,6 +132,7 @@ export default function Sidebar({ modules, role, username }: SidebarProps) {
           onClick={toggle}
           className="w-full flex justify-center py-1.5 text-slate-400 hover:text-white transition-colors text-lg"
           title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+          aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
         >
           {collapsed ? '›' : '‹'}
         </button>
