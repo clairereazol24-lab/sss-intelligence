@@ -14,7 +14,7 @@ export default async function Home() {
 
   return (
     <div className="p-6">
-      <p className="text-sm text-gray-500">You don&apos;t have access to any modules yet. Contact your admin.</p>
+      <p className="text-sm text-gray-500 dark:text-gray-400">You don&apos;t have access to any modules yet. Contact your admin.</p>
     </div>
   )
 }

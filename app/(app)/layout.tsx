@@ -12,7 +12,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     : []
 
   return (
-    <div className="flex h-screen bg-gray-50 overflow-hidden">
+    <div className="flex h-screen bg-gray-50 dark:bg-gray-900 overflow-hidden">
       <Sidebar modules={visibleModules} role={access?.role ?? 'member'} username={access?.username ?? ''} />
       <main className="flex-1 overflow-y-auto">{children}</main>
     </div>
