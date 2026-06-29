@@ -101,25 +101,25 @@ export default function DashboardPage() {
           const t = totals[p.key]
           return (
             <div key={p.key} className="bg-white rounded-xl border border-gray-200 p-5 dark:bg-gray-800 dark:border-gray-700">
-              <h2 className="font-semibold text-gray-700 dark:text-gray-200 mb-4">{p.label}</h2>
+              <h2 className="font-semibold text-gray-700 dark:text-gray-200 mb-4 text-center">{p.label}</h2>
               {loading ? (
-                <p className="text-sm text-gray-400 dark:text-gray-500">Loading...</p>
+                <p className="text-sm text-gray-400 dark:text-gray-500 text-center">Loading...</p>
               ) : (
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <p className="text-xs text-gray-400 dark:text-gray-500">Total Deposit</p>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="text-center">
+                    <p className="text-xs text-gray-400 dark:text-gray-500 mb-1">Total Deposit</p>
                     <p className="font-semibold text-gray-800 dark:text-gray-100 text-sm">{fmt(t?.total_deposit || 0)}</p>
                   </div>
-                  <div className="flex items-center justify-between">
-                    <p className="text-xs text-gray-400 dark:text-gray-500">Total GGR</p>
+                  <div className="text-center">
+                    <p className="text-xs text-gray-400 dark:text-gray-500 mb-1">Total GGR</p>
                     <p className={`font-semibold text-sm ${(t?.company_net_win || 0) >= 0 ? 'text-green-600' : 'text-red-500'}`}>{fmt(t?.company_net_win || 0)}</p>
                   </div>
-                  <div className="flex items-center justify-between">
-                    <p className="text-xs text-gray-400 dark:text-gray-500">Registered Members</p>
+                  <div className="text-center">
+                    <p className="text-xs text-gray-400 dark:text-gray-500 mb-1">Registered Members</p>
                     <p className="font-semibold text-gray-800 dark:text-gray-100 text-sm">{(t?.registered_members || 0).toLocaleString()}</p>
                   </div>
-                  <div className="flex items-center justify-between">
-                    <p className="text-xs text-gray-400 dark:text-gray-500">Stores</p>
+                  <div className="text-center">
+                    <p className="text-xs text-gray-400 dark:text-gray-500 mb-1">Stores</p>
                     <p className="font-semibold text-gray-800 dark:text-gray-100 text-sm">{t?.store_count || 0}</p>
                   </div>
                 </div>
