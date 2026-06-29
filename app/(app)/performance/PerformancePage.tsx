@@ -13,6 +13,17 @@ type StoreRow = {
   registered_members: number
 }
 
+type MemberRow = {
+  username: string
+  sub_affiliate: string
+  sub_affiliate_name: string
+  dsp: string | null
+  status: string
+  deposit: number
+  withdraw: number
+  ggr?: number
+}
+
 type DSPRow = {
   dsp: string
   partner: string
@@ -136,6 +147,40 @@ function StoreTable({ rows, metricLabel, metric, notesMap, onSaveNote }: {
   )
 }
 
+function MemberTable({ rows, metricLabel, metric }: {
+  rows: MemberRow[]
+  metricLabel: string
+  metric: (m: MemberRow) => React.ReactNode
+}) {
+  return (
+    <table className="w-full text-sm">
+      <thead>
+        <tr className="bg-gray-50 dark:bg-gray-700 text-left">
+          <th className="px-2 py-2 text-gray-500 dark:text-gray-400 font-medium w-[5%]">#</th>
+          <th className="px-2 py-2 text-gray-500 dark:text-gray-400 font-medium w-[22%]">Username</th>
+          <th className="px-2 py-2 text-gray-500 dark:text-gray-400 font-medium w-[22%]">Store</th>
+          <th className="px-2 py-2 text-gray-500 dark:text-gray-400 font-medium w-[20%]">DSP</th>
+          <th className="px-2 py-2 text-gray-500 dark:text-gray-400 font-medium text-right w-[31%]">{metricLabel}</th>
+        </tr>
+      </thead>
+      <tbody>
+        {rows.map((m, i) => (
+          <tr key={`${m.username}-${i}`} className="border-t border-gray-50 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700">
+            <td className="px-2 py-2 text-gray-400 dark:text-gray-500 font-medium">{i + 1}</td>
+            <td className="px-2 py-2 font-medium text-gray-800 dark:text-gray-100 truncate">{m.username}</td>
+            <td className="px-2 py-2 text-xs text-gray-500 dark:text-gray-400 truncate">{m.sub_affiliate_name || m.sub_affiliate}</td>
+            <td className="px-2 py-2 text-xs text-gray-600 dark:text-gray-300 truncate">{m.dsp || '—'}</td>
+            <td className="px-2 py-2 text-right font-medium text-gray-800 dark:text-gray-100">{metric(m)}</td>
+          </tr>
+        ))}
+        {rows.length === 0 && (
+          <tr><td colSpan={5} className="px-4 py-12 text-center text-gray-400 dark:text-gray-500">No member data. Import a CSV in the Members module first.</td></tr>
+        )}
+      </tbody>
+    </table>
+  )
+}
+
 function DSPTable({ rows, metricLabel, metric }: {
   rows: DSPRow[]
   metricLabel: string
@@ -191,6 +236,8 @@ export default function PerformancePage({ partner }: { partner?: string }) {
   const [dspsByMembers, setDSPsByMembers] = useState<DSPRow[]>([])
   const [dspsByGGR, setDSPsByGGR] = useState<DSPRow[]>([])
   const [dsps, setDSPs] = useState<DSPRow[]>([])
+  const [membersByDeposit, setMembersByDeposit] = useState<MemberRow[]>([])
+  const [membersByGGR, setMembersByGGR] = useState<MemberRow[]>([])
   const [loading, setLoading] = useState(false)
   const [notesMap, setNotesMap] = useState<Record<string, string>>({})
 
@@ -202,8 +249,15 @@ export default function PerformancePage({ partner }: { partner?: string }) {
 
   const fetchData = async (period: string) => {
     setLoading(true)
-    const res = await fetch(buildUrl(period))
-    const data = await res.json()
+    const partnerParam = partner ? `&partner=${encodeURIComponent(partner)}` : ''
+    const [perfRes, memDepRes, memGGRRes] = await Promise.all([
+      fetch(buildUrl(period)),
+      fetch(`/api/members?top=deposit${partnerParam}`),
+      fetch(`/api/members?top=ggr${partnerParam}`),
+    ])
+    const data = await perfRes.json()
+    const memDep = await memDepRes.json()
+    const memGGR = await memGGRRes.json()
     setStores(data.top50Stores || [])
     setStoresByMembers(data.top50StoresByMembers || [])
     setStoresByGGR(data.top50StoresByGGR || [])
@@ -211,6 +265,8 @@ export default function PerformancePage({ partner }: { partner?: string }) {
     setDSPsByMembers(data.top50DSPsByMembers || [])
     setDSPsByGGR(data.top50DSPsByGGR || [])
     setDSPs(data.top50DSPs || [])
+    setMembersByDeposit(memDep.members || [])
+    setMembersByGGR(memGGR.members || [])
     if (data.periods) setPeriods(data.periods)
     setLoading(false)
   }
@@ -319,7 +375,7 @@ export default function PerformancePage({ partner }: { partner?: string }) {
             </Card>
           </div>
 
-          {/* Right column — Stores */}
+          {/* Right column — Stores + Members */}
           <div className="flex flex-col gap-6">
             <Card emoji="🏆" title="Top 50 Stores by Deposit">
               <StoreTable rows={stores} metricLabel="Total Deposit" metric={(s) => fmt(s.total_deposit)} notesMap={notesMap} onSaveNote={handleSaveNote} />
@@ -329,6 +385,12 @@ export default function PerformancePage({ partner }: { partner?: string }) {
             </Card>
             <Card emoji="⭐" title="Top 50 Stores by Registered Members">
               <StoreTable rows={storesByMembers} metricLabel="Registered Members" metric={(s) => s.registered_members.toLocaleString()} notesMap={notesMap} onSaveNote={handleSaveNote} />
+            </Card>
+            <Card emoji="💵" title="Top 50 Members by Deposit">
+              <MemberTable rows={membersByDeposit} metricLabel="Deposit" metric={(m) => fmt(m.deposit)} />
+            </Card>
+            <Card emoji="📉" title="Top 50 Members by GGR">
+              <MemberTable rows={membersByGGR} metricLabel="GGR" metric={(m) => { const g = m.ggr ?? (m.deposit - m.withdraw); return <span className={g >= 0 ? 'text-green-600' : 'text-red-500'}>{fmt(g)}</span> }} />
             </Card>
           </div>
         </div>

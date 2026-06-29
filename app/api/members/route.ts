@@ -10,6 +10,7 @@ export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
     const partner = searchParams.get('partner')
+    const top = searchParams.get('top') // 'deposit' | 'ggr'
 
     let query = supabase
       .from('members')
@@ -28,6 +29,19 @@ export async function GET(request: NextRequest) {
       allRows.push(...page)
       if (page.length < PAGE) break
       start += PAGE
+    }
+
+    // Top-50 mode for Performance page
+    if (top === 'deposit') {
+      const sorted = [...allRows].sort((a, b) => (b.deposit || 0) - (a.deposit || 0)).slice(0, 50)
+      return NextResponse.json({ members: sorted })
+    }
+    if (top === 'ggr') {
+      const sorted = [...allRows]
+        .map(r => ({ ...r, ggr: (r.deposit || 0) - (r.withdraw || 0) }))
+        .sort((a, b) => b.ggr - a.ggr)
+        .slice(0, 50)
+      return NextResponse.json({ members: sorted })
     }
 
     let active = 0, locked = 0, disabled = 0
