@@ -1,6 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 
-export type ModuleKey = 'sss_data' | 'performance' | 'store_directory' | 'ai_report' | 'marketing_efforts'
+export type ModuleKey = 'dashboard' | 'sss_data' | 'performance' | 'store_directory' | 'ai_report' | 'marketing_efforts'
 
 export type ModuleDef = {
   key: ModuleKey
@@ -11,6 +11,7 @@ export type ModuleDef = {
 }
 
 export const MODULES: ModuleDef[] = [
+  { key: 'dashboard', label: 'Dashboard', href: '/dashboard', icon: '📊' },
   {
     key: 'sss_data',
     label: 'SSS Data',

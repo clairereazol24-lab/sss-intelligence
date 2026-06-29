@@ -62,31 +62,11 @@ export default function SSSDataClient({ partner }: { partner: string }) {
   const [allStores, setAllStores] = useState<StoreRow[]>([])
   const [lastUpdated, setLastUpdated] = useState<LastUpdated | null>(null)
 
-  const [alphaTotals, setAlphaTotals] = useState<OverallTotals | null>(null)
-  const [rtTotals, setRtTotals] = useState<OverallTotals | null>(null)
-  const [dashLoading, setDashLoading] = useState(false)
-
   const buildQuery = (from: string, to: string) => {
     const params = new URLSearchParams()
     if (from && to) { params.set('from', from); params.set('to', to) }
     params.set('partner', partner)
     return `?${params.toString()}`
-  }
-
-  const fetchDashboard = async (from: string, to: string) => {
-    setDashLoading(true)
-    try {
-      const base = (from && to) ? `&from=${from}&to=${to}` : ''
-      const [aRes, rRes] = await Promise.all([
-        fetch(`/api/performance?partner=Alpharus${base}`),
-        fetch(`/api/performance?partner=Relevant%20Tech${base}`),
-      ])
-      const [aData, rData] = await Promise.all([aRes.json(), rRes.json()])
-      setAlphaTotals(aData.overallTotals || null)
-      setRtTotals(rData.overallTotals || null)
-    } finally {
-      setDashLoading(false)
-    }
   }
 
   const fetchOverall = async (from: string, to: string) => {
@@ -106,10 +86,10 @@ export default function SSSDataClient({ partner }: { partner: string }) {
     }
   }
 
-  useEffect(() => { fetchOverall('', ''); fetchDashboard('', '') }, [partner])
+  useEffect(() => { fetchOverall('', '') }, [partner])
 
-  const handleOverallFromChange = (value: string) => { setOverallFrom(value); fetchOverall(value, overallTo); fetchDashboard(value, overallTo) }
-  const handleOverallToChange = (value: string) => { setOverallTo(value); fetchOverall(overallFrom, value); fetchDashboard(overallFrom, value) }
+  const handleOverallFromChange = (value: string) => { setOverallFrom(value); fetchOverall(value, overallTo) }
+  const handleOverallToChange = (value: string) => { setOverallTo(value); fetchOverall(overallFrom, value) }
 
   const handleExport = async () => {
     setOverallError(null)
@@ -271,40 +251,6 @@ export default function SSSDataClient({ partner }: { partner: string }) {
             ⬇️ Export
           </button>
         </div>
-      </div>
-
-      {/* Dashboard — both partners side by side */}
-      <div className="grid grid-cols-2 gap-4 mb-6">
-        {[
-          { label: 'Alpharus', totals: alphaTotals },
-          { label: 'Relevant Tech', totals: rtTotals },
-        ].map(({ label, totals }) => (
-          <div key={label} className={`bg-white rounded-xl border p-5 dark:bg-gray-800 dark:border-gray-700 ${partner === label ? 'border-blue-300 dark:border-blue-600' : 'border-gray-200'}`}>
-            <h2 className={`font-semibold mb-4 text-sm ${partner === label ? 'text-blue-600 dark:text-blue-400' : 'text-gray-500 dark:text-gray-400'}`}>{label}</h2>
-            {dashLoading ? (
-              <p className="text-xs text-gray-400 dark:text-gray-500">Loading...</p>
-            ) : (
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <p className="text-xs text-gray-400 dark:text-gray-500 mb-0.5">Total Deposit</p>
-                  <p className="font-semibold text-gray-800 dark:text-gray-100 text-sm">{fmt(totals?.total_deposit || 0)}</p>
-                </div>
-                <div>
-                  <p className="text-xs text-gray-400 dark:text-gray-500 mb-0.5">Total GGR</p>
-                  <p className={`font-semibold text-sm ${(totals?.company_net_win || 0) >= 0 ? 'text-green-600' : 'text-red-500'}`}>{fmt(totals?.company_net_win || 0)}</p>
-                </div>
-                <div>
-                  <p className="text-xs text-gray-400 dark:text-gray-500 mb-0.5">Registered Members</p>
-                  <p className="font-semibold text-gray-800 dark:text-gray-100 text-sm">{(totals?.registered_members || 0).toLocaleString()}</p>
-                </div>
-                <div>
-                  <p className="text-xs text-gray-400 dark:text-gray-500 mb-0.5">Stores</p>
-                  <p className="font-semibold text-gray-800 dark:text-gray-100 text-sm">{totals?.store_count || 0}</p>
-                </div>
-              </div>
-            )}
-          </div>
-        ))}
       </div>
 
       {/* Overall summary */}
