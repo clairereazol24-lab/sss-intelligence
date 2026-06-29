@@ -6,6 +6,7 @@ type Member = {
   username: string
   sub_affiliate: string
   sub_affiliate_name: string
+  dsp: string | null
   status: string
   registered_time: string | null
   member_rank: string | null
@@ -87,6 +88,7 @@ export default function MembersClient({ partner }: { partner: string }) {
         channel: row['Channel'] || null,
         ad_name: row['AD Name'] || null,
         username: row['Username'],
+        dsp: row['DSP'] || row['Dsp'] || null,
         registered_time: row['Registered Time'] ? new Date(row['Registered Time']).toISOString() : null,
         status: row['Status'] || null,
         member_rank: row['Member Rank'] || null,
@@ -118,12 +120,16 @@ export default function MembersClient({ partner }: { partner: string }) {
   }
 
   const filtered = search.trim()
-    ? members.filter(m =>
-        m.username.toLowerCase().includes(search.toLowerCase()) ||
-        m.sub_affiliate.toLowerCase().includes(search.toLowerCase()) ||
-        m.sub_affiliate_name.toLowerCase().includes(search.toLowerCase()) ||
-        (m.status || '').toLowerCase().includes(search.toLowerCase())
-      )
+    ? members.filter(m => {
+        const q = search.toLowerCase()
+        return (
+          m.username.toLowerCase().includes(q) ||
+          m.sub_affiliate.toLowerCase().includes(q) ||
+          m.sub_affiliate_name.toLowerCase().includes(q) ||
+          (m.dsp || '').toLowerCase().includes(q) ||
+          (m.status || '').toLowerCase().includes(q)
+        )
+      })
     : members
 
   return (
@@ -207,7 +213,7 @@ export default function MembersClient({ partner }: { partner: string }) {
             <table className="text-xs w-full">
               <thead className="sticky top-0">
                 <tr className="bg-gray-50 dark:bg-gray-700">
-                  {['Sub Affiliate', 'Store Name', 'Username', 'Status', 'Rank', 'Registered', 'Last Login', 'Deposit', 'Withdraw'].map(h => (
+                  {['Sub Affiliate', 'Store Name', 'DSP', 'Username', 'Status', 'Rank', 'Registered', 'Last Login', 'Deposit', 'Withdraw'].map(h => (
                     <th key={h} className="px-3 py-2 text-left text-gray-500 dark:text-gray-400 font-medium whitespace-nowrap">{h}</th>
                   ))}
                 </tr>
@@ -217,6 +223,7 @@ export default function MembersClient({ partner }: { partner: string }) {
                   <tr key={`${m.username}-${i}`} className="border-t border-gray-100 dark:border-gray-700">
                     <td className="px-3 py-2 text-gray-700 dark:text-gray-300">{m.sub_affiliate}</td>
                     <td className="px-3 py-2 text-gray-700 dark:text-gray-300">{m.sub_affiliate_name}</td>
+                    <td className="px-3 py-2 text-gray-500 dark:text-gray-400">{m.dsp || '—'}</td>
                     <td className="px-3 py-2 text-gray-700 dark:text-gray-300 font-medium">{m.username}</td>
                     <td className={`px-3 py-2 font-medium ${statusColor(m.status)}`}>{m.status || '—'}</td>
                     <td className="px-3 py-2 text-gray-500 dark:text-gray-400">{m.member_rank || '—'}</td>

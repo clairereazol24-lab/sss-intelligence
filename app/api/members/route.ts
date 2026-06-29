@@ -13,7 +13,7 @@ export async function GET(request: NextRequest) {
 
     let query = supabase
       .from('members')
-      .select('username, sub_affiliate, sub_affiliate_name, status, registered_time, member_rank, last_login_time, first_deposit_amount, deposit, deposit_times, withdraw, withdraw_times')
+      .select('username, sub_affiliate, sub_affiliate_name, dsp, status, registered_time, member_rank, last_login_time, first_deposit_amount, deposit, deposit_times, withdraw, withdraw_times')
       .order('sub_affiliate', { ascending: true })
       .order('registered_time', { ascending: true })
     if (partner) query = query.eq('partner', partner)
