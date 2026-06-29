@@ -37,6 +37,22 @@ type LastUpdated = {
   period_type: string
 }
 
+type MemberStoreRow = {
+  sub_affiliate: string
+  sub_affiliate_name: string
+  total: number
+  active: number
+  locked: number
+  disabled: number
+}
+
+type MemberSummary = {
+  total: number
+  active: number
+  locked: number
+  disabled: number
+}
+
 export default function SSSDataClient({ partner }: { partner: string }) {
   const [file, setFile] = useState<File | null>(null)
   const [parsed, setParsed] = useState<any[]>([])
@@ -53,6 +69,16 @@ export default function SSSDataClient({ partner }: { partner: string }) {
   const [mode, setMode] = useState<'new' | 'update'>('new')
   const [confirming, setConfirming] = useState(false)
   const fileRef = useRef<HTMLInputElement>(null)
+
+  const [memberStores, setMemberStores] = useState<MemberStoreRow[]>([])
+  const [memberSummary, setMemberSummary] = useState<MemberSummary | null>(null)
+  const [memberLoading, setMemberLoading] = useState(false)
+  const [memberError, setMemberError] = useState<string | null>(null)
+  const [memberFile, setMemberFile] = useState<File | null>(null)
+  const [memberParsed, setMemberParsed] = useState<any[]>([])
+  const [memberUploading, setMemberUploading] = useState(false)
+  const [memberResult, setMemberResult] = useState<string | null>(null)
+  const memberFileRef = useRef<HTMLInputElement>(null)
 
   const [overallFrom, setOverallFrom] = useState('')
   const [overallTo, setOverallTo] = useState('')
@@ -86,7 +112,75 @@ export default function SSSDataClient({ partner }: { partner: string }) {
     }
   }
 
-  useEffect(() => { fetchOverall('', '') }, [partner])
+  const fetchMembers = async () => {
+    setMemberLoading(true)
+    setMemberError(null)
+    try {
+      const res = await fetch(`/api/members?partner=${encodeURIComponent(partner)}`)
+      const data = await res.json()
+      if (data.error) throw new Error(data.error)
+      setMemberStores(data.byStore || [])
+      setMemberSummary(data.summary || null)
+    } catch (err: any) {
+      setMemberError(err.message || 'Failed to load members.')
+    } finally {
+      setMemberLoading(false)
+    }
+  }
+
+  const handleMemberFile = (f: File) => {
+    setMemberFile(f)
+    setMemberResult(null)
+    Papa.parse(f, {
+      header: true,
+      skipEmptyLines: true,
+      complete: (res) => setMemberParsed(res.data as any[]),
+    })
+  }
+
+  const handleMemberUpload = async () => {
+    if (!memberParsed.length) return
+    setMemberUploading(true)
+    setMemberError(null)
+    try {
+      const records = memberParsed.map((row: any) => ({
+        partner: row['Partner'] || partner,
+        sub_affiliate: row['Sub Affiliate'],
+        sub_affiliate_name: row['Sub Affiliate Name'],
+        channel: row['Channel'] || null,
+        ad_name: row['AD Name'] || null,
+        username: row['Username'],
+        registered_time: row['Registered Time'] ? new Date(row['Registered Time']).toISOString() : null,
+        status: row['Status'] || null,
+        member_rank: row['Member Rank'] || null,
+        last_login_time: row['Last Login Time'] ? new Date(row['Last Login Time']).toISOString() : null,
+        first_deposit_amount: parseFloat(row['First Deposit Amount']) || 0,
+        deposit: parseFloat(row['Deposit']) || 0,
+        deposit_times: parseInt(row['Deposit Times']) || 0,
+        withdraw: parseFloat(row['Withdraw']) || 0,
+        withdraw_times: parseInt(row['Withdraw Times']) || 0,
+      })).filter(r => r.username && r.sub_affiliate)
+
+      const res = await fetch('/api/members', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ records }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Upload failed.')
+      setMemberResult(`✅ ${data.count} member records uploaded.`)
+      setMemberParsed([])
+      setMemberFile(null)
+      if (memberFileRef.current) memberFileRef.current.value = ''
+      fetchMembers()
+    } catch (err: any) {
+      setMemberError(err.message || 'Upload failed.')
+    } finally {
+      setMemberUploading(false)
+    }
+  }
+
+  useEffect(() => { fetchOverall('', ''); fetchMembers() }, [partner])
 
   const handleOverallFromChange = (value: string) => { setOverallFrom(value); fetchOverall(value, overallTo) }
   const handleOverallToChange = (value: string) => { setOverallTo(value); fetchOverall(overallFrom, value) }
@@ -318,6 +412,77 @@ export default function SSSDataClient({ partner }: { partner: string }) {
                     <td className={`px-3 py-2 font-medium ${s.company_net_win >= 0 ? 'text-green-600' : 'text-red-500'}`}>{fmt(s.company_net_win)}</td>
                     <td className="px-3 py-2 text-gray-700 dark:text-gray-300">{fmt(s.payout_amount)}</td>
                     <td className="px-3 py-2 text-gray-700 dark:text-gray-300">{s.registered_members.toLocaleString()}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
+      {/* Registered Members */}
+      <div className="bg-white rounded-xl border border-gray-200 p-5 mb-6 dark:bg-gray-800 dark:border-gray-700">
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <h2 className="font-semibold text-gray-700 dark:text-gray-200">Registered Members</h2>
+            {memberSummary && (
+              <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
+                {memberSummary.total.toLocaleString()} total &nbsp;·&nbsp;
+                <span className="text-green-600">{memberSummary.active.toLocaleString()} active</span> &nbsp;·&nbsp;
+                <span className="text-amber-500">{memberSummary.locked.toLocaleString()} locked</span> &nbsp;·&nbsp;
+                <span className="text-red-400">{memberSummary.disabled.toLocaleString()} disabled</span>
+              </p>
+            )}
+          </div>
+          <div>
+            <input ref={memberFileRef} type="file" accept=".csv" className="hidden" onChange={e => { const f = e.target.files?.[0]; if (f) handleMemberFile(f) }} />
+            <button
+              onClick={() => memberFileRef.current?.click()}
+              className="bg-blue-600 hover:bg-blue-700 text-white font-medium px-4 py-2 rounded-lg transition-colors text-sm whitespace-nowrap"
+            >
+              📥 Import Members
+            </button>
+          </div>
+        </div>
+
+        {memberFile && memberParsed.length > 0 && (
+          <div className="bg-blue-50 border border-blue-200 rounded-lg px-4 py-3 mb-4 flex items-center justify-between dark:bg-blue-900/20 dark:border-blue-800">
+            <p className="text-sm text-blue-700 dark:text-blue-300">{memberFile.name} — {memberParsed.length} rows ready</p>
+            <div className="flex gap-2">
+              <button onClick={() => { setMemberFile(null); setMemberParsed([]); if (memberFileRef.current) memberFileRef.current.value = '' }} className="text-xs text-gray-500 hover:text-gray-700 px-2 py-1 rounded dark:text-gray-400">Cancel</button>
+              <button onClick={handleMemberUpload} disabled={memberUploading} className="bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-xs font-medium px-4 py-1.5 rounded-lg transition-colors">
+                {memberUploading ? 'Uploading...' : 'Upload'}
+              </button>
+            </div>
+          </div>
+        )}
+
+        {memberResult && <div className="bg-green-50 border border-green-200 text-green-800 px-4 py-3 rounded-lg mb-4 text-sm dark:bg-green-900/30 dark:border-green-800 dark:text-green-400">{memberResult}</div>}
+        {memberError && <div className="bg-red-50 border border-red-200 text-red-800 px-4 py-3 rounded-lg mb-4 text-sm dark:bg-red-900/30 dark:border-red-800 dark:text-red-400">❌ {memberError}</div>}
+
+        {memberLoading ? (
+          <p className="text-sm text-gray-400 dark:text-gray-500">Loading...</p>
+        ) : memberStores.length === 0 ? (
+          <p className="text-xs text-gray-400 dark:text-gray-500">No member data yet — import a CSV above.</p>
+        ) : (
+          <div className="overflow-x-auto max-h-[480px] overflow-y-auto">
+            <table className="text-xs w-full">
+              <thead>
+                <tr className="bg-gray-50 dark:bg-gray-700">
+                  {['Sub Affiliate', 'Store Name', 'Total', 'Active', 'Locked', 'Disabled'].map(h => (
+                    <th key={h} className="px-3 py-2 text-left text-gray-500 dark:text-gray-400 font-medium whitespace-nowrap">{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {memberStores.map(s => (
+                  <tr key={s.sub_affiliate} className="border-t border-gray-100 dark:border-gray-700">
+                    <td className="px-3 py-2 text-gray-700 dark:text-gray-300">{s.sub_affiliate}</td>
+                    <td className="px-3 py-2 text-gray-700 dark:text-gray-300">{s.sub_affiliate_name}</td>
+                    <td className="px-3 py-2 font-medium text-gray-800 dark:text-gray-100">{s.total.toLocaleString()}</td>
+                    <td className="px-3 py-2 text-green-600">{s.active.toLocaleString()}</td>
+                    <td className="px-3 py-2 text-amber-500">{s.locked.toLocaleString()}</td>
+                    <td className="px-3 py-2 text-red-400">{s.disabled > 0 ? s.disabled.toLocaleString() : '—'}</td>
                   </tr>
                 ))}
               </tbody>
