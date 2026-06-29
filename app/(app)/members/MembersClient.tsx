@@ -2,27 +2,44 @@
 import { useState, useRef, useEffect } from 'react'
 import Papa from 'papaparse'
 
-type MemberStoreRow = {
+type Member = {
+  username: string
   sub_affiliate: string
   sub_affiliate_name: string
-  total: number
-  active: number
-  locked: number
-  disabled: number
+  status: string
+  registered_time: string | null
+  member_rank: string | null
+  last_login_time: string | null
+  first_deposit_amount: number
+  deposit: number
+  deposit_times: number
+  withdraw: number
+  withdraw_times: number
 }
 
-type MemberSummary = {
-  total: number
-  active: number
-  locked: number
-  disabled: number
+type Summary = { total: number; active: number; locked: number; disabled: number }
+
+const fmt = (n: number) => `₱${n.toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+
+const fmtDate = (d: string | null) => {
+  if (!d) return '—'
+  return new Date(d).toLocaleDateString('en-PH', { year: 'numeric', month: 'short', day: 'numeric' })
+}
+
+const statusColor = (s: string) => {
+  const v = (s || '').toLowerCase()
+  if (v === 'active') return 'text-green-600'
+  if (v === 'locked') return 'text-amber-500'
+  if (v === 'disabled') return 'text-red-400'
+  return 'text-gray-400'
 }
 
 export default function MembersClient({ partner }: { partner: string }) {
-  const [stores, setStores] = useState<MemberStoreRow[]>([])
-  const [summary, setSummary] = useState<MemberSummary | null>(null)
+  const [members, setMembers] = useState<Member[]>([])
+  const [summary, setSummary] = useState<Summary | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [search, setSearch] = useState('')
 
   const [file, setFile] = useState<File | null>(null)
   const [parsed, setParsed] = useState<any[]>([])
@@ -37,7 +54,7 @@ export default function MembersClient({ partner }: { partner: string }) {
       const res = await fetch(`/api/members?partner=${encodeURIComponent(partner)}`)
       const data = await res.json()
       if (data.error) throw new Error(data.error)
-      setStores(data.byStore || [])
+      setMembers(data.members || [])
       setSummary(data.summary || null)
     } catch (err: any) {
       setError(err.message || 'Failed to load members.')
@@ -100,6 +117,15 @@ export default function MembersClient({ partner }: { partner: string }) {
     }
   }
 
+  const filtered = search.trim()
+    ? members.filter(m =>
+        m.username.toLowerCase().includes(search.toLowerCase()) ||
+        m.sub_affiliate.toLowerCase().includes(search.toLowerCase()) ||
+        m.sub_affiliate_name.toLowerCase().includes(search.toLowerCase()) ||
+        (m.status || '').toLowerCase().includes(search.toLowerCase())
+      )
+    : members
+
   return (
     <div className="p-6">
       <div className="flex items-center justify-between mb-6">
@@ -118,7 +144,6 @@ export default function MembersClient({ partner }: { partner: string }) {
         </div>
       </div>
 
-      {/* Import confirmation bar */}
       {file && parsed.length > 0 && (
         <div className="bg-blue-50 border border-blue-200 rounded-lg px-4 py-3 mb-6 flex items-center justify-between dark:bg-blue-900/20 dark:border-blue-800">
           <p className="text-sm text-blue-700 dark:text-blue-300">{file.name} — {parsed.length} rows ready</p>
@@ -134,10 +159,8 @@ export default function MembersClient({ partner }: { partner: string }) {
       {result && <div className="bg-green-50 border border-green-200 text-green-800 px-4 py-3 rounded-lg mb-6 text-sm dark:bg-green-900/30 dark:border-green-800 dark:text-green-400">{result}</div>}
       {error && <div className="bg-red-50 border border-red-200 text-red-800 px-4 py-3 rounded-lg mb-6 text-sm dark:bg-red-900/30 dark:border-red-800 dark:text-red-400">❌ {error}</div>}
 
-      {/* Summary totals */}
       {summary && (
         <div className="bg-white rounded-xl border border-gray-200 p-5 mb-6 dark:bg-gray-800 dark:border-gray-700">
-          <h2 className="font-semibold text-gray-700 dark:text-gray-200 mb-3">Overall</h2>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
             <div>
               <p className="text-xs text-gray-400 dark:text-gray-500 mb-1">Total Members</p>
@@ -159,32 +182,48 @@ export default function MembersClient({ partner }: { partner: string }) {
         </div>
       )}
 
-      {/* Per-store table */}
       <div className="bg-white rounded-xl border border-gray-200 p-5 dark:bg-gray-800 dark:border-gray-700">
-        <h2 className="font-semibold text-gray-700 dark:text-gray-200 mb-3">By Store</h2>
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="font-semibold text-gray-700 dark:text-gray-200">
+            Members {search && filtered.length !== members.length ? `(${filtered.length} of ${members.length})` : members.length > 0 ? `(${members.length})` : ''}
+          </h2>
+          {members.length > 0 && (
+            <input
+              type="text"
+              placeholder="Search username, store, status..."
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              className="border border-gray-200 rounded-lg px-3 py-1.5 text-sm w-64 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100"
+            />
+          )}
+        </div>
+
         {loading ? (
           <p className="text-sm text-gray-400 dark:text-gray-500">Loading...</p>
-        ) : stores.length === 0 ? (
-          <p className="text-xs text-gray-400 dark:text-gray-500">No member data yet — import a CSV above.</p>
+        ) : members.length === 0 ? (
+          <p className="text-xs text-gray-400 dark:text-gray-500">No members yet — import a CSV above.</p>
         ) : (
-          <div className="overflow-x-auto max-h-[520px] overflow-y-auto">
+          <div className="overflow-x-auto max-h-[560px] overflow-y-auto">
             <table className="text-xs w-full">
               <thead className="sticky top-0">
                 <tr className="bg-gray-50 dark:bg-gray-700">
-                  {['Sub Affiliate', 'Store Name', 'Total', 'Active', 'Locked', 'Disabled'].map(h => (
+                  {['Sub Affiliate', 'Store Name', 'Username', 'Status', 'Rank', 'Registered', 'Last Login', 'Deposit', 'Withdraw'].map(h => (
                     <th key={h} className="px-3 py-2 text-left text-gray-500 dark:text-gray-400 font-medium whitespace-nowrap">{h}</th>
                   ))}
                 </tr>
               </thead>
               <tbody>
-                {stores.map(s => (
-                  <tr key={s.sub_affiliate} className="border-t border-gray-100 dark:border-gray-700">
-                    <td className="px-3 py-2 text-gray-700 dark:text-gray-300">{s.sub_affiliate}</td>
-                    <td className="px-3 py-2 text-gray-700 dark:text-gray-300">{s.sub_affiliate_name}</td>
-                    <td className="px-3 py-2 font-medium text-gray-800 dark:text-gray-100">{s.total.toLocaleString()}</td>
-                    <td className="px-3 py-2 text-green-600">{s.active.toLocaleString()}</td>
-                    <td className="px-3 py-2 text-amber-500">{s.locked.toLocaleString()}</td>
-                    <td className="px-3 py-2 text-red-400">{s.disabled > 0 ? s.disabled.toLocaleString() : '—'}</td>
+                {filtered.map((m, i) => (
+                  <tr key={`${m.username}-${i}`} className="border-t border-gray-100 dark:border-gray-700">
+                    <td className="px-3 py-2 text-gray-700 dark:text-gray-300">{m.sub_affiliate}</td>
+                    <td className="px-3 py-2 text-gray-700 dark:text-gray-300">{m.sub_affiliate_name}</td>
+                    <td className="px-3 py-2 text-gray-700 dark:text-gray-300 font-medium">{m.username}</td>
+                    <td className={`px-3 py-2 font-medium ${statusColor(m.status)}`}>{m.status || '—'}</td>
+                    <td className="px-3 py-2 text-gray-500 dark:text-gray-400">{m.member_rank || '—'}</td>
+                    <td className="px-3 py-2 text-gray-500 dark:text-gray-400 whitespace-nowrap">{fmtDate(m.registered_time)}</td>
+                    <td className="px-3 py-2 text-gray-500 dark:text-gray-400 whitespace-nowrap">{fmtDate(m.last_login_time)}</td>
+                    <td className="px-3 py-2 text-gray-700 dark:text-gray-300">{m.deposit > 0 ? fmt(m.deposit) : '—'}</td>
+                    <td className="px-3 py-2 text-gray-700 dark:text-gray-300">{m.withdraw > 0 ? fmt(m.withdraw) : '—'}</td>
                   </tr>
                 ))}
               </tbody>
