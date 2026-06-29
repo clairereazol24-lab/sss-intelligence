@@ -76,19 +76,19 @@ export default function DashboardPage() {
       <div className="bg-white rounded-xl border border-gray-200 p-5 mb-6 dark:bg-gray-800 dark:border-gray-700">
         <h2 className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-4">Combined</h2>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-6">
-          <div>
+          <div className="text-center">
             <p className="text-xs text-gray-400 dark:text-gray-500 mb-1">Total Deposit</p>
             <p className="text-lg font-bold text-gray-800 dark:text-gray-100">{loading ? '—' : fmt(combined.total_deposit)}</p>
           </div>
-          <div>
+          <div className="text-center">
             <p className="text-xs text-gray-400 dark:text-gray-500 mb-1">Total GGR</p>
             <p className={`text-lg font-bold ${combined.company_net_win >= 0 ? 'text-green-600' : 'text-red-500'}`}>{loading ? '—' : fmt(combined.company_net_win)}</p>
           </div>
-          <div>
+          <div className="text-center">
             <p className="text-xs text-gray-400 dark:text-gray-500 mb-1">Registered Members</p>
             <p className="text-lg font-bold text-gray-800 dark:text-gray-100">{loading ? '—' : combined.registered_members.toLocaleString()}</p>
           </div>
-          <div>
+          <div className="text-center">
             <p className="text-xs text-gray-400 dark:text-gray-500 mb-1">Stores</p>
             <p className="text-lg font-bold text-gray-800 dark:text-gray-100">{loading ? '—' : combined.store_count}</p>
           </div>
