@@ -155,22 +155,22 @@ function MemberTable({ rows, metricLabel, metric }: {
   return (
     <table className="w-full text-sm">
       <thead>
-        <tr className="bg-gray-50 dark:bg-gray-700 text-left">
-          <th className="px-2 py-2 text-gray-500 dark:text-gray-400 font-medium w-[5%]">#</th>
-          <th className="px-2 py-2 text-gray-500 dark:text-gray-400 font-medium w-[22%]">Username</th>
-          <th className="px-2 py-2 text-gray-500 dark:text-gray-400 font-medium w-[22%]">Store</th>
-          <th className="px-2 py-2 text-gray-500 dark:text-gray-400 font-medium w-[20%]">DSP</th>
-          <th className="px-2 py-2 text-gray-500 dark:text-gray-400 font-medium text-right w-[31%]">{metricLabel}</th>
+        <tr className="bg-gray-50 dark:bg-gray-700 text-center">
+          <th className="px-3 py-2.5 text-gray-500 dark:text-gray-400 font-medium w-[5%]">#</th>
+          <th className="px-3 py-2.5 text-gray-500 dark:text-gray-400 font-medium w-[23%]">Username</th>
+          <th className="px-3 py-2.5 text-gray-500 dark:text-gray-400 font-medium w-[23%]">Store</th>
+          <th className="px-3 py-2.5 text-gray-500 dark:text-gray-400 font-medium w-[22%]">DSP</th>
+          <th className="px-3 py-2.5 text-gray-500 dark:text-gray-400 font-medium w-[27%]">{metricLabel}</th>
         </tr>
       </thead>
       <tbody>
         {rows.map((m, i) => (
-          <tr key={`${m.username}-${i}`} className="border-t border-gray-50 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700">
-            <td className="px-2 py-2 text-gray-400 dark:text-gray-500 font-medium">{i + 1}</td>
-            <td className="px-2 py-2 font-medium text-gray-800 dark:text-gray-100 truncate">{m.username}</td>
-            <td className="px-2 py-2 text-xs text-gray-500 dark:text-gray-400 truncate">{m.sub_affiliate_name || m.sub_affiliate}</td>
-            <td className="px-2 py-2 text-xs text-gray-600 dark:text-gray-300 truncate">{m.dsp || '—'}</td>
-            <td className="px-2 py-2 text-right font-medium text-gray-800 dark:text-gray-100">{metric(m)}</td>
+          <tr key={`${m.username}-${i}`} className="border-t border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 text-center">
+            <td className="px-3 py-2.5 text-gray-400 dark:text-gray-500 font-medium">{i + 1}</td>
+            <td className="px-3 py-2.5 font-medium text-gray-800 dark:text-gray-100">{m.username}</td>
+            <td className="px-3 py-2.5 text-xs text-gray-500 dark:text-gray-400">{m.sub_affiliate_name || m.sub_affiliate}</td>
+            <td className="px-3 py-2.5 text-xs text-gray-600 dark:text-gray-300">{m.dsp || '—'}</td>
+            <td className="px-3 py-2.5 font-medium text-gray-800 dark:text-gray-100">{metric(m)}</td>
           </tr>
         ))}
         {rows.length === 0 && (
