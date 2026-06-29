@@ -16,6 +16,13 @@ type MemberCounts = {
   disabled: number
 }
 
+type TopMember = {
+  username: string
+  dsp: string | null
+  deposit: number
+  withdraw: number
+}
+
 const PARTNERS = [
   { key: 'Alpharus', label: 'Alpharus' },
   { key: 'Relevant Tech', label: 'Relevant Tech' },
@@ -24,6 +31,7 @@ const PARTNERS = [
 export default function DashboardPage() {
   const [perf, setPerf] = useState<Record<string, PerfTotals | null>>({ Alpharus: null, 'Relevant Tech': null })
   const [memberCounts, setMemberCounts] = useState<Record<string, MemberCounts | null>>({ Alpharus: null, 'Relevant Tech': null })
+  const [top50, setTop50] = useState<TopMember[]>([])
   const [loading, setLoading] = useState(true)
   const [from, setFrom] = useState('')
   const [to, setTo] = useState('')
@@ -32,9 +40,10 @@ export default function DashboardPage() {
     setLoading(true)
     try {
       const base = f && t ? `&from=${f}&to=${t}` : ''
-      const [perfResults, memberResults] = await Promise.all([
+      const [perfResults, memberResults, top50Res] = await Promise.all([
         Promise.all(PARTNERS.map(p => fetch(`/api/performance?partner=${encodeURIComponent(p.key)}${base}`).then(r => r.json()))),
         Promise.all(PARTNERS.map(p => fetch(`/api/members?partner=${encodeURIComponent(p.key)}&summary=true`).then(r => r.json()))),
+        fetch('/api/members?top=deposit').then(r => r.json()),
       ])
       const nextPerf: Record<string, PerfTotals | null> = {}
       const nextMem: Record<string, MemberCounts | null> = {}
@@ -44,6 +53,7 @@ export default function DashboardPage() {
       })
       setPerf(nextPerf)
       setMemberCounts(nextMem)
+      setTop50(top50Res.members || [])
     } finally {
       setLoading(false)
     }
@@ -104,7 +114,7 @@ export default function DashboardPage() {
       </div>
 
       {/* Per-partner */}
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-2 gap-4 mb-6">
         {PARTNERS.map(p => {
           const t = perf[p.key]
           const m = memberCounts[p.key]
@@ -136,6 +146,46 @@ export default function DashboardPage() {
             </div>
           )
         })}
+      </div>
+
+      {/* Top 50 Members */}
+      <div className="bg-white rounded-xl border border-gray-200 p-5 dark:bg-gray-800 dark:border-gray-700">
+        <h2 className="font-semibold text-gray-700 dark:text-gray-200 mb-4">💵 Top 50 Members by Deposit</h2>
+        {loading ? (
+          <p className="text-sm text-gray-400 dark:text-gray-500">Loading...</p>
+        ) : top50.length === 0 ? (
+          <p className="text-xs text-gray-400 dark:text-gray-500">No member data yet.</p>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="text-xs w-full">
+              <thead>
+                <tr className="bg-gray-50 dark:bg-gray-700">
+                  <th className="px-3 py-2.5 text-center text-gray-500 dark:text-gray-400 font-medium w-8">#</th>
+                  <th className="px-3 py-2.5 text-center text-gray-500 dark:text-gray-400 font-medium">DSP</th>
+                  <th className="px-3 py-2.5 text-center text-gray-500 dark:text-gray-400 font-medium">Username</th>
+                  <th className="px-3 py-2.5 text-center text-gray-500 dark:text-gray-400 font-medium">Deposit</th>
+                  <th className="px-3 py-2.5 text-center text-gray-500 dark:text-gray-400 font-medium">Withdraw</th>
+                  <th className="px-3 py-2.5 text-center text-gray-500 dark:text-gray-400 font-medium">GGR</th>
+                </tr>
+              </thead>
+              <tbody>
+                {top50.map((m, i) => {
+                  const ggr = (m.deposit || 0) - (m.withdraw || 0)
+                  return (
+                    <tr key={m.username} className="border-t border-gray-100 dark:border-gray-700">
+                      <td className="px-3 py-2.5 text-center text-gray-400 dark:text-gray-500">{i + 1}</td>
+                      <td className="px-3 py-2.5 text-center text-gray-500 dark:text-gray-400">{m.dsp || '—'}</td>
+                      <td className="px-3 py-2.5 text-center text-gray-700 dark:text-gray-300 font-medium">{m.username}</td>
+                      <td className="px-3 py-2.5 text-center text-gray-700 dark:text-gray-300">{fmt(m.deposit || 0)}</td>
+                      <td className="px-3 py-2.5 text-center text-gray-700 dark:text-gray-300">{fmt(m.withdraw || 0)}</td>
+                      <td className={`px-3 py-2.5 text-center font-medium ${ggr >= 0 ? 'text-green-600' : 'text-red-500'}`}>{fmt(ggr)}</td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
     </div>
   )
