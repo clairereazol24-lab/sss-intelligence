@@ -94,7 +94,7 @@ ALTER TABLE profiles DISABLE ROW LEVEL SECURITY;
 -- ============================================================
 CREATE TABLE IF NOT EXISTS module_permissions (
   user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
-  module VARCHAR(30) NOT NULL CHECK (module IN ('dashboard', 'sss_data', 'performance', 'store_directory', 'ai_report', 'marketing_efforts')),
+  module VARCHAR(30) NOT NULL CHECK (module IN ('dashboard', 'sss_data', 'members', 'performance', 'store_directory', 'ai_report', 'marketing_efforts')),
   PRIMARY KEY (user_id, module)
 );
 ALTER TABLE module_permissions DISABLE ROW LEVEL SECURITY;

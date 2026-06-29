@@ -1,6 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 
-export type ModuleKey = 'dashboard' | 'sss_data' | 'performance' | 'store_directory' | 'ai_report' | 'marketing_efforts'
+export type ModuleKey = 'dashboard' | 'sss_data' | 'members' | 'performance' | 'store_directory' | 'ai_report' | 'marketing_efforts'
 
 export type ModuleDef = {
   key: ModuleKey
@@ -20,6 +20,16 @@ export const MODULES: ModuleDef[] = [
     children: [
       { label: 'Alpharus', href: '/sss-data/alpharus' },
       { label: 'Relevant Tech', href: '/sss-data/relevant-tech' },
+    ],
+  },
+  {
+    key: 'members',
+    label: 'Members',
+    href: '/members',
+    icon: '👥',
+    children: [
+      { label: 'Alpharus', href: '/members/alpharus' },
+      { label: 'Relevant Tech', href: '/members/relevant-tech' },
     ],
   },
   {
