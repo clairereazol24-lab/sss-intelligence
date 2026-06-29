@@ -3,11 +3,17 @@ import { useState, useEffect } from 'react'
 
 const fmt = (n: number) => `₱${n.toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
 
-type Totals = {
+type PerfTotals = {
   total_deposit: number
   company_net_win: number
-  registered_members: number
   store_count: number
+}
+
+type MemberCounts = {
+  total: number
+  active: number
+  locked: number
+  disabled: number
 }
 
 const PARTNERS = [
@@ -16,7 +22,8 @@ const PARTNERS = [
 ]
 
 export default function DashboardPage() {
-  const [totals, setTotals] = useState<Record<string, Totals | null>>({ Alpharus: null, 'Relevant Tech': null })
+  const [perf, setPerf] = useState<Record<string, PerfTotals | null>>({ Alpharus: null, 'Relevant Tech': null })
+  const [memberCounts, setMemberCounts] = useState<Record<string, MemberCounts | null>>({ Alpharus: null, 'Relevant Tech': null })
   const [loading, setLoading] = useState(true)
   const [from, setFrom] = useState('')
   const [to, setTo] = useState('')
@@ -25,12 +32,18 @@ export default function DashboardPage() {
     setLoading(true)
     try {
       const base = f && t ? `&from=${f}&to=${t}` : ''
-      const results = await Promise.all(
-        PARTNERS.map(p => fetch(`/api/performance?partner=${encodeURIComponent(p.key)}${base}`).then(r => r.json()))
-      )
-      const next: Record<string, Totals | null> = {}
-      PARTNERS.forEach((p, i) => { next[p.key] = results[i].overallTotals || null })
-      setTotals(next)
+      const [perfResults, memberResults] = await Promise.all([
+        Promise.all(PARTNERS.map(p => fetch(`/api/performance?partner=${encodeURIComponent(p.key)}${base}`).then(r => r.json()))),
+        Promise.all(PARTNERS.map(p => fetch(`/api/members?partner=${encodeURIComponent(p.key)}&summary=true`).then(r => r.json()))),
+      ])
+      const nextPerf: Record<string, PerfTotals | null> = {}
+      const nextMem: Record<string, MemberCounts | null> = {}
+      PARTNERS.forEach((p, i) => {
+        nextPerf[p.key] = perfResults[i].overallTotals || null
+        nextMem[p.key] = memberResults[i].summary || null
+      })
+      setPerf(nextPerf)
+      setMemberCounts(nextMem)
     } finally {
       setLoading(false)
     }
@@ -41,15 +54,10 @@ export default function DashboardPage() {
   const handleFrom = (v: string) => { setFrom(v); fetchAll(v, to) }
   const handleTo = (v: string) => { setTo(v); fetchAll(from, v) }
 
-  const combined: Totals = PARTNERS.reduce((acc, p) => {
-    const t = totals[p.key]
-    return {
-      total_deposit: acc.total_deposit + (t?.total_deposit || 0),
-      company_net_win: acc.company_net_win + (t?.company_net_win || 0),
-      registered_members: acc.registered_members + (t?.registered_members || 0),
-      store_count: acc.store_count + (t?.store_count || 0),
-    }
-  }, { total_deposit: 0, company_net_win: 0, registered_members: 0, store_count: 0 })
+  const combinedDeposit = PARTNERS.reduce((acc, p) => acc + (perf[p.key]?.total_deposit || 0), 0)
+  const combinedGGR = PARTNERS.reduce((acc, p) => acc + (perf[p.key]?.company_net_win || 0), 0)
+  const combinedMembers = PARTNERS.reduce((acc, p) => acc + (memberCounts[p.key]?.total || 0), 0)
+  const combinedStores = PARTNERS.reduce((acc, p) => acc + (perf[p.key]?.store_count || 0), 0)
 
   return (
     <div className="p-6">
@@ -72,33 +80,34 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* Combined total */}
+      {/* Combined */}
       <div className="bg-white rounded-xl border border-gray-200 p-5 mb-6 dark:bg-gray-800 dark:border-gray-700">
         <h2 className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-4">Combined</h2>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-6">
           <div className="text-center">
             <p className="text-xs text-gray-400 dark:text-gray-500 mb-1">Total Deposit</p>
-            <p className="text-lg font-bold text-gray-800 dark:text-gray-100">{loading ? '—' : fmt(combined.total_deposit)}</p>
+            <p className="text-lg font-bold text-gray-800 dark:text-gray-100">{loading ? '—' : fmt(combinedDeposit)}</p>
           </div>
           <div className="text-center">
             <p className="text-xs text-gray-400 dark:text-gray-500 mb-1">Total GGR</p>
-            <p className={`text-lg font-bold ${combined.company_net_win >= 0 ? 'text-green-600' : 'text-red-500'}`}>{loading ? '—' : fmt(combined.company_net_win)}</p>
+            <p className={`text-lg font-bold ${combinedGGR >= 0 ? 'text-green-600' : 'text-red-500'}`}>{loading ? '—' : fmt(combinedGGR)}</p>
           </div>
           <div className="text-center">
             <p className="text-xs text-gray-400 dark:text-gray-500 mb-1">Registered Members</p>
-            <p className="text-lg font-bold text-gray-800 dark:text-gray-100">{loading ? '—' : combined.registered_members.toLocaleString()}</p>
+            <p className="text-lg font-bold text-gray-800 dark:text-gray-100">{loading ? '—' : combinedMembers.toLocaleString()}</p>
           </div>
           <div className="text-center">
             <p className="text-xs text-gray-400 dark:text-gray-500 mb-1">Stores</p>
-            <p className="text-lg font-bold text-gray-800 dark:text-gray-100">{loading ? '—' : combined.store_count}</p>
+            <p className="text-lg font-bold text-gray-800 dark:text-gray-100">{loading ? '—' : combinedStores}</p>
           </div>
         </div>
       </div>
 
-      {/* Per-partner cards */}
+      {/* Per-partner */}
       <div className="grid grid-cols-2 gap-4">
         {PARTNERS.map(p => {
-          const t = totals[p.key]
+          const t = perf[p.key]
+          const m = memberCounts[p.key]
           return (
             <div key={p.key} className="bg-white rounded-xl border border-gray-200 p-5 dark:bg-gray-800 dark:border-gray-700">
               <h2 className="font-semibold text-gray-700 dark:text-gray-200 mb-4 text-center">{p.label}</h2>
@@ -116,7 +125,7 @@ export default function DashboardPage() {
                   </div>
                   <div className="text-center">
                     <p className="text-xs text-gray-400 dark:text-gray-500 mb-1">Registered Members</p>
-                    <p className="font-semibold text-gray-800 dark:text-gray-100 text-sm">{(t?.registered_members || 0).toLocaleString()}</p>
+                    <p className="font-semibold text-gray-800 dark:text-gray-100 text-sm">{(m?.total || 0).toLocaleString()}</p>
                   </div>
                   <div className="text-center">
                     <p className="text-xs text-gray-400 dark:text-gray-500 mb-1">Stores</p>

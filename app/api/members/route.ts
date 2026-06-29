@@ -6,29 +6,51 @@ const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 )
 
+async function fetchAllMembers(partner?: string | null, columns = 'username, sub_affiliate, sub_affiliate_name, dsp, status, registered_time, member_rank, last_login_time, first_deposit_amount, deposit, deposit_times, withdraw, withdraw_times') {
+  let query = supabase
+    .from('members')
+    .select(columns)
+    .order('sub_affiliate', { ascending: true })
+    .order('registered_time', { ascending: true })
+  if (partner) query = query.eq('partner', partner)
+
+  const allRows: any[] = []
+  let start = 0
+  const PAGE = 1000
+  while (true) {
+    const { data: page, error } = await query.range(start, start + PAGE - 1)
+    if (error) throw error
+    if (!page || page.length === 0) break
+    allRows.push(...page)
+    if (page.length < PAGE) break
+    start += PAGE
+  }
+  return allRows
+}
+
+function buildSummary(rows: any[]) {
+  let active = 0, locked = 0, disabled = 0
+  for (const r of rows) {
+    const s = (r.status || '').toLowerCase()
+    if (s === 'active') active++
+    else if (s === 'locked') locked++
+    else if (s === 'disabled') disabled++
+  }
+  return { total: rows.length, active, locked, disabled }
+}
+
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
     const partner = searchParams.get('partner')
-    const top = searchParams.get('top') // 'deposit' | 'ggr'
+    const top = searchParams.get('top')       // 'deposit' | 'ggr'
+    const summaryOnly = searchParams.get('summary') === 'true'
 
-    let query = supabase
-      .from('members')
-      .select('username, sub_affiliate, sub_affiliate_name, dsp, status, registered_time, member_rank, last_login_time, first_deposit_amount, deposit, deposit_times, withdraw, withdraw_times')
-      .order('sub_affiliate', { ascending: true })
-      .order('registered_time', { ascending: true })
-    if (partner) query = query.eq('partner', partner)
+    const allRows = await fetchAllMembers(partner)
 
-    const allRows: any[] = []
-    let start = 0
-    const PAGE = 1000
-    while (true) {
-      const { data: page, error } = await query.range(start, start + PAGE - 1)
-      if (error) throw error
-      if (!page || page.length === 0) break
-      allRows.push(...page)
-      if (page.length < PAGE) break
-      start += PAGE
+    // Lightweight summary-only mode (for Dashboard)
+    if (summaryOnly) {
+      return NextResponse.json({ summary: buildSummary(allRows) })
     }
 
     // Top-50 mode for Performance page
@@ -44,17 +66,9 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ members: sorted })
     }
 
-    let active = 0, locked = 0, disabled = 0
-    for (const r of allRows) {
-      const s = (r.status || '').toLowerCase()
-      if (s === 'active') active++
-      else if (s === 'locked') locked++
-      else if (s === 'disabled') disabled++
-    }
-
     return NextResponse.json({
       members: allRows,
-      summary: { total: allRows.length, active, locked, disabled },
+      summary: buildSummary(allRows),
     })
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 500 })
@@ -68,11 +82,38 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'No records provided.' }, { status: 400 })
     }
 
-    // Upsert in batches of 500
+    const partnerVal: string = records[0]?.partner || ''
+
+    // Fetch all existing members for this partner to build accumulate map
+    const existingRows = await fetchAllMembers(
+      partnerVal,
+      'username, deposit, withdraw, deposit_times, withdraw_times, registered_time, first_deposit_amount'
+    )
+    const existingMap: Record<string, any> = {}
+    for (const e of existingRows) existingMap[e.username] = e
+
+    // Merge: accumulate numerics, update mutable fields, preserve originals
+    const mergedRecords = records.map((r: any) => {
+      const ex = existingMap[r.username]
+      if (ex) {
+        return {
+          ...r,
+          deposit: (ex.deposit || 0) + (r.deposit || 0),
+          withdraw: (ex.withdraw || 0) + (r.withdraw || 0),
+          deposit_times: (ex.deposit_times || 0) + (r.deposit_times || 0),
+          withdraw_times: (ex.withdraw_times || 0) + (r.withdraw_times || 0),
+          registered_time: ex.registered_time || r.registered_time,
+          first_deposit_amount: ex.first_deposit_amount || r.first_deposit_amount,
+        }
+      }
+      return r
+    })
+
+    // Upsert merged records in batches of 500
     const BATCH = 500
     let upserted = 0
-    for (let i = 0; i < records.length; i += BATCH) {
-      const batch = records.slice(i, i + BATCH)
+    for (let i = 0; i < mergedRecords.length; i += BATCH) {
+      const batch = mergedRecords.slice(i, i + BATCH)
       const { error } = await supabase
         .from('members')
         .upsert(batch, { onConflict: 'username,partner' })
