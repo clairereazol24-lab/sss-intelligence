@@ -33,8 +33,10 @@ export async function GET(request: NextRequest) {
     const period = searchParams.get('period')
     const from = searchParams.get('from')
     const to = searchParams.get('to')
+    const partner = searchParams.get('partner')
 
     let query = supabase.from('performance_data').select('*').order('period', { ascending: false })
+    if (partner) query = query.eq('partner', partner)
     if (period && period !== 'all') {
       query = query.eq('period', period)
     } else if (from && to) {

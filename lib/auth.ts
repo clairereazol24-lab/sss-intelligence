@@ -11,7 +11,16 @@ export type ModuleDef = {
 }
 
 export const MODULES: ModuleDef[] = [
-  { key: 'sss_data', label: 'SSS Data', href: '/sss-data', icon: '📤' },
+  {
+    key: 'sss_data',
+    label: 'SSS Data',
+    href: '/sss-data',
+    icon: '📤',
+    children: [
+      { label: 'Alpharus', href: '/sss-data/alpharus' },
+      { label: 'Relevant Tech', href: '/sss-data/relevant-tech' },
+    ],
+  },
   {
     key: 'performance',
     label: 'Performance',
