@@ -179,12 +179,14 @@ export async function GET(request: NextRequest) {
 
     const uniquePeriods = Array.from(new Set((periods || []).map((p: any) => p.period)))
 
-    // Most recently uploaded row, regardless of any period/from/to filter above
-    const { data: lastRow } = await supabase
+    // Most recently uploaded row for this partner
+    let lastRowQuery = supabase
       .from('performance_data')
       .select('period, period_type')
-      .order('created_at', { ascending: false })
+      .order('updated_at', { ascending: false })
       .limit(1)
+    if (partner) lastRowQuery = lastRowQuery.eq('partner', partner)
+    const { data: lastRow } = await lastRowQuery
 
     const lastUpdated = lastRow && lastRow.length > 0 ? lastRow[0] : null
 

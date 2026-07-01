@@ -6,6 +6,33 @@ const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 )
 
+export async function DELETE(_request: NextRequest) {
+  try {
+    // Find the most recent updated_at across all rows (the last upload batch)
+    const { data: latest, error: findError } = await supabase
+      .from('performance_data')
+      .select('updated_at')
+      .order('updated_at', { ascending: false })
+      .limit(1)
+      .single()
+
+    if (findError || !latest) {
+      return NextResponse.json({ error: 'No data to undo.' }, { status: 404 })
+    }
+
+    const { count, error: delError } = await supabase
+      .from('performance_data')
+      .delete({ count: 'exact' })
+      .eq('updated_at', latest.updated_at)
+
+    if (delError) throw delError
+
+    return NextResponse.json({ success: true, deleted: count })
+  } catch (err: any) {
+    return NextResponse.json({ error: err.message }, { status: 500 })
+  }
+}
+
 export async function POST(request: NextRequest) {
   try {
     const { records, period, periodType } = await request.json()
