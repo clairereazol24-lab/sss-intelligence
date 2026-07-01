@@ -61,8 +61,6 @@ export default function SSSDataClient({ partner }: { partner: string }) {
   const [overallError, setOverallError] = useState<string | null>(null)
   const [allStores, setAllStores] = useState<StoreRow[]>([])
   const [lastUpdated, setLastUpdated] = useState<LastUpdated | null>(null)
-  const [undoing, setUndoing] = useState(false)
-  const [undoConfirm, setUndoConfirm] = useState(false)
 
   const buildQuery = (from: string, to: string) => {
     const params = new URLSearchParams()
@@ -138,24 +136,6 @@ export default function SSSDataClient({ partner }: { partner: string }) {
   const getPeriod = () => {
     if (periodType === 'monthly') return `${year}-${month.padStart(2, '0')}`
     return date
-  }
-
-  const handleUndo = async () => {
-    if (!undoConfirm) { setUndoConfirm(true); return }
-    setUndoing(true)
-    setUndoConfirm(false)
-    setOverallError(null)
-    try {
-      const res = await fetch('/api/upload', { method: 'DELETE' })
-      const data = await res.json()
-      if (!res.ok || data.error) throw new Error(data.error || 'Undo failed.')
-      setResult(`✅ Undone — ${data.deleted} records removed.`)
-      fetchOverall(overallFrom, overallTo)
-    } catch (err: any) {
-      setOverallError(err.message || 'Undo failed.')
-    } finally {
-      setUndoing(false)
-    }
   }
 
   const handleCancel = () => {
@@ -269,18 +249,6 @@ export default function SSSDataClient({ partner }: { partner: string }) {
             className="bg-white border border-gray-200 hover:bg-gray-50 text-gray-700 font-medium px-4 py-2 rounded-lg shadow-sm transition-colors text-sm whitespace-nowrap dark:bg-gray-800 dark:border-gray-700 dark:hover:bg-gray-700 dark:text-gray-200"
           >
             ⬇️ Export
-          </button>
-          <button
-            onClick={undoConfirm ? () => setUndoConfirm(false) : handleUndo}
-            disabled={undoing}
-            className={`font-medium px-4 py-2 rounded-lg transition-colors text-sm whitespace-nowrap ${
-              undoConfirm
-                ? 'bg-red-600 hover:bg-red-700 text-white'
-                : 'bg-white border border-gray-200 hover:bg-gray-50 text-gray-700 shadow-sm dark:bg-gray-800 dark:border-gray-700 dark:hover:bg-gray-700 dark:text-gray-200'
-            }`}
-            title={undoConfirm ? 'Click again to confirm undo' : 'Undo last upload (deletes most recent batch)'}
-          >
-            {undoing ? 'Undoing...' : undoConfirm ? '⚠️ Confirm Undo?' : '↩ Undo Upload'}
           </button>
         </div>
       </div>
