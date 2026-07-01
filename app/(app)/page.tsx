@@ -1,13 +1,14 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase-server'
 import { getUserAccess, MODULES } from '@/lib/auth'
+import { supabaseAdmin } from '@/lib/supabase-admin'
 
 export default async function Home() {
   const supabase = createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  const access = await getUserAccess(supabase, user.id)
+  const access = await getUserAccess(supabaseAdmin, user.id)
   const firstAllowed = MODULES.find((m) => access && (access.role === 'admin' || access.allowedModules.includes(m.key)))
 
   if (firstAllowed) {

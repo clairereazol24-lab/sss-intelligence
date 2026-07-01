@@ -1,11 +1,12 @@
 import Sidebar from '@/components/Sidebar'
 import { createClient } from '@/lib/supabase-server'
 import { getUserAccess, MODULES } from '@/lib/auth'
+import { supabaseAdmin } from '@/lib/supabase-admin'
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const supabase = createClient()
   const { data: { user } } = await supabase.auth.getUser()
-  const access = user ? await getUserAccess(supabase, user.id) : null
+  const access = user ? await getUserAccess(supabaseAdmin, user.id) : null
 
   const visibleModules = access
     ? MODULES.filter((m) => access.role === 'admin' || access.allowedModules.includes(m.key))

@@ -1,6 +1,7 @@
 import { createServerClient, type CookieOptions } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 import { getUserAccess, hasModuleAccess, moduleForPath } from '@/lib/auth'
+import { supabaseAdmin } from '@/lib/supabase-admin'
 
 export async function middleware(request: NextRequest) {
   const response = NextResponse.next({ request: { headers: request.headers } })
@@ -40,7 +41,7 @@ export async function middleware(request: NextRequest) {
     return withCookies(NextResponse.redirect(new URL('/', request.url)))
   }
 
-  const access = await getUserAccess(supabase, user.id)
+  const access = await getUserAccess(supabaseAdmin, user.id)
   if (!access) {
     return withCookies(NextResponse.redirect(new URL('/login', request.url)))
   }
