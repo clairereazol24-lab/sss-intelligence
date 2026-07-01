@@ -35,7 +35,7 @@ export async function DELETE(_request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const { records, period, periodType } = await request.json()
+    const { records, period, periodType, mode = 'new' } = await request.json()
 
     if (!records || !period || !periodType) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
@@ -43,6 +43,37 @@ export async function POST(request: NextRequest) {
 
     if (records.length === 0) {
       return NextResponse.json({ error: 'Cannot upload an empty file.' }, { status: 400 })
+    }
+
+    const partnerSet = new Set<string | null>(records.map((r: any) => r.partner || null))
+    const uniquePartners: (string | null)[] = Array.from(partnerSet)
+
+    if (mode === 'new') {
+      // Block if any period+partner combo already exists
+      let existsCount = 0
+      for (const p of uniquePartners) {
+        const q = supabase
+          .from('performance_data')
+          .select('*', { count: 'exact', head: true })
+          .eq('period', period)
+        const { count } = await (p === null ? q.is('partner', null) : q.eq('partner', p))
+        existsCount += count || 0
+      }
+      if (existsCount > 0) {
+        return NextResponse.json(
+          { error: `Data for ${period} already exists. Use "Update File" mode to replace it.` },
+          { status: 409 }
+        )
+      }
+    }
+
+    if (mode === 'update') {
+      // Delete existing rows for this period+partner before re-inserting
+      for (const p of uniquePartners) {
+        const q = supabase.from('performance_data').delete().eq('period', period)
+        const { error: delError } = await (p === null ? q.is('partner', null) : q.eq('partner', p))
+        if (delError) throw delError
+      }
     }
 
     // Auto-upsert stores master table
