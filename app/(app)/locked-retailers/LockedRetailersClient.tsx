@@ -64,7 +64,7 @@ export default function LockedRetailersClient() {
         Paste locked Sub Affiliate IDs to download their all-time sales totals, ranked by DSP.
       </p>
 
-      <div className="grid grid-cols-1 lg:grid-cols-[3fr_2fr] gap-6">
+      <div className="space-y-6">
         <div className="bg-white rounded-xl border border-gray-200 p-6 dark:bg-gray-800 dark:border-gray-700">
           <h2 className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-4">
             Sub Affiliate IDs
@@ -74,12 +74,12 @@ export default function LockedRetailersClient() {
             value={raw}
             onChange={(e) => setRaw(e.target.value)}
             placeholder="One Sub Affiliate ID per line, or comma-separated"
-            rows={18}
+            rows={10}
             className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white shadow-sm dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 font-mono resize-none"
           />
         </div>
 
-        <div className="bg-white rounded-xl border border-gray-200 p-6 dark:bg-gray-800 dark:border-gray-700 flex flex-col">
+        <div className="bg-white rounded-xl border border-gray-200 p-6 dark:bg-gray-800 dark:border-gray-700">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide">
               Parsed IDs
@@ -89,7 +89,7 @@ export default function LockedRetailersClient() {
             </span>
           </div>
 
-          <div className="flex-1 min-h-[280px] max-h-[420px] overflow-y-auto border border-gray-100 rounded-lg dark:border-gray-700 p-3 mb-4">
+          <div className="min-h-[120px] max-h-[300px] overflow-y-auto border border-gray-100 rounded-lg dark:border-gray-700 p-3">
             {ids.length === 0 ? (
               <p className="text-xs text-gray-400 dark:text-gray-500 text-center mt-8">
                 Parsed IDs will appear here as you type.
@@ -107,15 +107,17 @@ export default function LockedRetailersClient() {
               </div>
             )}
           </div>
+        </div>
 
+        <div className="max-w-md mx-auto flex flex-col items-center gap-4">
           {error && (
-            <div className="bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 text-red-800 dark:text-red-400 px-4 py-3 rounded-lg mb-4 text-sm">
+            <div className="w-full bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 text-red-800 dark:text-red-400 px-4 py-3 rounded-lg text-sm">
               ❌ {error}
             </div>
           )}
 
           {result && (
-            <div className="bg-green-50 dark:bg-green-900/30 border border-green-200 dark:border-green-800 text-green-800 dark:text-green-400 px-4 py-3 rounded-lg mb-4 text-sm">
+            <div className="w-full bg-green-50 dark:bg-green-900/30 border border-green-200 dark:border-green-800 text-green-800 dark:text-green-400 px-4 py-3 rounded-lg text-sm">
               {result}
             </div>
           )}
@@ -123,7 +125,7 @@ export default function LockedRetailersClient() {
           <button
             onClick={handleGenerate}
             disabled={ids.length === 0 || generating}
-            className="w-full bg-blue-600 hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors mt-auto"
+            className="bg-blue-600 hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed text-white text-sm font-medium px-8 py-2.5 rounded-lg transition-colors"
           >
             {generating ? 'Generating…' : 'Generate & Download Excel'}
           </button>
