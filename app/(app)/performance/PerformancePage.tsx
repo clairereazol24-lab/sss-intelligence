@@ -114,14 +114,14 @@ function StoreTable({ rows, metricLabel, metric, notesMap, onSaveNote }: {
   onSaveNote: (id: string, value: string) => void
 }) {
   return (
-    <table className="w-full text-sm">
+    <table className="w-full text-sm table-fixed">
       <thead>
         <tr className="bg-gray-50 dark:bg-gray-700 text-left">
           <th className="px-2 py-2 text-gray-500 dark:text-gray-400 font-medium w-[5%]">#</th>
-          <th className="px-2 py-2 text-gray-500 dark:text-gray-400 font-medium w-[28%]">Store</th>
-          <th className="px-2 py-2 text-gray-500 dark:text-gray-400 font-medium w-[18%]">DSP</th>
-          <th className="px-2 py-2 text-gray-500 dark:text-gray-400 font-medium text-right w-[22%]">{metricLabel}</th>
-          <th className="px-2 py-2 text-gray-500 dark:text-gray-400 font-medium w-[27%]">Notes</th>
+          <th className="px-2 py-2 text-gray-500 dark:text-gray-400 font-medium w-[26%]">Store</th>
+          <th className="px-2 py-2 text-gray-500 dark:text-gray-400 font-medium w-[15%]">DSP</th>
+          <th className="px-3 py-2 text-gray-500 dark:text-gray-400 font-medium text-right w-[20%]">{metricLabel}</th>
+          <th className="px-4 py-2 text-gray-500 dark:text-gray-400 font-medium w-[34%] border-l border-gray-100 dark:border-gray-700">Notes</th>
         </tr>
       </thead>
       <tbody>
@@ -133,8 +133,8 @@ function StoreTable({ rows, metricLabel, metric, notesMap, onSaveNote }: {
               <div className="text-xs text-gray-400 dark:text-gray-500">{s.sub_affiliate}</div>
             </td>
             <td className="px-2 py-2 text-gray-600 dark:text-gray-300 truncate text-xs">{s.dsp || '—'}</td>
-            <td className="px-2 py-2 text-right font-medium text-gray-800 dark:text-gray-100">{metric(s)}</td>
-            <td className="px-2 py-2">
+            <td className="px-3 py-2 text-right font-medium text-gray-800 dark:text-gray-100">{metric(s)}</td>
+            <td className="px-4 py-2 border-l border-gray-50 dark:border-gray-700">
               <NoteCell id={nk('store', s.sub_affiliate, s.partner)} notesMap={notesMap} onSave={onSaveNote} />
             </td>
           </tr>
@@ -153,14 +153,14 @@ function MemberTable({ rows, metricLabel, metric }: {
   metric: (m: MemberRow) => React.ReactNode
 }) {
   return (
-    <table className="w-full text-sm">
+    <table className="w-full text-sm table-fixed">
       <thead>
         <tr className="bg-gray-50 dark:bg-gray-700 text-center">
           <th className="px-3 py-2.5 text-gray-500 dark:text-gray-400 font-medium w-[5%]">#</th>
-          <th className="px-3 py-2.5 text-gray-500 dark:text-gray-400 font-medium w-[23%]">Username</th>
-          <th className="px-3 py-2.5 text-gray-500 dark:text-gray-400 font-medium w-[23%]">Store</th>
-          <th className="px-3 py-2.5 text-gray-500 dark:text-gray-400 font-medium w-[22%]">DSP</th>
-          <th className="px-3 py-2.5 text-gray-500 dark:text-gray-400 font-medium w-[27%]">{metricLabel}</th>
+          <th className="px-3 py-2.5 text-gray-500 dark:text-gray-400 font-medium w-[25%]">Username</th>
+          <th className="px-3 py-2.5 text-gray-500 dark:text-gray-400 font-medium w-[25%]">Store</th>
+          <th className="px-3 py-2.5 text-gray-500 dark:text-gray-400 font-medium w-[20%]">DSP</th>
+          <th className="px-3 py-2.5 text-gray-500 dark:text-gray-400 font-medium w-[25%]">{metricLabel}</th>
         </tr>
       </thead>
       <tbody>
@@ -252,19 +252,19 @@ export default function PerformancePage({ partner }: { partner?: string }) {
     const partnerParam = partner ? `&partner=${encodeURIComponent(partner)}` : ''
     const [perfRes, memDepRes, memGGRRes] = await Promise.all([
       fetch(buildUrl(period)),
-      fetch(`/api/members?top=deposit${partnerParam}`),
-      fetch(`/api/members?top=ggr${partnerParam}`),
+      fetch(`/api/members?top=deposit&full=true${partnerParam}`),
+      fetch(`/api/members?top=ggr&full=true${partnerParam}`),
     ])
     const data = await perfRes.json()
     const memDep = await memDepRes.json()
     const memGGR = await memGGRRes.json()
-    setStores(data.top50Stores || [])
-    setStoresByMembers(data.top50StoresByMembers || [])
-    setStoresByGGR(data.top50StoresByGGR || [])
-    setDSPsByDeposit(data.top50DSPsByDeposit || [])
-    setDSPsByMembers(data.top50DSPsByMembers || [])
-    setDSPsByGGR(data.top50DSPsByGGR || [])
-    setDSPs(data.top50DSPs || [])
+    setStores(data.sortedStores || [])
+    setStoresByMembers(data.sortedStoresByMembers || [])
+    setStoresByGGR(data.sortedStoresByGGR || [])
+    setDSPsByDeposit(data.sortedDSPsByDeposit || [])
+    setDSPsByMembers(data.sortedDSPsByMembers || [])
+    setDSPsByGGR(data.sortedDSPsByGGR || [])
+    setDSPs(data.sortedDSPs || [])
     setMembersByDeposit(memDep.members || [])
     setMembersByGGR(memGGR.members || [])
     if (data.periods) setPeriods(data.periods)
@@ -334,7 +334,7 @@ export default function PerformancePage({ partner }: { partner?: string }) {
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-bold text-gray-800 dark:text-gray-100">Performance</h1>
-          <p className="text-sm text-gray-500 dark:text-gray-400">{title} · Top 50 stores and DSPs</p>
+          <p className="text-sm text-gray-500 dark:text-gray-400">{title} · All stores and DSPs</p>
         </div>
         <div className="flex items-center gap-3">
           <select
@@ -361,35 +361,35 @@ export default function PerformancePage({ partner }: { partner?: string }) {
         <div className="grid grid-cols-1 lg:grid-cols-[2fr_3fr] gap-6">
           {/* Left column — DSP */}
           <div className="flex flex-col gap-6">
-            <Card emoji="💰" title="Top 50 DSPs by Deposit">
+            <Card emoji="💰" title="DSPs by Deposit">
               <DSPTable rows={dspsByDeposit} metricLabel="Total Deposit" metric={(d) => fmt(d.total_deposit)} />
             </Card>
-            <Card emoji="📊" title="Top 50 DSPs by GGR">
+            <Card emoji="📊" title="DSPs by GGR">
               <DSPTable rows={dspsByGGR} metricLabel="Total GGR" metric={(d) => <span className={d.total_grr >= 0 ? 'text-green-600' : 'text-red-500'}>{fmt(d.total_grr)}</span>} />
             </Card>
-            <Card emoji="👥" title="Top 50 DSPs by Registered Members">
+            <Card emoji="👥" title="DSPs by Registered Members">
               <DSPTable rows={dspsByMembers} metricLabel="Registered Members" metric={(d) => d.registered_members.toLocaleString()} />
             </Card>
-            <Card emoji="👤" title="Top 50 DSPs by Store Count">
+            <Card emoji="👤" title="DSPs by Store Count">
               <DSPTable rows={dsps} metricLabel="Stores" metric={(d) => d.store_count.toLocaleString()} />
             </Card>
           </div>
 
           {/* Right column — Stores + Members */}
           <div className="flex flex-col gap-6">
-            <Card emoji="🏆" title="Top 50 Stores by Deposit">
+            <Card emoji="🏆" title="Stores by Deposit">
               <StoreTable rows={stores} metricLabel="Total Deposit" metric={(s) => fmt(s.total_deposit)} notesMap={notesMap} onSaveNote={handleSaveNote} />
             </Card>
-            <Card emoji="📈" title="Top 50 Stores by GGR">
+            <Card emoji="📈" title="Stores by GGR">
               <StoreTable rows={storesByGGR} metricLabel="GGR" metric={(s) => <span className={s.company_net_win >= 0 ? 'text-green-600' : 'text-red-500'}>{fmt(s.company_net_win)}</span>} notesMap={notesMap} onSaveNote={handleSaveNote} />
             </Card>
-            <Card emoji="⭐" title="Top 50 Stores by Registered Members">
+            <Card emoji="⭐" title="Stores by Registered Members">
               <StoreTable rows={storesByMembers} metricLabel="Registered Members" metric={(s) => s.registered_members.toLocaleString()} notesMap={notesMap} onSaveNote={handleSaveNote} />
             </Card>
-            <Card emoji="💵" title="Top 50 Members by Deposit">
+            <Card emoji="💵" title="Members by Deposit">
               <MemberTable rows={membersByDeposit} metricLabel="Deposit" metric={(m) => fmt(m.deposit)} />
             </Card>
-            <Card emoji="📉" title="Top 50 Members by GGR">
+            <Card emoji="📉" title="Members by GGR">
               <MemberTable rows={membersByGGR} metricLabel="GGR" metric={(m) => { const g = m.ggr ?? (m.deposit - m.withdraw); return <span className={g >= 0 ? 'text-green-600' : 'text-red-500'}>{fmt(g)}</span> }} />
             </Card>
           </div>

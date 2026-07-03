@@ -122,17 +122,14 @@ export async function GET(request: NextRequest) {
       }
     )
 
-    const top50Stores = [...stores]
+    const sortedStores = [...stores]
       .sort((a: any, b: any) => b.total_deposit - a.total_deposit)
-      .slice(0, 50)
 
-    const top50StoresByMembers = [...stores]
+    const sortedStoresByMembers = [...stores]
       .sort((a: any, b: any) => b.registered_members - a.registered_members)
-      .slice(0, 50)
 
-    const top50StoresByGGR = [...stores]
+    const sortedStoresByGGR = [...stores]
       .sort((a: any, b: any) => b.company_net_win - a.company_net_win)
-      .slice(0, 50)
 
     // Aggregate by DSP
     const dspMap: Record<string, any> = {}
@@ -149,21 +146,17 @@ export async function GET(request: NextRequest) {
       dspMap[key].registered_members += (s as any).registered_members
     }
 
-    const top50DSPs = Object.values(dspMap)
+    const sortedDSPs = Object.values(dspMap)
       .sort((a: any, b: any) => b.store_count - a.store_count)
-      .slice(0, 50)
 
-    const top50DSPsByDeposit = Object.values(dspMap)
+    const sortedDSPsByDeposit = Object.values(dspMap)
       .sort((a: any, b: any) => (b as any).total_deposit - (a as any).total_deposit)
-      .slice(0, 50)
 
-    const top50DSPsByMembers = Object.values(dspMap)
+    const sortedDSPsByMembers = Object.values(dspMap)
       .sort((a: any, b: any) => (b as any).registered_members - (a as any).registered_members)
-      .slice(0, 50)
 
-    const top50DSPsByGGR = Object.values(dspMap)
+    const sortedDSPsByGGR = Object.values(dspMap)
       .sort((a: any, b: any) => (b as any).total_grr - (a as any).total_grr)
-      .slice(0, 50)
 
     // Available periods
     const { data: periods } = await supabase
@@ -185,7 +178,7 @@ export async function GET(request: NextRequest) {
 
     const lastUpdated = lastRow && lastRow.length > 0 ? lastRow[0] : null
 
-    return NextResponse.json({ top50Stores, top50StoresByMembers, top50StoresByGGR, top50DSPs, top50DSPsByDeposit, top50DSPsByGGR, top50DSPsByMembers, periods: uniquePeriods, overallTotals, allStores, lastUpdated })
+    return NextResponse.json({ sortedStores, sortedStoresByMembers, sortedStoresByGGR, sortedDSPs, sortedDSPsByDeposit, sortedDSPsByGGR, sortedDSPsByMembers, periods: uniquePeriods, overallTotals, allStores, lastUpdated })
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 500 })
   }
