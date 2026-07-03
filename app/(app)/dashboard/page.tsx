@@ -150,7 +150,7 @@ export default function DashboardPage() {
 
       {/* Top 50 Members */}
       <div className="bg-white rounded-xl border border-gray-200 p-5 dark:bg-gray-800 dark:border-gray-700">
-        <h2 className="font-semibold text-gray-700 dark:text-gray-200 mb-4">💵 Top 50 Members by Deposit</h2>
+        <h2 className="font-semibold text-gray-700 dark:text-gray-200 mb-4 text-center">Top 50 Members by Deposit</h2>
         {loading ? (
           <p className="text-sm text-gray-400 dark:text-gray-500">Loading...</p>
         ) : top50.length === 0 ? (
