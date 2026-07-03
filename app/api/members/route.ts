@@ -79,24 +79,20 @@ export async function POST(request: NextRequest) {
 
     const partnerVal: string = records[0]?.partner || ''
 
-    // Fetch all existing members for this partner to build accumulate map
+    // Fetch existing registered_time/first_deposit_amount so those stay locked to the first upload
     const existingRows = await fetchAllMembers(
       partnerVal,
-      'username, deposit, withdraw, deposit_times, withdraw_times, registered_time, first_deposit_amount'
+      'username, registered_time, first_deposit_amount'
     )
     const existingMap: Record<string, any> = {}
     for (const e of existingRows) existingMap[e.username] = e
 
-    // Merge: accumulate numerics, update mutable fields, preserve originals
+    // Replace all fields with the new upload's values, except registered_time/first_deposit_amount which stay locked to the first-ever record
     const mergedRecords = records.map((r: any) => {
       const ex = existingMap[r.username]
       if (ex) {
         return {
           ...r,
-          deposit: (ex.deposit || 0) + (r.deposit || 0),
-          withdraw: (ex.withdraw || 0) + (r.withdraw || 0),
-          deposit_times: (ex.deposit_times || 0) + (r.deposit_times || 0),
-          withdraw_times: (ex.withdraw_times || 0) + (r.withdraw_times || 0),
           registered_time: ex.registered_time || r.registered_time,
           first_deposit_amount: ex.first_deposit_amount || r.first_deposit_amount,
         }
