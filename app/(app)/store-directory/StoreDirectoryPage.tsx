@@ -174,7 +174,7 @@ export default function StoreDirectoryPage({ partner }: { partner?: string }) {
       <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
         <table className="w-full text-sm">
           <thead>
-            <tr className="bg-gray-50 dark:bg-gray-700 text-left">
+            <tr className="bg-gray-50 dark:bg-gray-700 text-center">
               <th className="px-4 py-3 text-gray-500 dark:text-gray-400 font-medium">Store Name</th>
               <th className="px-4 py-3 text-gray-500 dark:text-gray-400 font-medium">DSP</th>
               {!partner && <th className="px-4 py-3 text-gray-500 dark:text-gray-400 font-medium">Partner</th>}
@@ -188,7 +188,7 @@ export default function StoreDirectoryPage({ partner }: { partner?: string }) {
             ) : filtered.length === 0 ? (
               <tr><td colSpan={partner ? 4 : 5} className="px-4 py-12 text-center text-gray-400 dark:text-gray-500">No stores found.</td></tr>
             ) : filtered.map(s => (
-              <tr key={s.id} className="border-t border-gray-50 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700">
+              <tr key={s.id} className="border-t border-gray-50 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 text-center">
                 <td className="px-4 py-3">
                   <div className="font-medium text-gray-800 dark:text-gray-100">{s.store_name}</div>
                   <div className="text-xs text-gray-400 dark:text-gray-500">{s.sub_affiliate}</div>
@@ -196,7 +196,7 @@ export default function StoreDirectoryPage({ partner }: { partner?: string }) {
                 <td className="px-4 py-3 text-gray-600 dark:text-gray-300">{s.dsp || '—'}</td>
                 {!partner && <td className="px-4 py-3">{s.partner ? <span className="bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 text-xs px-2 py-0.5 rounded">{s.partner}</span> : '—'}</td>}
                 <td className="px-4 py-3"><span className={`text-xs font-medium px-2 py-0.5 rounded-full ${statusColor(s.deployment_status)}`}>{s.deployment_status}</span></td>
-                <td className="px-4 py-3 text-right"><button onClick={() => openEdit(s)} className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 text-xs font-medium">Edit</button></td>
+                <td className="px-4 py-3"><button onClick={() => openEdit(s)} className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 text-xs font-medium">Edit</button></td>
               </tr>
             ))}
           </tbody>
@@ -261,15 +261,15 @@ export default function StoreDirectoryPage({ partner }: { partner?: string }) {
               <div className="overflow-x-auto">
                 <table className="text-xs w-full">
                   <thead>
-                    <tr className="bg-gray-50 dark:bg-gray-700">
+                    <tr className="bg-gray-50 dark:bg-gray-700 text-center">
                       {['Sub Affiliate', 'Store Name', 'Partner', 'DSP', 'Deployment Status'].map(h => (
-                        <th key={h} className="px-3 py-2 text-left text-gray-500 dark:text-gray-400 font-medium">{h}</th>
+                        <th key={h} className="px-3 py-2 text-gray-500 dark:text-gray-400 font-medium">{h}</th>
                       ))}
                     </tr>
                   </thead>
                   <tbody>
                     {bulkParsed.slice(0, 10).map((row, i) => (
-                      <tr key={i} className="border-t border-gray-100 dark:border-gray-700">
+                      <tr key={i} className="border-t border-gray-100 dark:border-gray-700 text-center">
                         <td className="px-3 py-2 text-gray-700 dark:text-gray-300">{subAffiliateKey ? row[subAffiliateKey] : '—'}</td>
                         <td className="px-3 py-2 text-gray-700 dark:text-gray-300">{storeNameKey ? row[storeNameKey] : '—'}</td>
                         <td className="px-3 py-2 text-gray-700 dark:text-gray-300">{partner || (partnerKey && row[partnerKey]) || '—'}</td>

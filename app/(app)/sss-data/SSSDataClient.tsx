@@ -263,19 +263,19 @@ export default function SSSDataClient({ partner }: { partner: string }) {
           <p className="text-sm text-gray-400 dark:text-gray-500">Loading...</p>
         ) : (
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-            <div>
+            <div className="text-center">
               <p className="text-xs text-gray-400 dark:text-gray-500 mb-1">Total Deposit</p>
               <p className="font-semibold text-gray-800 dark:text-gray-100">{fmt(overallTotals?.total_deposit || 0)}</p>
             </div>
-            <div>
+            <div className="text-center">
               <p className="text-xs text-gray-400 dark:text-gray-500 mb-1">Total GGR</p>
               <p className={`font-semibold ${((overallTotals?.company_net_win || 0) >= 0) ? 'text-green-600' : 'text-red-500'}`}>{fmt(overallTotals?.company_net_win || 0)}</p>
             </div>
-            <div>
+            <div className="text-center">
               <p className="text-xs text-gray-400 dark:text-gray-500 mb-1">Registered Members</p>
               <p className="font-semibold text-gray-800 dark:text-gray-100">{(overallTotals?.registered_members || 0).toLocaleString()}</p>
             </div>
-            <div>
+            <div className="text-center">
               <p className="text-xs text-gray-400 dark:text-gray-500 mb-1">Stores</p>
               <p className="font-semibold text-gray-800 dark:text-gray-100">{overallTotals?.store_count || 0}</p>
             </div>
@@ -300,15 +300,15 @@ export default function SSSDataClient({ partner }: { partner: string }) {
           <div className="overflow-x-auto max-h-[480px] overflow-y-auto">
             <table className="text-xs w-full">
               <thead>
-                <tr className="bg-gray-50 dark:bg-gray-700">
+                <tr className="bg-gray-50 dark:bg-gray-700 text-center">
                   {['DSP', 'Sub Affiliate', 'Sub Affiliate Name', 'Total Deposit', 'Total Withdraw', 'Valid Bet Amount', 'Company Net Win (GGR)', 'Payout Amount', 'Registered Members'].map(h => (
-                    <th key={h} className="px-3 py-2 text-left text-gray-500 dark:text-gray-400 font-medium whitespace-nowrap">{h}</th>
+                    <th key={h} className="px-3 py-2 text-gray-500 dark:text-gray-400 font-medium whitespace-nowrap">{h}</th>
                   ))}
                 </tr>
               </thead>
               <tbody>
                 {allStores.map((s) => (
-                  <tr key={s.sub_affiliate} className="border-t border-gray-100 dark:border-gray-700">
+                  <tr key={s.sub_affiliate} className="border-t border-gray-100 dark:border-gray-700 text-center">
                     <td className="px-3 py-2 text-gray-700 dark:text-gray-300">{s.dsp || '—'}</td>
                     <td className="px-3 py-2 text-gray-700 dark:text-gray-300">{s.sub_affiliate}</td>
                     <td className="px-3 py-2 text-gray-700 dark:text-gray-300">{s.store_name}</td>
@@ -376,15 +376,15 @@ export default function SSSDataClient({ partner }: { partner: string }) {
               <div className="overflow-x-auto">
                 <table className="text-xs w-full">
                   <thead>
-                    <tr className="bg-gray-50 dark:bg-gray-700">
+                    <tr className="bg-gray-50 dark:bg-gray-700 text-center">
                       {['Sub Affiliate', 'Sub Affiliate Name', 'Total Deposit', 'Company Net Win (GGR)', 'Partner', 'DSP'].map(h => (
-                        <th key={h} className="px-3 py-2 text-left text-gray-500 dark:text-gray-400 font-medium">{h}</th>
+                        <th key={h} className="px-3 py-2 text-gray-500 dark:text-gray-400 font-medium">{h}</th>
                       ))}
                     </tr>
                   </thead>
                   <tbody>
                     {parsed.slice(0, 10).map((row, i) => (
-                      <tr key={i} className="border-t border-gray-100 dark:border-gray-700">
+                      <tr key={i} className="border-t border-gray-100 dark:border-gray-700 text-center">
                         <td className="px-3 py-2 text-gray-700 dark:text-gray-300">{row['Sub Affiliate']}</td>
                         <td className="px-3 py-2 text-gray-700 dark:text-gray-300">{row['Sub Affiliate Name']}</td>
                         <td className="px-3 py-2 text-gray-700 dark:text-gray-300">{row['Total Deposit']}</td>
