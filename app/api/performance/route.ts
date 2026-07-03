@@ -123,12 +123,15 @@ export async function GET(request: NextRequest) {
     )
 
     const sortedStores = [...stores]
+      .filter((s: any) => s.total_deposit !== 0)
       .sort((a: any, b: any) => b.total_deposit - a.total_deposit)
 
     const sortedStoresByMembers = [...stores]
+      .filter((s: any) => s.registered_members !== 0)
       .sort((a: any, b: any) => b.registered_members - a.registered_members)
 
     const sortedStoresByGGR = [...stores]
+      .filter((s: any) => s.company_net_win !== 0)
       .sort((a: any, b: any) => b.company_net_win - a.company_net_win)
 
     // Aggregate by DSP
@@ -150,12 +153,15 @@ export async function GET(request: NextRequest) {
       .sort((a: any, b: any) => b.store_count - a.store_count)
 
     const sortedDSPsByDeposit = Object.values(dspMap)
+      .filter((d: any) => d.total_deposit !== 0)
       .sort((a: any, b: any) => (b as any).total_deposit - (a as any).total_deposit)
 
     const sortedDSPsByMembers = Object.values(dspMap)
+      .filter((d: any) => d.registered_members !== 0)
       .sort((a: any, b: any) => (b as any).registered_members - (a as any).registered_members)
 
     const sortedDSPsByGGR = Object.values(dspMap)
+      .filter((d: any) => d.total_grr !== 0)
       .sort((a: any, b: any) => (b as any).total_grr - (a as any).total_grr)
 
     // Available periods

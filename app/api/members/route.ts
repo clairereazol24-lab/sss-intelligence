@@ -49,17 +49,19 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ summary: buildSummary(allRows) })
     }
 
-    // Top-50 mode (Dashboard); pass full=true for the complete sorted list (Performance page)
+    // Top-50 mode (Dashboard); pass full=true for the complete sorted list, zero values excluded (Performance page)
     if (top === 'deposit') {
       let sorted = [...allRows].sort((a, b) => (b.deposit || 0) - (a.deposit || 0))
-      if (!full) sorted = sorted.slice(0, 50)
+      if (full) sorted = sorted.filter(r => (r.deposit || 0) !== 0)
+      else sorted = sorted.slice(0, 50)
       return NextResponse.json({ members: sorted })
     }
     if (top === 'ggr') {
       let sorted = [...allRows]
         .map(r => ({ ...r, ggr: (r.deposit || 0) - (r.withdraw || 0) }))
         .sort((a, b) => b.ggr - a.ggr)
-      if (!full) sorted = sorted.slice(0, 50)
+      if (full) sorted = sorted.filter(r => r.ggr !== 0)
+      else sorted = sorted.slice(0, 50)
       return NextResponse.json({ members: sorted })
     }
 
