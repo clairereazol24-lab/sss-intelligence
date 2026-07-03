@@ -118,10 +118,10 @@ function StoreTable({ rows, metricLabel, metric, notesMap, onSaveNote }: {
       <thead className="sticky top-0 z-10">
         <tr className="bg-gray-50 dark:bg-gray-700 text-center">
           <th className="px-2 py-2 text-gray-500 dark:text-gray-400 font-medium w-8">#</th>
-          <th className="px-2 py-2 text-gray-500 dark:text-gray-400 font-medium w-40">Store</th>
+          <th className="px-2 py-2 text-gray-500 dark:text-gray-400 font-medium">Store</th>
           <th className="px-2 py-2 text-gray-500 dark:text-gray-400 font-medium w-20">DSP</th>
-          <th className="px-3 py-2 text-gray-500 dark:text-gray-400 font-medium w-36">{metricLabel}</th>
-          <th className="px-4 py-2 text-gray-500 dark:text-gray-400 font-medium border-l border-gray-100 dark:border-gray-700">Notes</th>
+          <th className="px-3 py-2 text-gray-500 dark:text-gray-400 font-medium w-28">{metricLabel}</th>
+          <th className="px-4 py-2 text-gray-500 dark:text-gray-400 font-medium w-32 border-l border-gray-100 dark:border-gray-700">Notes</th>
         </tr>
       </thead>
       <tbody>
@@ -158,9 +158,9 @@ function MemberTable({ rows, metricLabel, metric }: {
         <tr className="bg-gray-50 dark:bg-gray-700 text-center">
           <th className="px-3 py-2.5 text-gray-500 dark:text-gray-400 font-medium w-8">#</th>
           <th className="px-3 py-2.5 text-gray-500 dark:text-gray-400 font-medium w-24">Username</th>
-          <th className="px-3 py-2.5 text-gray-500 dark:text-gray-400 font-medium w-36">Store</th>
+          <th className="px-3 py-2.5 text-gray-500 dark:text-gray-400 font-medium">Store</th>
           <th className="px-3 py-2.5 text-gray-500 dark:text-gray-400 font-medium w-20">DSP</th>
-          <th className="px-3 py-2.5 text-gray-500 dark:text-gray-400 font-medium">{metricLabel}</th>
+          <th className="px-3 py-2.5 text-gray-500 dark:text-gray-400 font-medium w-28">{metricLabel}</th>
         </tr>
       </thead>
       <tbody>
