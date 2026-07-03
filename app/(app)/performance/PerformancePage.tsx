@@ -118,10 +118,10 @@ function StoreTable({ rows, metricLabel, metric, notesMap, onSaveNote }: {
       <thead>
         <tr className="bg-gray-50 dark:bg-gray-700 text-center">
           <th className="px-2 py-2 text-gray-500 dark:text-gray-400 font-medium w-8">#</th>
-          <th className="px-2 py-2 text-gray-500 dark:text-gray-400 font-medium">Store</th>
-          <th className="px-2 py-2 text-gray-500 dark:text-gray-400 font-medium w-20">DSP</th>
-          <th className="px-3 py-2 text-gray-500 dark:text-gray-400 font-medium w-28">{metricLabel}</th>
-          <th className="px-4 py-2 text-gray-500 dark:text-gray-400 font-medium w-40 border-l border-gray-100 dark:border-gray-700">Notes</th>
+          <th className="px-2 py-2 text-gray-500 dark:text-gray-400 font-medium w-32">Store</th>
+          <th className="px-2 py-2 text-gray-500 dark:text-gray-400 font-medium w-16">DSP</th>
+          <th className="px-3 py-2 text-gray-500 dark:text-gray-400 font-medium w-36">{metricLabel}</th>
+          <th className="px-4 py-2 text-gray-500 dark:text-gray-400 font-medium border-l border-gray-100 dark:border-gray-700">Notes</th>
         </tr>
       </thead>
       <tbody>
@@ -157,10 +157,10 @@ function MemberTable({ rows, metricLabel, metric }: {
       <thead>
         <tr className="bg-gray-50 dark:bg-gray-700 text-center">
           <th className="px-3 py-2.5 text-gray-500 dark:text-gray-400 font-medium w-8">#</th>
-          <th className="px-3 py-2.5 text-gray-500 dark:text-gray-400 font-medium w-28">Username</th>
-          <th className="px-3 py-2.5 text-gray-500 dark:text-gray-400 font-medium">Store</th>
-          <th className="px-3 py-2.5 text-gray-500 dark:text-gray-400 font-medium w-20">DSP</th>
-          <th className="px-3 py-2.5 text-gray-500 dark:text-gray-400 font-medium w-28">{metricLabel}</th>
+          <th className="px-3 py-2.5 text-gray-500 dark:text-gray-400 font-medium w-24">Username</th>
+          <th className="px-3 py-2.5 text-gray-500 dark:text-gray-400 font-medium w-28">Store</th>
+          <th className="px-3 py-2.5 text-gray-500 dark:text-gray-400 font-medium w-16">DSP</th>
+          <th className="px-3 py-2.5 text-gray-500 dark:text-gray-400 font-medium">{metricLabel}</th>
         </tr>
       </thead>
       <tbody>
@@ -191,9 +191,9 @@ function DSPTable({ rows, metricLabel, metric }: {
       <thead>
         <tr className="bg-gray-50 dark:bg-gray-700 text-center">
           <th className="px-2 py-2 text-gray-500 dark:text-gray-400 font-medium w-8">#</th>
-          <th className="px-2 py-2 text-gray-500 dark:text-gray-400 font-medium">DSP</th>
+          <th className="px-2 py-2 text-gray-500 dark:text-gray-400 font-medium w-24">DSP</th>
           <th className="px-2 py-2 text-gray-500 dark:text-gray-400 font-medium w-28">Partner</th>
-          <th className="px-2 py-2 text-gray-500 dark:text-gray-400 font-medium w-28">{metricLabel}</th>
+          <th className="px-2 py-2 text-gray-500 dark:text-gray-400 font-medium">{metricLabel}</th>
         </tr>
       </thead>
       <tbody>
