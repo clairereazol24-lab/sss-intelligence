@@ -52,7 +52,7 @@ export const MODULES: ModuleDef[] = [
       { label: 'Relevant Tech', href: '/store-directory/relevant-tech' },
     ],
   },
-  { key: 'locked_retailers', label: 'Locked Retailers', href: '/locked-retailers', icon: '🔒' },
+  { key: 'locked_retailers', label: 'Shortcut', href: '/locked-retailers', icon: '🔒' },
   // ai_report and marketing_efforts hidden — restore by uncommenting
   // { key: 'ai_report', label: 'AI Report', href: '/ai-report', icon: '🤖' },
   // { key: 'marketing_efforts', label: 'Marketing Efforts', href: '/marketing-efforts', icon: '📣' },
