@@ -117,11 +117,11 @@ function StoreTable({ rows, metricLabel, metric, notesMap, onSaveNote }: {
     <table className="w-full text-sm table-fixed">
       <thead>
         <tr className="bg-gray-50 dark:bg-gray-700 text-left">
-          <th className="px-2 py-2 text-gray-500 dark:text-gray-400 font-medium w-[5%]">#</th>
-          <th className="px-2 py-2 text-gray-500 dark:text-gray-400 font-medium w-[26%]">Store</th>
-          <th className="px-2 py-2 text-gray-500 dark:text-gray-400 font-medium w-[15%]">DSP</th>
-          <th className="px-3 py-2 text-gray-500 dark:text-gray-400 font-medium text-right w-[20%]">{metricLabel}</th>
-          <th className="px-4 py-2 text-gray-500 dark:text-gray-400 font-medium w-[34%] border-l border-gray-100 dark:border-gray-700">Notes</th>
+          <th className="px-2 py-2 text-gray-500 dark:text-gray-400 font-medium w-8">#</th>
+          <th className="px-2 py-2 text-gray-500 dark:text-gray-400 font-medium">Store</th>
+          <th className="px-2 py-2 text-gray-500 dark:text-gray-400 font-medium w-24">DSP</th>
+          <th className="px-3 py-2 text-gray-500 dark:text-gray-400 font-medium text-right w-32">{metricLabel}</th>
+          <th className="px-4 py-2 text-gray-500 dark:text-gray-400 font-medium border-l border-gray-100 dark:border-gray-700">Notes</th>
         </tr>
       </thead>
       <tbody>
@@ -156,11 +156,11 @@ function MemberTable({ rows, metricLabel, metric }: {
     <table className="w-full text-sm table-fixed">
       <thead>
         <tr className="bg-gray-50 dark:bg-gray-700 text-center">
-          <th className="px-3 py-2.5 text-gray-500 dark:text-gray-400 font-medium w-[5%]">#</th>
-          <th className="px-3 py-2.5 text-gray-500 dark:text-gray-400 font-medium w-[25%]">Username</th>
-          <th className="px-3 py-2.5 text-gray-500 dark:text-gray-400 font-medium w-[25%]">Store</th>
-          <th className="px-3 py-2.5 text-gray-500 dark:text-gray-400 font-medium w-[20%]">DSP</th>
-          <th className="px-3 py-2.5 text-gray-500 dark:text-gray-400 font-medium w-[25%]">{metricLabel}</th>
+          <th className="px-3 py-2.5 text-gray-500 dark:text-gray-400 font-medium w-8">#</th>
+          <th className="px-3 py-2.5 text-gray-500 dark:text-gray-400 font-medium">Username</th>
+          <th className="px-3 py-2.5 text-gray-500 dark:text-gray-400 font-medium">Store</th>
+          <th className="px-3 py-2.5 text-gray-500 dark:text-gray-400 font-medium w-24">DSP</th>
+          <th className="px-3 py-2.5 text-gray-500 dark:text-gray-400 font-medium w-32">{metricLabel}</th>
         </tr>
       </thead>
       <tbody>

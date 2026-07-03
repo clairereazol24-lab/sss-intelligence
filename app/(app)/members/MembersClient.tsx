@@ -168,19 +168,19 @@ export default function MembersClient({ partner }: { partner: string }) {
       {summary && (
         <div className="bg-white rounded-xl border border-gray-200 p-5 mb-6 dark:bg-gray-800 dark:border-gray-700">
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-            <div>
+            <div className="text-center">
               <p className="text-xs text-gray-400 dark:text-gray-500 mb-1">Total Members</p>
               <p className="text-lg font-bold text-gray-800 dark:text-gray-100">{summary.total.toLocaleString()}</p>
             </div>
-            <div>
+            <div className="text-center">
               <p className="text-xs text-gray-400 dark:text-gray-500 mb-1">Active</p>
               <p className="text-lg font-bold text-green-600">{summary.active.toLocaleString()}</p>
             </div>
-            <div>
+            <div className="text-center">
               <p className="text-xs text-gray-400 dark:text-gray-500 mb-1">Locked</p>
               <p className="text-lg font-bold text-amber-500">{summary.locked.toLocaleString()}</p>
             </div>
-            <div>
+            <div className="text-center">
               <p className="text-xs text-gray-400 dark:text-gray-500 mb-1">Disabled</p>
               <p className="text-lg font-bold text-red-400">{summary.disabled.toLocaleString()}</p>
             </div>
@@ -212,15 +212,15 @@ export default function MembersClient({ partner }: { partner: string }) {
           <div className="overflow-x-auto max-h-[560px] overflow-y-auto">
             <table className="text-xs w-full">
               <thead className="sticky top-0">
-                <tr className="bg-gray-50 dark:bg-gray-700">
+                <tr className="bg-gray-50 dark:bg-gray-700 text-center">
                   {['Sub Affiliate', 'Store Name', 'DSP', 'Username', 'Status', 'Rank', 'Registered', 'Last Login', 'Deposit', 'Withdraw'].map(h => (
-                    <th key={h} className="px-3 py-2 text-left text-gray-500 dark:text-gray-400 font-medium whitespace-nowrap">{h}</th>
+                    <th key={h} className="px-3 py-2 text-gray-500 dark:text-gray-400 font-medium whitespace-nowrap">{h}</th>
                   ))}
                 </tr>
               </thead>
               <tbody>
                 {filtered.map((m, i) => (
-                  <tr key={`${m.username}-${i}`} className="border-t border-gray-100 dark:border-gray-700">
+                  <tr key={`${m.username}-${i}`} className="border-t border-gray-100 dark:border-gray-700 text-center">
                     <td className="px-3 py-2 text-gray-700 dark:text-gray-300">{m.sub_affiliate}</td>
                     <td className="px-3 py-2 text-gray-700 dark:text-gray-300">{m.sub_affiliate_name}</td>
                     <td className="px-3 py-2 text-gray-500 dark:text-gray-400">{m.dsp || '—'}</td>
