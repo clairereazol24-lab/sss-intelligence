@@ -115,7 +115,7 @@ function StoreTable({ rows, metricLabel, metric, notesMap, onSaveNote }: {
 }) {
   return (
     <table className="w-full text-sm table-fixed">
-      <thead>
+      <thead className="sticky top-0 z-10">
         <tr className="bg-gray-50 dark:bg-gray-700 text-center">
           <th className="px-2 py-2 text-gray-500 dark:text-gray-400 font-medium w-8">#</th>
           <th className="px-2 py-2 text-gray-500 dark:text-gray-400 font-medium w-40">Store</th>
@@ -154,7 +154,7 @@ function MemberTable({ rows, metricLabel, metric }: {
 }) {
   return (
     <table className="w-full text-sm table-fixed">
-      <thead>
+      <thead className="sticky top-0 z-10">
         <tr className="bg-gray-50 dark:bg-gray-700 text-center">
           <th className="px-3 py-2.5 text-gray-500 dark:text-gray-400 font-medium w-8">#</th>
           <th className="px-3 py-2.5 text-gray-500 dark:text-gray-400 font-medium w-24">Username</th>
@@ -188,7 +188,7 @@ function DSPTable({ rows, metricLabel, metric }: {
 }) {
   return (
     <table className="w-full text-sm table-fixed">
-      <thead>
+      <thead className="sticky top-0 z-10">
         <tr className="bg-gray-50 dark:bg-gray-700 text-center">
           <th className="px-2 py-2 text-gray-500 dark:text-gray-400 font-medium w-8">#</th>
           <th className="px-2 py-2 text-gray-500 dark:text-gray-400 font-medium w-24">DSP</th>
@@ -218,7 +218,7 @@ function DSPTable({ rows, metricLabel, metric }: {
 function Card({ emoji, title, children }: { emoji: string; title: string; children: React.ReactNode }) {
   return (
     <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
-      <div className="px-4 py-3 border-b border-gray-100 dark:border-gray-700">
+      <div className="px-4 py-3 border-b border-gray-100 dark:border-gray-700 text-center">
         <h2 className="font-semibold text-gray-700 dark:text-gray-200 text-sm">{emoji} {title}</h2>
       </div>
       <div className="overflow-x-auto overflow-y-auto max-h-[520px]">{children}</div>
