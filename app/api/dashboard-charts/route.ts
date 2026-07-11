@@ -59,6 +59,8 @@ export async function GET(request: NextRequest) {
         .eq('period_type', 'daily')
         .gte('period', startDate)
         .lte('period', endDate)
+        .order('period')
+        .order('sub_affiliate')
         .range(start, start + PAGE - 1)
 
       if (error) throw error
