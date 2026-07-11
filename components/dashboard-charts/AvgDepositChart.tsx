@@ -1,5 +1,5 @@
 'use client'
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, TooltipValueType } from 'recharts'
 import { useTheme } from '@/components/ThemeProvider'
 import { chartColors, fmtDate, fmtPhp } from './chartTheme'
 
@@ -21,8 +21,8 @@ export default function AvgDepositChart({ data }: { data: SeriesPoint[] }) {
           <XAxis dataKey="date" tickFormatter={fmtDate} tick={{ fill: c.axis, fontSize: 11 }} axisLine={{ stroke: c.axis }} tickLine={false} />
           <YAxis tick={{ fill: c.axis, fontSize: 11 }} axisLine={false} tickLine={false} tickFormatter={(v: number) => v.toLocaleString('en-PH')} />
           <Tooltip
-            labelFormatter={fmtDate as any}
-            formatter={(value: any) => fmtPhp(value as number | null | undefined)}
+            labelFormatter={fmtDate}
+            formatter={(value: TooltipValueType | undefined) => fmtPhp(typeof value === 'number' ? value : undefined)}
             contentStyle={{ background: c.surface, border: `1px solid ${c.grid}`, color: c.text, fontSize: 12 }}
           />
           <Line type="monotone" dataKey="avg_deposit_per_member" name="Avg Deposit/Member" stroke={c.seriesBlue} strokeWidth={2} dot={{ r: 4, strokeWidth: 2, stroke: c.surface }} activeDot={{ r: 6, strokeWidth: 2, stroke: c.surface }} connectNulls={false} />

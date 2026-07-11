@@ -1,5 +1,5 @@
 'use client'
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, TooltipValueType } from 'recharts'
 import { useTheme } from '@/components/ThemeProvider'
 import { chartColors, fmtDate, fmtPct } from './chartTheme'
 
@@ -22,8 +22,8 @@ export default function EfficiencyRetentionChart({ data }: { data: SeriesPoint[]
           <XAxis dataKey="date" tickFormatter={fmtDate} tick={{ fill: c.axis, fontSize: 11 }} axisLine={{ stroke: c.axis }} tickLine={false} />
           <YAxis tick={{ fill: c.axis, fontSize: 11 }} axisLine={false} tickLine={false} tickFormatter={(v: number) => `${v}%`} />
           <Tooltip
-            labelFormatter={fmtDate as any}
-            formatter={(value: any) => fmtPct(value as number | null | undefined)}
+            labelFormatter={fmtDate}
+            formatter={(value: TooltipValueType | undefined) => fmtPct(typeof value === 'number' ? value : undefined)}
             contentStyle={{ background: c.surface, border: `1px solid ${c.grid}`, color: c.text, fontSize: 12 }}
           />
           <Legend wrapperStyle={{ fontSize: 12, color: c.text }} />
