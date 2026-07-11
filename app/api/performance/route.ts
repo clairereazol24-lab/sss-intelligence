@@ -36,7 +36,11 @@ export async function GET(request: NextRequest) {
     }
     const data = allData
 
-    // Aggregate by store (sum across periods if multiple)
+    // Aggregate by store (sum across periods if multiple). effective_member is a
+    // daily/monthly snapshot (how many members were active in that period), not a
+    // flow metric like registered_members or total_deposit, so it must not be
+    // summed across periods — that produces a meaningless inflated number. Track
+    // the most recent period's value per store instead.
     const storeMap: Record<string, any> = {}
     for (const row of data || []) {
       const storeKey = `${row.sub_affiliate}__${row.partner ?? ''}`
@@ -56,6 +60,7 @@ export async function GET(request: NextRequest) {
           members_withdrawn: 0,
           effective_member: 0,
           first_deposit_count: 0,
+          _latestEffectivePeriod: '',
         }
       }
       const s = storeMap[storeKey]
@@ -67,8 +72,11 @@ export async function GET(request: NextRequest) {
       s.registered_members += row.registered_members
       s.deposit_member_count += row.deposit_member_count
       s.members_withdrawn += row.members_withdrawn
-      s.effective_member += row.effective_member
       s.first_deposit_count += row.first_deposit_count
+      if (row.period >= s._latestEffectivePeriod) {
+        s.effective_member = row.effective_member
+        s._latestEffectivePeriod = row.period
+      }
     }
 
     // Merge in stores from directory that have no performance data
@@ -96,6 +104,8 @@ export async function GET(request: NextRequest) {
         }
       }
     }
+
+    for (const s of Object.values(storeMap) as any[]) delete s._latestEffectivePeriod
 
     const stores = Object.values(storeMap)
     const allStores = [...stores].sort((a: any, b: any) => b.total_deposit - a.total_deposit)

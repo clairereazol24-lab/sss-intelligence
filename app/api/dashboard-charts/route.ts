@@ -131,20 +131,30 @@ export async function GET(request: NextRequest) {
       }
     })
 
-    // Per-store breakdown over the 14-day display window only
-    const storeMap: Record<string, { store_name: string; registered_members: number; effective_member: number; total_deposit: number }> = {}
+    // Per-store breakdown over the 14-day display window only.
+    // registered_members and total_deposit are flow metrics (new registrations,
+    // deposits) so summing across the window is correct. effective_member is a
+    // daily snapshot (how many members were active that day), not a flow metric —
+    // summing 14 days of it produces a meaningless inflated number, so we track
+    // the latest day's value per store instead.
+    const storeMap: Record<string, { store_name: string; registered_members: number; effective_member: number; total_deposit: number; _latestEffectivePeriod: string }> = {}
     const displayStart = displayDates[0]
     for (const r of rows) {
       if (r.period < displayStart) continue
       if (!storeMap[r.sub_affiliate]) {
-        storeMap[r.sub_affiliate] = { store_name: r.store_name, registered_members: 0, effective_member: 0, total_deposit: 0 }
+        storeMap[r.sub_affiliate] = { store_name: r.store_name, registered_members: 0, effective_member: 0, total_deposit: 0, _latestEffectivePeriod: '' }
       }
       const s = storeMap[r.sub_affiliate]
       s.registered_members += r.registered_members || 0
-      s.effective_member += r.effective_member || 0
       s.total_deposit += r.total_deposit || 0
+      if (r.period >= s._latestEffectivePeriod) {
+        s.effective_member = r.effective_member || 0
+        s._latestEffectivePeriod = r.period
+      }
     }
-    const storeBreakdown = Object.values(storeMap).sort((a, b) => b.total_deposit - a.total_deposit)
+    const storeBreakdown = Object.values(storeMap)
+      .map(({ store_name, registered_members, effective_member, total_deposit }) => ({ store_name, registered_members, effective_member, total_deposit }))
+      .sort((a, b) => b.total_deposit - a.total_deposit)
 
     return NextResponse.json({ series, storeBreakdown })
   } catch (err: any) {
