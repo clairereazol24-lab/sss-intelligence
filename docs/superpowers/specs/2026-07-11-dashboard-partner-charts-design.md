@@ -31,24 +31,36 @@ underlying field — no point mislabeling data we don't actually have.
 
 ## Chart Definitions
 
-Both charts cover a rolling **14-day window** (last week + this week), same visual
-style as the boss's rolling-30-day original, just a shorter window. All values are
-**partner-level totals** — summed across every store belonging to that partner for a
-given day — not per-store.
+All four charts below cover a rolling **14-day window** (last week + this week), same
+line-chart style as the boss's rolling-30-day original, just a shorter window. All
+values are **partner-level totals** — summed across every store belonging to that
+partner for a given day — not per-store.
 
-### Chart 1 — Efficiency & Loyalty Metrics (line chart)
+**Dual-axis deviation from the boss's original:** the boss's dashboard plots PHP
+amounts on a right axis alongside percentages/counts on a left axis, on the same
+chart. The dataviz skill flags dual-axis (two y-scales on one chart) as the most
+common charting mistake — it makes the visual comparison between lines misleading,
+since a viewer can't tell which scale a line belongs to at a glance. Per the user's
+explicit choice, this design splits each of the boss's 2 dual-axis charts into 2
+single-axis charts each (4 charts total), grouping only same-scale metrics together:
+
+### Chart 1a — Efficiency & Retention (line chart, % axis)
 - **Conversion Rate (%)** = `first_deposit_count / registered_members × 100`
   Blank for a day if `registered_members = 0` (per boss's own rule).
-- **Avg Deposit/Member (PHP)** — right axis = `total_deposit / deposit_member_count`
-  Blank for a day if `deposit_member_count = 0`.
 - **7-Day Retention (%)** = `registered_members(day) / sum(registered_members, trailing 7 days incl. that day) × 100`
   Values over 100% are valid and expected (means retained users outnumber new
   registrations that week) — not an error state, don't clamp or flag it.
 
-### Chart 2 — Pilot Performance Trend (line chart)
+### Chart 1b — Avg Deposit/Member (line chart, PHP axis)
+- **Avg Deposit/Member (PHP)** = `total_deposit / deposit_member_count`
+  Blank for a day if `deposit_member_count = 0`.
+
+### Chart 2a — Members (line chart, count axis)
 - **Registered Members**
 - **Effective Member**
-- **Total Deposits (PHP)** — right axis
+
+### Chart 2b — Total Deposits (line chart, PHP axis)
+- **Total Deposits (PHP)**
 
 ### Per-Store Breakdown Table
 Below the two charts: one row per store belonging to the selected partner, aggregated
@@ -83,7 +95,9 @@ regeneration step.
 ## UI Changes
 
 **Location:** New section on `app/(app)/dashboard/page.tsx`, placed after the existing
-"Combined" and per-partner stat cards, above "Top 50 Members."
+"Combined" and per-partner stat cards, above "Top 50 Members." Layout: a 2x2 grid of
+the 4 charts (Chart 1a, 1b, 2a, 2b), stacking to a single column on mobile per this
+app's existing responsive conventions.
 
 **Controls:** A dropdown (native `<select>`, matching the existing period-filter
 pattern in `PerformancePage.tsx`) with options Alpharus / Relevant Tech. Changing it
