@@ -131,19 +131,38 @@ export async function GET(request: NextRequest) {
       }
     })
 
-    // Per-store breakdown over the 14-day display window only.
-    // registered_members and total_deposit are flow metrics (new registrations,
-    // deposits) so summing across the window is correct.
-    const storeMap: Record<string, { store_name: string; registered_members: number; total_deposit: number }> = {}
+    // Per-store breakdown. Total Deposit stays scoped to the 14-day display
+    // window (recent performance), but Registered Members is the store's
+    // overall all-time total (matching /performance and /api/performance) —
+    // not windowed, since "Registered Members" means "how many members has
+    // this store ever registered," not "how many registered recently."
+    const storeMap: Record<string, { store_name: string; total_deposit: number }> = {}
     const displayStart = displayDates[0]
     for (const r of rows) {
       if (r.period < displayStart) continue
       if (!storeMap[r.sub_affiliate]) {
-        storeMap[r.sub_affiliate] = { store_name: r.store_name, registered_members: 0, total_deposit: 0 }
+        storeMap[r.sub_affiliate] = { store_name: r.store_name, total_deposit: 0 }
       }
-      const s = storeMap[r.sub_affiliate]
-      s.registered_members += r.registered_members || 0
-      s.total_deposit += r.total_deposit || 0
+      storeMap[r.sub_affiliate].total_deposit += r.total_deposit || 0
+    }
+
+    // All-time registered_members per store, across every uploaded period
+    // (daily and monthly alike) for this partner.
+    const allTimeRegistered: Record<string, number> = {}
+    let rStart = 0
+    while (true) {
+      const { data: page, error } = await supabase
+        .from('performance_data')
+        .select('sub_affiliate, registered_members')
+        .eq('partner', partner)
+        .range(rStart, rStart + PAGE - 1)
+      if (error) throw error
+      if (!page || page.length === 0) break
+      for (const r of page as { sub_affiliate: string; registered_members: number }[]) {
+        allTimeRegistered[r.sub_affiliate] = (allTimeRegistered[r.sub_affiliate] || 0) + (r.registered_members || 0)
+      }
+      if (page.length < PAGE) break
+      rStart += PAGE
     }
 
     // "Effective Member" for the store breakdown is the current count of
@@ -172,7 +191,7 @@ export async function GET(request: NextRequest) {
     const storeBreakdown = Object.entries(storeMap)
       .map(([sub_affiliate, s]) => ({
         store_name: s.store_name,
-        registered_members: s.registered_members,
+        registered_members: allTimeRegistered[sub_affiliate] || 0,
         effective_member: activeCounts[sub_affiliate] || 0,
         total_deposit: s.total_deposit,
       }))
