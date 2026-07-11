@@ -547,8 +547,8 @@ export default function StoreBreakdownTable({ stores }: { stores: StoreRow[] }) 
           </tr>
         </thead>
         <tbody>
-          {stores.map(s => (
-            <tr key={s.store_name} className="border-t border-gray-100 dark:border-gray-700">
+          {stores.map((s, i) => (
+            <tr key={`${s.store_name}-${i}`} className="border-t border-gray-100 dark:border-gray-700">
               <td className="px-3 py-2.5 text-center text-gray-700 dark:text-gray-300 font-medium">{s.store_name}</td>
               <td className="px-3 py-2.5 text-center text-gray-700 dark:text-gray-300">{s.registered_members.toLocaleString()}</td>
               <td className="px-3 py-2.5 text-center text-gray-700 dark:text-gray-300">{s.effective_member.toLocaleString()}</td>
