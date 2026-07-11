@@ -133,27 +133,49 @@ export async function GET(request: NextRequest) {
 
     // Per-store breakdown over the 14-day display window only.
     // registered_members and total_deposit are flow metrics (new registrations,
-    // deposits) so summing across the window is correct. effective_member is a
-    // daily snapshot (how many members were active that day), not a flow metric —
-    // summing 14 days of it produces a meaningless inflated number, so we track
-    // the latest day's value per store instead.
-    const storeMap: Record<string, { store_name: string; registered_members: number; effective_member: number; total_deposit: number; _latestEffectivePeriod: string }> = {}
+    // deposits) so summing across the window is correct.
+    const storeMap: Record<string, { store_name: string; registered_members: number; total_deposit: number }> = {}
     const displayStart = displayDates[0]
     for (const r of rows) {
       if (r.period < displayStart) continue
       if (!storeMap[r.sub_affiliate]) {
-        storeMap[r.sub_affiliate] = { store_name: r.store_name, registered_members: 0, effective_member: 0, total_deposit: 0, _latestEffectivePeriod: '' }
+        storeMap[r.sub_affiliate] = { store_name: r.store_name, registered_members: 0, total_deposit: 0 }
       }
       const s = storeMap[r.sub_affiliate]
       s.registered_members += r.registered_members || 0
       s.total_deposit += r.total_deposit || 0
-      if (r.period >= s._latestEffectivePeriod) {
-        s.effective_member = r.effective_member || 0
-        s._latestEffectivePeriod = r.period
-      }
     }
-    const storeBreakdown = Object.values(storeMap)
-      .map(({ store_name, registered_members, effective_member, total_deposit }) => ({ store_name, registered_members, effective_member, total_deposit }))
+
+    // "Effective Member" for the store breakdown is the current count of
+    // active-status members per store, from the members table (the real
+    // per-member records) — not the daily uploaded snapshot. This is a "right
+    // now" count, not a windowed one, since member status has no history.
+    const activeCounts: Record<string, number> = {}
+    let mStart = 0
+    while (true) {
+      const { data: page, error } = await supabase
+        .from('members')
+        .select('sub_affiliate, status')
+        .eq('partner', partner)
+        .range(mStart, mStart + PAGE - 1)
+      if (error) throw error
+      if (!page || page.length === 0) break
+      for (const m of page as { sub_affiliate: string; status: string }[]) {
+        if ((m.status || '').toLowerCase() === 'active') {
+          activeCounts[m.sub_affiliate] = (activeCounts[m.sub_affiliate] || 0) + 1
+        }
+      }
+      if (page.length < PAGE) break
+      mStart += PAGE
+    }
+
+    const storeBreakdown = Object.entries(storeMap)
+      .map(([sub_affiliate, s]) => ({
+        store_name: s.store_name,
+        registered_members: s.registered_members,
+        effective_member: activeCounts[sub_affiliate] || 0,
+        total_deposit: s.total_deposit,
+      }))
       .sort((a, b) => b.total_deposit - a.total_deposit)
 
     return NextResponse.json({ series, storeBreakdown })
