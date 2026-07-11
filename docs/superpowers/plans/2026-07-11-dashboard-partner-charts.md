@@ -34,7 +34,7 @@
 
 Run: `npm install recharts`
 
-Expected: `package.json` gains a `"recharts": "^2.x.x"` line under `"dependencies"`, and `package-lock.json` updates. No errors.
+Expected: `package.json` gains a `"recharts"` line under `"dependencies"` (whatever semver range `npm install` resolves to — no specific major version is required), and `package-lock.json` updates. No errors.
 
 - [ ] **Step 2: Verify the install resolves**
 
