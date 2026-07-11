@@ -34,7 +34,7 @@
 
 Run: `npm install recharts`
 
-Expected: `package.json` gains a `"recharts": "^2.x.x"` line under `"dependencies"`, and `package-lock.json` updates. No errors.
+Expected: `package.json` gains a `"recharts"` line under `"dependencies"` (whatever semver range `npm install` resolves to — no specific major version is required), and `package-lock.json` updates. No errors.
 
 - [ ] **Step 2: Verify the install resolves**
 
@@ -261,6 +261,7 @@ git commit -m "Add dashboard-charts API route: 14-day partner series + store bre
 **Interfaces:**
 - Consumes: `useTheme` from `@/components/ThemeProvider` (returns `{ theme: 'light' | 'dark' }`).
 - Produces: `chartColors: { light: ChartPalette; dark: ChartPalette }` where `ChartPalette = { seriesBlue: string; seriesAqua: string; grid: string; axis: string; text: string }`, imported by every chart component in this task and Task 4.
+- Produces: `fmtDate(d: string): string`, `fmtPct(v: number | null | undefined): string`, `fmtPhp(v: number | null | undefined): string`, `fmtCount(v: number | null | undefined): string` — shared formatters imported by every chart component in this task and Task 4, and by `StoreBreakdownTable` in Task 5 (for `fmtPhp`), instead of each file defining its own copy.
 - Produces: `<EfficiencyRetentionChart data={SeriesPoint[]} />` and `<AvgDepositChart data={SeriesPoint[]} />`, where `SeriesPoint` is the exact shape returned by `/api/dashboard-charts`'s `series` array (Task 2) — both components only read the fields they need (`date`, `conversion_rate`, `retention_7d` for 1a; `date`, `avg_deposit_per_member` for 1b) and safely ignore the rest.
 
 - [ ] **Step 1: Write the shared theme file**
@@ -293,6 +294,20 @@ export const chartColors: { light: ChartPalette; dark: ChartPalette } = {
     surface: '#1a1a19',
   },
 }
+
+export const fmtDate = (d: string): string => {
+  const parts = d.split('-')
+  return `${parts[1]}/${parts[2]}`
+}
+
+export const fmtPct = (v: number | null | undefined): string =>
+  v === null || v === undefined ? '—' : `${v.toFixed(1)}%`
+
+export const fmtPhp = (v: number | null | undefined): string =>
+  v === null || v === undefined ? '—' : `₱${v.toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+
+export const fmtCount = (v: number | null | undefined): string =>
+  v === null || v === undefined ? '—' : v.toLocaleString('en-PH')
 ```
 
 - [ ] **Step 2: Write Chart 1a (Conversion Rate + 7-Day Retention)**
@@ -301,20 +316,13 @@ export const chartColors: { light: ChartPalette; dark: ChartPalette } = {
 'use client'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
 import { useTheme } from '@/components/ThemeProvider'
-import { chartColors } from './chartTheme'
+import { chartColors, fmtDate, fmtPct } from './chartTheme'
 
 type SeriesPoint = {
   date: string
   conversion_rate: number | null
   retention_7d: number | null
 }
-
-const fmtDate = (d: string) => {
-  const parts = d.split('-')
-  return `${parts[1]}/${parts[2]}`
-}
-
-const fmtPct = (v: number | null | undefined) => (v === null || v === undefined ? '—' : `${v.toFixed(1)}%`)
 
 export default function EfficiencyRetentionChart({ data }: { data: SeriesPoint[] }) {
   const { theme } = useTheme()
@@ -349,20 +357,12 @@ export default function EfficiencyRetentionChart({ data }: { data: SeriesPoint[]
 'use client'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
 import { useTheme } from '@/components/ThemeProvider'
-import { chartColors } from './chartTheme'
+import { chartColors, fmtDate, fmtPhp } from './chartTheme'
 
 type SeriesPoint = {
   date: string
   avg_deposit_per_member: number | null
 }
-
-const fmtDate = (d: string) => {
-  const parts = d.split('-')
-  return `${parts[1]}/${parts[2]}`
-}
-
-const fmtPhp = (v: number | null | undefined) =>
-  v === null || v === undefined ? '—' : `₱${v.toLocaleString('en-PH', { maximumFractionDigits: 2 })}`
 
 export default function AvgDepositChart({ data }: { data: SeriesPoint[] }) {
   const { theme } = useTheme()
@@ -411,29 +411,22 @@ git commit -m "Add chart theme and the two Efficiency/Retention chart components
 - Create: `components/dashboard-charts/TotalDepositsChart.tsx` (Chart 2b)
 
 **Interfaces:**
-- Consumes: `chartColors` from `./chartTheme` (Task 3), `useTheme` from `@/components/ThemeProvider`.
+- Consumes: `chartColors`, `fmtDate`, `fmtCount`, `fmtPhp` from `./chartTheme` (Task 3), `useTheme` from `@/components/ThemeProvider`.
 - Produces: `<MembersChart data={SeriesPoint[]} />` and `<TotalDepositsChart data={SeriesPoint[]} />`, same `SeriesPoint` shape as Task 2/3 (each reads only `date` + its own fields: `registered_members`/`effective_member` for 2a, `total_deposit` for 2b).
 
 - [ ] **Step 1: Write Chart 2a (Registered Members + Effective Member)**
 
 ```tsx
 'use client'
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, TooltipValueType } from 'recharts'
 import { useTheme } from '@/components/ThemeProvider'
-import { chartColors } from './chartTheme'
+import { chartColors, fmtDate, fmtCount } from './chartTheme'
 
 type SeriesPoint = {
   date: string
   registered_members: number | null
   effective_member: number | null
 }
-
-const fmtDate = (d: string) => {
-  const parts = d.split('-')
-  return `${parts[1]}/${parts[2]}`
-}
-
-const fmtCount = (v: number | null | undefined) => (v === null || v === undefined ? '—' : v.toLocaleString('en-PH'))
 
 export default function MembersChart({ data }: { data: SeriesPoint[] }) {
   const { theme } = useTheme()
@@ -449,7 +442,7 @@ export default function MembersChart({ data }: { data: SeriesPoint[] }) {
           <YAxis tick={{ fill: c.axis, fontSize: 11 }} axisLine={false} tickLine={false} tickFormatter={(v: number) => v.toLocaleString('en-PH')} />
           <Tooltip
             labelFormatter={fmtDate}
-            formatter={(value: number | null) => fmtCount(value)}
+            formatter={(value: TooltipValueType | undefined) => fmtCount(typeof value === 'number' ? value : undefined)}
             contentStyle={{ background: c.surface, border: `1px solid ${c.grid}`, color: c.text, fontSize: 12 }}
           />
           <Legend wrapperStyle={{ fontSize: 12, color: c.text }} />
@@ -466,22 +459,14 @@ export default function MembersChart({ data }: { data: SeriesPoint[] }) {
 
 ```tsx
 'use client'
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, TooltipValueType } from 'recharts'
 import { useTheme } from '@/components/ThemeProvider'
-import { chartColors } from './chartTheme'
+import { chartColors, fmtDate, fmtPhp } from './chartTheme'
 
 type SeriesPoint = {
   date: string
   total_deposit: number | null
 }
-
-const fmtDate = (d: string) => {
-  const parts = d.split('-')
-  return `${parts[1]}/${parts[2]}`
-}
-
-const fmtPhp = (v: number | null | undefined) =>
-  v === null || v === undefined ? '—' : `₱${v.toLocaleString('en-PH', { maximumFractionDigits: 2 })}`
 
 export default function TotalDepositsChart({ data }: { data: SeriesPoint[] }) {
   const { theme } = useTheme()
@@ -497,7 +482,7 @@ export default function TotalDepositsChart({ data }: { data: SeriesPoint[] }) {
           <YAxis tick={{ fill: c.axis, fontSize: 11 }} axisLine={false} tickLine={false} tickFormatter={(v: number) => v.toLocaleString('en-PH')} />
           <Tooltip
             labelFormatter={fmtDate}
-            formatter={(value: number | null) => fmtPhp(value)}
+            formatter={(value: TooltipValueType | undefined) => fmtPhp(typeof value === 'number' ? value : undefined)}
             contentStyle={{ background: c.surface, border: `1px solid ${c.grid}`, color: c.text, fontSize: 12 }}
           />
           <Line type="monotone" dataKey="total_deposit" name="Total Deposits" stroke={c.seriesBlue} strokeWidth={2} dot={{ r: 4, strokeWidth: 2, stroke: c.surface }} activeDot={{ r: 6, strokeWidth: 2, stroke: c.surface }} connectNulls={false} />
@@ -529,13 +514,14 @@ git commit -m "Add Members and Total Deposits chart components"
 - Create: `components/dashboard-charts/StoreBreakdownTable.tsx`
 
 **Interfaces:**
-- Consumes: the exact `storeBreakdown` array shape from `/api/dashboard-charts` (Task 2): `Array<{ store_name: string; registered_members: number; effective_member: number; total_deposit: number }>`.
+- Consumes: the exact `storeBreakdown` array shape from `/api/dashboard-charts` (Task 2): `Array<{ store_name: string; registered_members: number; effective_member: number; total_deposit: number }>`; `fmtPhp` from `./chartTheme` (Task 3).
 - Produces: `<StoreBreakdownTable stores={StoreRow[]} />`.
 
 - [ ] **Step 1: Write the component**
 
 ```tsx
 'use client'
+import { fmtPhp } from './chartTheme'
 
 type StoreRow = {
   store_name: string
@@ -543,8 +529,6 @@ type StoreRow = {
   effective_member: number
   total_deposit: number
 }
-
-const fmtPhp = (n: number) => `₱${n.toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
 
 export default function StoreBreakdownTable({ stores }: { stores: StoreRow[] }) {
   if (stores.length === 0) {
@@ -563,8 +547,8 @@ export default function StoreBreakdownTable({ stores }: { stores: StoreRow[] }) 
           </tr>
         </thead>
         <tbody>
-          {stores.map(s => (
-            <tr key={s.store_name} className="border-t border-gray-100 dark:border-gray-700">
+          {stores.map((s, i) => (
+            <tr key={`${s.store_name}-${i}`} className="border-t border-gray-100 dark:border-gray-700">
               <td className="px-3 py-2.5 text-center text-gray-700 dark:text-gray-300 font-medium">{s.store_name}</td>
               <td className="px-3 py-2.5 text-center text-gray-700 dark:text-gray-300">{s.registered_members.toLocaleString()}</td>
               <td className="px-3 py-2.5 text-center text-gray-700 dark:text-gray-300">{s.effective_member.toLocaleString()}</td>
