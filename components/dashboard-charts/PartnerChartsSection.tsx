@@ -1,9 +1,7 @@
 'use client'
 import { useEffect, useState } from 'react'
-import EfficiencyRetentionChart from './EfficiencyRetentionChart'
-import AvgDepositChart from './AvgDepositChart'
-import MembersChart from './MembersChart'
-import TotalDepositsChart from './TotalDepositsChart'
+import EfficiencyLoyaltyChart from './EfficiencyLoyaltyChart'
+import PilotPerformanceChart from './PilotPerformanceChart'
 import StoreBreakdownTable from './StoreBreakdownTable'
 
 const PARTNERS = ['Alpharus', 'Relevant Tech']
@@ -56,6 +54,8 @@ export default function PartnerChartsSection() {
   }, [partner])
 
   const hasAnyData = series.some(s => s.registered_members !== null)
+  const lastWeek = series.slice(0, 7)
+  const thisWeek = series.slice(7, 14)
 
   return (
     <div className="bg-white rounded-xl border border-gray-200 p-5 mb-6 dark:bg-gray-800 dark:border-gray-700">
@@ -80,11 +80,9 @@ export default function PartnerChartsSection() {
         <p className="text-sm text-gray-400 dark:text-gray-500 text-center py-8">No daily data yet for {partner}.</p>
       ) : (
         <>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-            <EfficiencyRetentionChart data={series} />
-            <AvgDepositChart data={series} />
-            <MembersChart data={series} />
-            <TotalDepositsChart data={series} />
+          <div className="grid grid-cols-1 gap-4 mb-6">
+            <EfficiencyLoyaltyChart lastWeek={lastWeek} thisWeek={thisWeek} />
+            <PilotPerformanceChart lastWeek={lastWeek} thisWeek={thisWeek} />
           </div>
           <StoreBreakdownTable stores={storeBreakdown} />
         </>

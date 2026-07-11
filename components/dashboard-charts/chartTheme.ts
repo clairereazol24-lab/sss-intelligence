@@ -1,6 +1,7 @@
 export type ChartPalette = {
   seriesBlue: string
   seriesAqua: string
+  seriesYellow: string
   grid: string
   axis: string
   text: string
@@ -11,6 +12,7 @@ export const chartColors: { light: ChartPalette; dark: ChartPalette } = {
   light: {
     seriesBlue: '#2a78d6',
     seriesAqua: '#1baf7a',
+    seriesYellow: '#eda100',
     grid: '#e1e0d9',
     axis: '#898781',
     text: '#52514e',
@@ -19,6 +21,7 @@ export const chartColors: { light: ChartPalette; dark: ChartPalette } = {
   dark: {
     seriesBlue: '#3987e5',
     seriesAqua: '#199e70',
+    seriesYellow: '#c98500',
     grid: '#2c2c2a',
     axis: '#898781',
     text: '#c3c2b7',
