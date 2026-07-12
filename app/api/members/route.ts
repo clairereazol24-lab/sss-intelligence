@@ -1,13 +1,30 @@
 import { supabaseAdmin as supabase } from '@/lib/supabase-admin'
 import { NextRequest, NextResponse } from 'next/server'
 
-async function fetchAllMembers(partner?: string | null, columns = 'username, sub_affiliate, sub_affiliate_name, dsp, status, registered_time, member_rank, last_login_time, first_deposit_amount, deposit, deposit_times, withdraw, withdraw_times') {
+const DEFAULT_COLUMNS = 'username, sub_affiliate, sub_affiliate_name, dsp, status, registered_time, member_rank, last_login_time, first_deposit_amount, deposit, deposit_times, withdraw, withdraw_times'
+
+type PeriodFilter =
+  | { kind: 'exact'; period: string }
+  | { kind: 'range'; from: string; to: string }
+  | { kind: 'null_only' }
+  | { kind: 'none' }
+
+function applyPeriodFilter(query: any, filter?: PeriodFilter) {
+  if (!filter || filter.kind === 'none') return query
+  if (filter.kind === 'exact') return query.eq('period', filter.period)
+  if (filter.kind === 'range') return query.gte('period', filter.from).lte('period', filter.to)
+  if (filter.kind === 'null_only') return query.is('period', null)
+  return query
+}
+
+async function fetchAllMembers(partner?: string | null, columns = DEFAULT_COLUMNS, periodFilter?: PeriodFilter) {
   let query = supabase
     .from('members')
     .select(columns)
     .order('sub_affiliate', { ascending: true })
     .order('registered_time', { ascending: true })
   if (partner) query = query.eq('partner', partner)
+  query = applyPeriodFilter(query, periodFilter)
 
   const allRows: any[] = []
   let start = 0
@@ -21,6 +38,32 @@ async function fetchAllMembers(partner?: string | null, columns = 'username, sub
     start += PAGE
   }
   return allRows
+}
+
+async function resolveLatestPeriodForPartner(partnerVal: string | null) {
+  let q = supabase.from('members').select('period').not('period', 'is', null).order('period', { ascending: false }).limit(1)
+  if (partnerVal) q = q.eq('partner', partnerVal)
+  const { data } = await q
+  return data && data.length > 0 ? (data[0] as any).period as string : null
+}
+
+async function fetchAllMembersLatestFallback(partner: string | null, columns: string) {
+  if (partner) {
+    const latest = await resolveLatestPeriodForPartner(partner)
+    const filter: PeriodFilter = latest ? { kind: 'exact', period: latest } : { kind: 'null_only' }
+    return fetchAllMembers(partner, columns, filter)
+  }
+  const { data: partnersData } = await supabase.from('members').select('partner').not('partner', 'is', null)
+  const partners = Array.from(new Set((partnersData || []).map((r: any) => r.partner as string)))
+  if (partners.length === 0) {
+    return fetchAllMembers(null, columns, { kind: 'none' })
+  }
+  const results = await Promise.all(partners.map(async (p) => {
+    const latest = await resolveLatestPeriodForPartner(p)
+    const filter: PeriodFilter = latest ? { kind: 'exact', period: latest } : { kind: 'null_only' }
+    return fetchAllMembers(p, columns, filter)
+  }))
+  return results.flat()
 }
 
 function buildSummary(rows: any[]) {
@@ -38,11 +81,21 @@ export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
     const partner = searchParams.get('partner')
+    const period = searchParams.get('period')
+    const from = searchParams.get('from')
+    const to = searchParams.get('to')
     const top = searchParams.get('top')       // 'deposit' | 'ggr'
     const full = searchParams.get('full') === 'true'
     const summaryOnly = searchParams.get('summary') === 'true'
 
-    const allRows = await fetchAllMembers(partner)
+    let allRows: any[]
+    if (period && period !== 'all') {
+      allRows = await fetchAllMembers(partner, DEFAULT_COLUMNS, { kind: 'exact', period })
+    } else if (from && to) {
+      allRows = await fetchAllMembers(partner, DEFAULT_COLUMNS, { kind: 'range', from, to })
+    } else {
+      allRows = await fetchAllMembersLatestFallback(partner, DEFAULT_COLUMNS)
+    }
 
     // Lightweight summary-only mode (for Dashboard)
     if (summaryOnly) {
