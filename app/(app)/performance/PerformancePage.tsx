@@ -250,10 +250,11 @@ export default function PerformancePage({ partner }: { partner?: string }) {
   const fetchData = async (period: string) => {
     setLoading(true)
     const partnerParam = partner ? `&partner=${encodeURIComponent(partner)}` : ''
+    const periodParam = period && period !== 'all' ? `&period=${encodeURIComponent(period)}` : ''
     const [perfRes, memDepRes, memGGRRes] = await Promise.all([
       fetch(buildUrl(period)),
-      fetch(`/api/members?top=deposit&full=true${partnerParam}`),
-      fetch(`/api/members?top=ggr&full=true${partnerParam}`),
+      fetch(`/api/members?top=deposit&full=true${partnerParam}${periodParam}`),
+      fetch(`/api/members?top=ggr&full=true${partnerParam}${periodParam}`),
     ])
     const data = await perfRes.json()
     const memDep = await memDepRes.json()
