@@ -1,7 +1,5 @@
 'use client'
 import { useEffect, useState } from 'react'
-import EfficiencyLoyaltyChart from './EfficiencyLoyaltyChart'
-import PilotPerformanceChart from './PilotPerformanceChart'
 import StoreBreakdownTable from './StoreBreakdownTable'
 
 const PARTNERS = ['Alpharus', 'Relevant Tech']
@@ -54,13 +52,11 @@ export default function PartnerChartsSection() {
   }, [partner])
 
   const hasAnyData = series.some(s => s.registered_members !== null)
-  const lastWeek = series.slice(0, 7)
-  const thisWeek = series.slice(7, 14)
 
   return (
     <div className="bg-white rounded-xl border border-gray-200 p-5 mb-6 dark:bg-gray-800 dark:border-gray-700">
       <div className="flex items-center justify-between mb-4">
-        <h2 className="font-semibold text-gray-700 dark:text-gray-200">Last Week & This Week</h2>
+        <h2 className="font-semibold text-gray-700 dark:text-gray-200">Store Breakdown</h2>
         <select
           value={partner}
           onChange={e => setPartner(e.target.value)}
@@ -79,13 +75,7 @@ export default function PartnerChartsSection() {
       ) : !hasAnyData ? (
         <p className="text-sm text-gray-400 dark:text-gray-500 text-center py-8">No daily data yet for {partner}.</p>
       ) : (
-        <>
-          <div className="grid grid-cols-1 gap-4 mb-6">
-            <EfficiencyLoyaltyChart lastWeek={lastWeek} thisWeek={thisWeek} />
-            <PilotPerformanceChart lastWeek={lastWeek} thisWeek={thisWeek} />
-          </div>
-          <StoreBreakdownTable stores={storeBreakdown} />
-        </>
+        <StoreBreakdownTable stores={storeBreakdown} />
       )}
     </div>
   )
