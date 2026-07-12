@@ -29,38 +29,50 @@ export async function POST(request: NextRequest) {
 
     let removed = 0
     if (uploadMode === 'update') {
-      // Delete every store not in this upload (full-replace semantics). A single
-      // .not('sub_affiliate', 'in', <one giant list>) call builds a URL-encoded
-      // filter that blows past request-size limits once the directory is
-      // realistically sized (1000+ stores) and fails with a bare "Bad Request" —
-      // so diff in memory and delete the stale set in small batches instead.
-      const keepSet = new Set(records.map((r) => r.sub_affiliate))
-      const existingSubAffiliates: string[] = []
-      let eStart = 0
-      const PAGE = 1000
-      while (true) {
-        const { data: page, error: fetchError } = await supabase
-          .from('stores')
-          .select('sub_affiliate')
-          .range(eStart, eStart + PAGE - 1)
-        if (fetchError) throw fetchError
-        if (!page || page.length === 0) break
-        existingSubAffiliates.push(...page.map((r) => r.sub_affiliate as string))
-        if (page.length < PAGE) break
-        eStart += PAGE
-      }
-      const staleSubAffiliates = existingSubAffiliates.filter((s) => !keepSet.has(s))
+      // Full-replace semantics, but scoped per partner: "update" means "replace
+      // the directory for whichever partner(s) this upload actually contains,"
+      // never every partner in the table. An upload from a partner-scoped page
+      // (e.g. Relevant Tech's Store Directory) must only ever touch Relevant
+      // Tech's stores — it must not delete another partner's stores just
+      // because they weren't in this file. Records with no partner at all
+      // can't be safely scoped, so they're excluded from replace-cleanup
+      // entirely (still upserted above, just never a basis for deletion).
+      const partnersInUpload = Array.from(
+        new Set(records.map((r) => r.partner).filter((p): p is string => !!p))
+      )
 
+      const PAGE = 1000
       const BATCH = 200
-      for (let i = 0; i < staleSubAffiliates.length; i += BATCH) {
-        const batch = staleSubAffiliates.slice(i, i + BATCH)
-        const { data: removedRows, error: deleteError } = await supabase
-          .from('stores')
-          .delete()
-          .in('sub_affiliate', batch)
-          .select()
-        if (deleteError) throw deleteError
-        removed += removedRows?.length || 0
+      for (const p of partnersInUpload) {
+        const keepSet = new Set(records.filter((r) => r.partner === p).map((r) => r.sub_affiliate))
+
+        const existingSubAffiliates: string[] = []
+        let eStart = 0
+        while (true) {
+          const { data: page, error: fetchError } = await supabase
+            .from('stores')
+            .select('sub_affiliate')
+            .eq('partner', p)
+            .range(eStart, eStart + PAGE - 1)
+          if (fetchError) throw fetchError
+          if (!page || page.length === 0) break
+          existingSubAffiliates.push(...page.map((r) => r.sub_affiliate as string))
+          if (page.length < PAGE) break
+          eStart += PAGE
+        }
+        const staleSubAffiliates = existingSubAffiliates.filter((s) => !keepSet.has(s))
+
+        for (let i = 0; i < staleSubAffiliates.length; i += BATCH) {
+          const batch = staleSubAffiliates.slice(i, i + BATCH)
+          const { data: removedRows, error: deleteError } = await supabase
+            .from('stores')
+            .delete()
+            .eq('partner', p)
+            .in('sub_affiliate', batch)
+            .select()
+          if (deleteError) throw deleteError
+          removed += removedRows?.length || 0
+        }
       }
     }
 

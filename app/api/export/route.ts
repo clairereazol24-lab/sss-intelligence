@@ -30,18 +30,28 @@ export async function GET(request: NextRequest) {
     const to = searchParams.get('to')
     const partner = searchParams.get('partner')
 
-    let query = supabase.from('performance_data').select('*').order('period', { ascending: false })
-    if (partner) query = query.eq('partner', partner)
-    if (period && period !== 'all') {
-      query = query.eq('period', period)
-    } else if (from && to) {
-      query = query.gte('period', from).lte('period', to)
+    // Paginate to fetch every matching row — PostgREST caps a single request
+    // at 1000 rows by default, and performance_data already exceeds that.
+    const allRows: any[] = []
+    let start = 0
+    const PAGE = 1000
+    while (true) {
+      let query = supabase.from('performance_data').select('*').order('period', { ascending: false })
+      if (partner) query = query.eq('partner', partner)
+      if (period && period !== 'all') {
+        query = query.eq('period', period)
+      } else if (from && to) {
+        query = query.gte('period', from).lte('period', to)
+      }
+      const { data: page, error } = await query.range(start, start + PAGE - 1)
+      if (error) throw error
+      if (!page || page.length === 0) break
+      allRows.push(...page)
+      if (page.length < PAGE) break
+      start += PAGE
     }
 
-    const { data, error } = await query
-    if (error) throw error
-
-    const csv = toCsv(data || [])
+    const csv = toCsv(allRows)
 
     return new NextResponse(csv, {
       status: 200,
