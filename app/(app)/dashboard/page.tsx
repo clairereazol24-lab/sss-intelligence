@@ -1,6 +1,5 @@
 'use client'
 import { useState, useEffect } from 'react'
-import PartnerChartsSection from '@/components/dashboard-charts/PartnerChartsSection'
 
 const fmt = (n: number) => `₱${n.toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
 
@@ -148,8 +147,6 @@ export default function DashboardPage() {
           )
         })}
       </div>
-
-      <PartnerChartsSection />
 
       {/* Top 50 Members */}
       <div className="bg-white rounded-xl border border-gray-200 p-5 dark:bg-gray-800 dark:border-gray-700">
