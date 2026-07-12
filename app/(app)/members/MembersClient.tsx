@@ -48,10 +48,11 @@ export default function MembersClient({ partner }: { partner: string }) {
   const [result, setResult] = useState<string | null>(null)
   const fileRef = useRef<HTMLInputElement>(null)
 
+  const today = new Date()
   const [periodType, setPeriodType] = useState<'monthly' | 'daily'>('monthly')
-  const [month, setMonth] = useState('')
-  const [year, setYear] = useState(new Date().getFullYear().toString())
-  const [date, setDate] = useState('')
+  const [month, setMonth] = useState(String(today.getMonth() + 1).padStart(2, '0'))
+  const [year, setYear] = useState(today.getFullYear().toString())
+  const [date, setDate] = useState(today.toISOString().slice(0, 10))
 
   const getPeriod = () => {
     if (periodType === 'monthly') return `${year}-${month.padStart(2, '0')}`
