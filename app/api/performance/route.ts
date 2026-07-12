@@ -73,11 +73,22 @@ export async function GET(request: NextRequest) {
       s.first_deposit_count += row.first_deposit_count
     }
 
-    // Merge in stores from directory that have no performance data
-    let dirQuery = supabase.from('stores').select('sub_affiliate, store_name, partner, dsp')
-    if (partner) dirQuery = dirQuery.eq('partner', partner)
-    const { data: dirStores } = await dirQuery
-    for (const ds of dirStores || []) {
+    // Merge in stores from directory that have no performance data. Paginated —
+    // PostgREST caps a single request at 1000 rows, and a partner's directory
+    // now exceeds that (1580+ stores for Relevant Tech alone).
+    const dirStores: { sub_affiliate: string; store_name: string; partner: string | null; dsp: string | null }[] = []
+    let dStart = 0
+    while (true) {
+      let dirQuery = supabase.from('stores').select('sub_affiliate, store_name, partner, dsp')
+      if (partner) dirQuery = dirQuery.eq('partner', partner)
+      const { data: dirPage, error: dirError } = await dirQuery.range(dStart, dStart + PAGE - 1)
+      if (dirError) throw dirError
+      if (!dirPage || dirPage.length === 0) break
+      dirStores.push(...(dirPage as any[]))
+      if (dirPage.length < PAGE) break
+      dStart += PAGE
+    }
+    for (const ds of dirStores) {
       const key = `${ds.sub_affiliate}__${ds.partner ?? ''}`
       if (!storeMap[key]) {
         storeMap[key] = {
