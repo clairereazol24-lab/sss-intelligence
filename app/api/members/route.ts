@@ -174,11 +174,20 @@ export async function POST(request: NextRequest) {
       return { ...base, period, period_type: period_type || null }
     })
 
-    // Upsert merged records in batches of 500
+    // Collapse duplicate (username, partner, period) rows within this same upload —
+    // Postgres' ON CONFLICT DO UPDATE errors if a single statement would touch the
+    // same target row twice. Last occurrence in the file wins.
+    const dedupedMap = new Map<string, any>()
+    for (const r of mergedRecords) {
+      dedupedMap.set(`${r.username}|${r.partner}|${r.period}`, r)
+    }
+    const dedupedRecords = Array.from(dedupedMap.values())
+
+    // Upsert deduped records in batches of 500
     const BATCH = 500
     let upserted = 0
-    for (let i = 0; i < mergedRecords.length; i += BATCH) {
-      const batch = mergedRecords.slice(i, i + BATCH)
+    for (let i = 0; i < dedupedRecords.length; i += BATCH) {
+      const batch = dedupedRecords.slice(i, i + BATCH)
       const { error } = await supabase
         .from('members')
         .upsert(batch, { onConflict: 'username,partner,period' })
