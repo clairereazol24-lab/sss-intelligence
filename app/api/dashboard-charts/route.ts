@@ -167,38 +167,37 @@ export async function GET(request: NextRequest) {
 
     // "Active Member" for the store breakdown is the current count of
     // active-status members per store, from the members table (the real
-    // per-member records) — scoped to the partner's latest upload period so
-    // a member re-uploaded under a newer period isn't counted once per
-    // period they happen to appear active in.
-    const { data: latestPeriodRows } = await supabase
-      .from('members')
-      .select('period')
-      .eq('partner', partner)
-      .not('period', 'is', null)
-      .order('period', { ascending: false })
-      .limit(1)
-    const latestPeriod = latestPeriodRows && latestPeriodRows.length > 0
-      ? (latestPeriodRows[0] as { period: string }).period
-      : null
-
-    const activeCounts: Record<string, number> = {}
+    // per-member records) — deduplicated per username across every period
+    // ever uploaded. Uploads are often cohort-based (each period is that
+    // month's new registrants, not a full re-snapshot of everyone), so
+    // scoping to a single "latest period" would drop every earlier cohort;
+    // instead keep each username's most recently-periodned record.
+    const latestByUsername = new Map<string, { sub_affiliate: string; status: string; period: string | null }>()
     let mStart = 0
     while (true) {
-      let memberQuery = supabase
+      const { data: page, error } = await supabase
         .from('members')
-        .select('sub_affiliate, status')
+        .select('username, sub_affiliate, status, period')
         .eq('partner', partner)
-      memberQuery = latestPeriod ? memberQuery.eq('period', latestPeriod) : memberQuery.is('period', null)
-      const { data: page, error } = await memberQuery.range(mStart, mStart + PAGE - 1)
+        .range(mStart, mStart + PAGE - 1)
       if (error) throw error
       if (!page || page.length === 0) break
-      for (const m of page as { sub_affiliate: string; status: string }[]) {
-        if ((m.status || '').toLowerCase() === 'active') {
-          activeCounts[m.sub_affiliate] = (activeCounts[m.sub_affiliate] || 0) + 1
-        }
+      for (const m of page as { username: string; sub_affiliate: string; status: string; period: string | null }[]) {
+        const existing = latestByUsername.get(m.username)
+        if (!existing) { latestByUsername.set(m.username, m); continue }
+        const mP = m.period ?? null
+        const exP = existing.period ?? null
+        if (mP !== null && (exP === null || mP > exP)) latestByUsername.set(m.username, m)
       }
       if (page.length < PAGE) break
       mStart += PAGE
+    }
+
+    const activeCounts: Record<string, number> = {}
+    for (const m of Array.from(latestByUsername.values())) {
+      if ((m.status || '').toLowerCase() === 'active') {
+        activeCounts[m.sub_affiliate] = (activeCounts[m.sub_affiliate] || 0) + 1
+      }
     }
 
     const storeBreakdown = Object.entries(storeMap)

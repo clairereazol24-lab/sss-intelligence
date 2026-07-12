@@ -100,24 +100,38 @@ export async function GET(request: NextRequest) {
     }
 
     // Effective Member = current count of active-status members per store, from
-    // the members table (the real per-member records), not the uploaded
-    // performance_data snapshot.
-    const activeCounts: Record<string, number> = {}
+    // the members table (the real per-member records) — deduplicated per
+    // username across every period ever uploaded. Uploads are often
+    // cohort-based (each period is that month's new registrants, not a full
+    // re-snapshot of everyone), so counting every row would over-count a
+    // member active across multiple periods; keep each username's most
+    // recently-periodned record instead. This is a "right now" figure, not
+    // the uploaded performance_data snapshot.
+    const latestByUsername: Record<string, { sub_affiliate: string; partner: string | null; status: string; period: string | null }> = {}
     let mStart = 0
     while (true) {
-      let mQuery = supabase.from('members').select('sub_affiliate, partner, status')
+      let mQuery = supabase.from('members').select('username, sub_affiliate, partner, status, period')
       if (partner) mQuery = mQuery.eq('partner', partner)
       const { data: mPage, error: mError } = await mQuery.range(mStart, mStart + PAGE - 1)
       if (mError) throw mError
       if (!mPage || mPage.length === 0) break
-      for (const m of mPage as { sub_affiliate: string; partner: string | null; status: string }[]) {
-        if ((m.status || '').toLowerCase() === 'active') {
-          const key = `${m.sub_affiliate}__${m.partner ?? ''}`
-          activeCounts[key] = (activeCounts[key] || 0) + 1
-        }
+      for (const m of mPage as { username: string; sub_affiliate: string; partner: string | null; status: string; period: string | null }[]) {
+        const key = `${m.username}__${m.partner ?? ''}`
+        const existing = latestByUsername[key]
+        if (!existing) { latestByUsername[key] = m; continue }
+        const mP = m.period ?? null
+        const exP = existing.period ?? null
+        if (mP !== null && (exP === null || mP > exP)) latestByUsername[key] = m
       }
       if (mPage.length < PAGE) break
       mStart += PAGE
+    }
+    const activeCounts: Record<string, number> = {}
+    for (const m of Object.values(latestByUsername)) {
+      if ((m.status || '').toLowerCase() === 'active') {
+        const key = `${m.sub_affiliate}__${m.partner ?? ''}`
+        activeCounts[key] = (activeCounts[key] || 0) + 1
+      }
     }
     for (const [key, s] of Object.entries(storeMap) as [string, any][]) {
       s.effective_member = activeCounts[key] || 0

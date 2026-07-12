@@ -6,15 +6,11 @@ const DEFAULT_COLUMNS = 'username, sub_affiliate, sub_affiliate_name, dsp, statu
 type PeriodFilter =
   | { kind: 'exact'; period: string }
   | { kind: 'range'; from: string; to: string }
-  | { kind: 'null_only' }
-  | { kind: 'none' }
 
 function applyPeriodFilter(query: any, filter?: PeriodFilter) {
-  if (!filter || filter.kind === 'none') return query
+  if (!filter) return query
   if (filter.kind === 'exact') return query.eq('period', filter.period)
-  if (filter.kind === 'range') return query.gte('period', filter.from).lte('period', filter.to)
-  if (filter.kind === 'null_only') return query.is('period', null)
-  return query
+  return query.gte('period', filter.from).lte('period', filter.to)
 }
 
 async function fetchAllMembers(partner?: string | null, columns = DEFAULT_COLUMNS, periodFilter?: PeriodFilter) {
@@ -40,29 +36,34 @@ async function fetchAllMembers(partner?: string | null, columns = DEFAULT_COLUMN
   return allRows
 }
 
-async function resolveLatestPeriodForPartner(partnerVal: string | null) {
-  let q = supabase.from('members').select('period').not('period', 'is', null).order('period', { ascending: false }).limit(1)
-  if (partnerVal) q = q.eq('partner', partnerVal)
-  const { data } = await q
-  return data && data.length > 0 ? (data[0] as any).period as string : null
+// "No period selected" means "current state of every member ever uploaded" —
+// union across every period ever uploaded for a partner (including legacy
+// period=NULL rows), keeping each username's most recently-periodned record.
+// Uploads are often cohort-based (each period is that month's new
+// registrants, not a full re-snapshot of everyone), so picking only the
+// single latest period would silently drop every earlier cohort.
+async function latestPerUsername(partnerVal: string, columns: string) {
+  const columnsWithPeriod = columns.includes('period') ? columns : `${columns}, period`
+  const rows = await fetchAllMembers(partnerVal, columnsWithPeriod)
+  const latestByUsername = new Map<string, any>()
+  for (const r of rows as any[]) {
+    const existing = latestByUsername.get(r.username)
+    if (!existing) { latestByUsername.set(r.username, r); continue }
+    const rP: string | null = r.period ?? null
+    const exP: string | null = existing.period ?? null
+    // NULL period = legacy/unstamped data, always treated as older than any stamped period
+    if (rP !== null && (exP === null || rP > exP)) latestByUsername.set(r.username, r)
+  }
+  return Array.from(latestByUsername.values())
 }
 
 async function fetchAllMembersLatestFallback(partner: string | null, columns: string) {
-  if (partner) {
-    const latest = await resolveLatestPeriodForPartner(partner)
-    const filter: PeriodFilter = latest ? { kind: 'exact', period: latest } : { kind: 'null_only' }
-    return fetchAllMembers(partner, columns, filter)
-  }
+  if (partner) return latestPerUsername(partner, columns)
+
   const { data: partnersData } = await supabase.from('members').select('partner').not('partner', 'is', null)
   const partners = Array.from(new Set((partnersData || []).map((r: any) => r.partner as string)))
-  if (partners.length === 0) {
-    return fetchAllMembers(null, columns, { kind: 'none' })
-  }
-  const results = await Promise.all(partners.map(async (p) => {
-    const latest = await resolveLatestPeriodForPartner(p)
-    const filter: PeriodFilter = latest ? { kind: 'exact', period: latest } : { kind: 'null_only' }
-    return fetchAllMembers(p, columns, filter)
-  }))
+  if (partners.length === 0) return []
+  const results = await Promise.all(partners.map((p) => latestPerUsername(p, columns)))
   return results.flat()
 }
 
