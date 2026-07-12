@@ -4,7 +4,7 @@ import { fmtPhp } from './chartTheme'
 type StoreRow = {
   store_name: string
   registered_members: number
-  effective_member: number
+  active_member: number
   total_deposit: number
 }
 
@@ -20,7 +20,7 @@ export default function StoreBreakdownTable({ stores }: { stores: StoreRow[] }) 
           <tr className="bg-gray-50 dark:bg-gray-700">
             <th className="px-3 py-2.5 text-center text-gray-500 dark:text-gray-400 font-medium">Store</th>
             <th className="px-3 py-2.5 text-center text-gray-500 dark:text-gray-400 font-medium">Registered Members</th>
-            <th className="px-3 py-2.5 text-center text-gray-500 dark:text-gray-400 font-medium">Effective Member</th>
+            <th className="px-3 py-2.5 text-center text-gray-500 dark:text-gray-400 font-medium">Active Member</th>
             <th className="px-3 py-2.5 text-center text-gray-500 dark:text-gray-400 font-medium">Total Deposit</th>
           </tr>
         </thead>
@@ -29,7 +29,7 @@ export default function StoreBreakdownTable({ stores }: { stores: StoreRow[] }) 
             <tr key={`${s.store_name}-${i}`} className="border-t border-gray-100 dark:border-gray-700">
               <td className="px-3 py-2.5 text-center text-gray-700 dark:text-gray-300 font-medium">{s.store_name}</td>
               <td className="px-3 py-2.5 text-center text-gray-700 dark:text-gray-300">{s.registered_members.toLocaleString()}</td>
-              <td className="px-3 py-2.5 text-center text-gray-700 dark:text-gray-300">{s.effective_member.toLocaleString()}</td>
+              <td className="px-3 py-2.5 text-center text-gray-700 dark:text-gray-300">{s.active_member.toLocaleString()}</td>
               <td className="px-3 py-2.5 text-center text-gray-700 dark:text-gray-300">{fmtPhp(s.total_deposit)}</td>
             </tr>
           ))}

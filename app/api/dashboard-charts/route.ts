@@ -165,18 +165,31 @@ export async function GET(request: NextRequest) {
       rStart += PAGE
     }
 
-    // "Effective Member" for the store breakdown is the current count of
+    // "Active Member" for the store breakdown is the current count of
     // active-status members per store, from the members table (the real
-    // per-member records) — not the daily uploaded snapshot. This is a "right
-    // now" count, not a windowed one, since member status has no history.
+    // per-member records) — scoped to the partner's latest upload period so
+    // a member re-uploaded under a newer period isn't counted once per
+    // period they happen to appear active in.
+    const { data: latestPeriodRows } = await supabase
+      .from('members')
+      .select('period')
+      .eq('partner', partner)
+      .not('period', 'is', null)
+      .order('period', { ascending: false })
+      .limit(1)
+    const latestPeriod = latestPeriodRows && latestPeriodRows.length > 0
+      ? (latestPeriodRows[0] as { period: string }).period
+      : null
+
     const activeCounts: Record<string, number> = {}
     let mStart = 0
     while (true) {
-      const { data: page, error } = await supabase
+      let memberQuery = supabase
         .from('members')
         .select('sub_affiliate, status')
         .eq('partner', partner)
-        .range(mStart, mStart + PAGE - 1)
+      memberQuery = latestPeriod ? memberQuery.eq('period', latestPeriod) : memberQuery.is('period', null)
+      const { data: page, error } = await memberQuery.range(mStart, mStart + PAGE - 1)
       if (error) throw error
       if (!page || page.length === 0) break
       for (const m of page as { sub_affiliate: string; status: string }[]) {
@@ -192,7 +205,7 @@ export async function GET(request: NextRequest) {
       .map(([sub_affiliate, s]) => ({
         store_name: s.store_name,
         registered_members: allTimeRegistered[sub_affiliate] || 0,
-        effective_member: activeCounts[sub_affiliate] || 0,
+        active_member: activeCounts[sub_affiliate] || 0,
         total_deposit: s.total_deposit,
       }))
       .sort((a, b) => b.total_deposit - a.total_deposit)

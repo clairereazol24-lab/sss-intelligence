@@ -19,7 +19,7 @@ type SeriesPoint = {
 type StoreRow = {
   store_name: string
   registered_members: number
-  effective_member: number
+  active_member: number
   total_deposit: number
 }
 
