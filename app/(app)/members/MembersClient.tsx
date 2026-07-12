@@ -50,14 +50,7 @@ export default function MembersClient({ partner }: { partner: string }) {
 
   const today = new Date()
   const [periodType, setPeriodType] = useState<'monthly' | 'daily'>('monthly')
-  const [month, setMonth] = useState(String(today.getMonth() + 1).padStart(2, '0'))
-  const [year, setYear] = useState(today.getFullYear().toString())
   const [date, setDate] = useState(today.toISOString().slice(0, 10))
-
-  const getPeriod = () => {
-    if (periodType === 'monthly') return `${year}-${month.padStart(2, '0')}`
-    return date
-  }
 
   const fetchMembers = async () => {
     setLoading(true)
@@ -89,9 +82,7 @@ export default function MembersClient({ partner }: { partner: string }) {
 
   const handleUpload = async () => {
     if (!parsed.length) return
-    if (periodType === 'monthly' && !month) { setError('Please select a month before uploading.'); return }
     if (periodType === 'daily' && !date) { setError('Please select a date before uploading.'); return }
-    const period = getPeriod()
     setUploading(true)
     setError(null)
     try {
@@ -114,14 +105,46 @@ export default function MembersClient({ partner }: { partner: string }) {
         withdraw_times: parseInt(row['Withdraw Times']) || 0,
       })).filter(r => r.username && r.sub_affiliate)
 
-      const res = await fetch('/api/members', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ records, period, period_type: periodType }),
-      })
-      const data = await res.json()
-      if (!res.ok) throw new Error(data.error || 'Upload failed.')
-      setResult(`✅ ${data.count} member records uploaded for period ${period}.`)
+      if (periodType === 'daily') {
+        const res = await fetch('/api/members', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ records, period: date, period_type: 'daily' }),
+        })
+        const data = await res.json()
+        if (!res.ok) throw new Error(data.error || 'Upload failed.')
+        setResult(`✅ ${data.count} member records uploaded for period ${date}.`)
+      } else {
+        // Monthly: derive each row's period from its own Registered Time instead of
+        // one manual label for the whole batch, so a single upload spanning several
+        // months files each row under its actual month.
+        const groups: Record<string, typeof records> = {}
+        let skipped = 0
+        for (const r of records) {
+          if (!r.registered_time) { skipped++; continue }
+          const monthKey = r.registered_time.slice(0, 7) // YYYY-MM
+          if (!groups[monthKey]) groups[monthKey] = []
+          groups[monthKey].push(r)
+        }
+        const periods = Object.keys(groups).sort()
+        if (periods.length === 0) throw new Error('No rows have a valid Registered Time to derive a period from.')
+
+        let uploaded = 0
+        const perPeriod: string[] = []
+        for (const p of periods) {
+          const res = await fetch('/api/members', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ records: groups[p], period: p, period_type: 'monthly' }),
+          })
+          const data = await res.json()
+          if (!res.ok) throw new Error(`${p}: ${data.error || 'Upload failed.'}`)
+          uploaded += data.count
+          perPeriod.push(`${p}: ${data.count}`)
+        }
+        setResult(`✅ ${uploaded} member records uploaded across ${periods.length} period${periods.length > 1 ? 's' : ''} (${perPeriod.join(', ')})${skipped ? `. ${skipped} row${skipped > 1 ? 's' : ''} skipped (missing Registered Time)` : ''}.`)
+      }
+
       setParsed([])
       setFile(null)
       if (fileRef.current) fileRef.current.value = ''
@@ -179,17 +202,7 @@ export default function MembersClient({ partner }: { partner: string }) {
             <button onClick={() => setPeriodType('monthly')} className={`px-3 py-1.5 rounded-lg text-xs font-medium ${periodType === 'monthly' ? 'bg-blue-600 text-white' : 'bg-white text-gray-600 dark:bg-gray-700 dark:text-gray-300'}`}>Monthly</button>
             <button onClick={() => setPeriodType('daily')} className={`px-3 py-1.5 rounded-lg text-xs font-medium ${periodType === 'daily' ? 'bg-blue-600 text-white' : 'bg-white text-gray-600 dark:bg-gray-700 dark:text-gray-300'}`}>Daily</button>
             {periodType === 'monthly' ? (
-              <>
-                <select value={month} onChange={(e) => setMonth(e.target.value)} className="border border-gray-200 rounded-lg px-2 py-1.5 text-xs dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100">
-                  <option value="">Month</option>
-                  {['01','02','03','04','05','06','07','08','09','10','11','12'].map((m, i) => (
-                    <option key={m} value={m}>{['January','February','March','April','May','June','July','August','September','October','November','December'][i]}</option>
-                  ))}
-                </select>
-                <select value={year} onChange={(e) => setYear(e.target.value)} className="border border-gray-200 rounded-lg px-2 py-1.5 text-xs dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100">
-                  {['2024','2025','2026','2027'].map(y => <option key={y} value={y}>{y}</option>)}
-                </select>
-              </>
+              <span className="text-xs text-gray-500 dark:text-gray-400">Period auto-detected per row from Registered Time — a file spanning several months will file each row under its own month.</span>
             ) : (
               <input type="date" value={date} onChange={(e) => setDate(e.target.value)} className="border border-gray-200 rounded-lg px-2 py-1.5 text-xs dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100" />
             )}
