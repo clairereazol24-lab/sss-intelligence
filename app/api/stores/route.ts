@@ -24,13 +24,6 @@ export async function GET(request: NextRequest) {
   return NextResponse.json(allRows)
 }
 
-export async function POST(request: NextRequest) {
-  const body = await request.json()
-  const { data, error } = await supabase.from('stores').insert(body).select().single()
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-  return NextResponse.json(data)
-}
-
 export async function PUT(request: NextRequest) {
   const body = await request.json()
   const { id, ...fields } = body

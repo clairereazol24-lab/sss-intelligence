@@ -112,12 +112,6 @@ export default function StoreDirectoryPage({ partner }: { partner?: string }) {
     }
   }
 
-  const openAdd = () => {
-    setEditing(null)
-    setForm({ sub_affiliate: '', store_name: '', partner: partner || '', dsp: '', deployment_status: 'Not Deployed' })
-    setModal(true)
-  }
-
   const openEdit = (s: Store) => {
     setEditing(s)
     setForm({ sub_affiliate: s.sub_affiliate, store_name: s.store_name, partner: s.partner || '', dsp: s.dsp || '', deployment_status: s.deployment_status })
@@ -125,12 +119,9 @@ export default function StoreDirectoryPage({ partner }: { partner?: string }) {
   }
 
   const handleSave = async () => {
+    if (!editing) return
     setSaving(true)
-    if (editing) {
-      await fetch('/api/stores', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: editing.id, ...form }) })
-    } else {
-      await fetch('/api/stores', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(form) })
-    }
+    await fetch('/api/stores', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: editing.id, ...form }) })
     setSaving(false)
     setModal(false)
     fetchStores()
@@ -154,7 +145,6 @@ export default function StoreDirectoryPage({ partner }: { partner?: string }) {
         <div className="flex items-center gap-3">
           <input ref={bulkFileRef} type="file" accept=".csv" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) handleBulkFile(f) }} />
           <button onClick={() => bulkFileRef.current?.click()} className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-200 text-sm font-medium px-4 py-2 rounded-lg shadow-sm transition-colors">📤 Bulk Import</button>
-          <button onClick={openAdd} className="bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors">+ Add Store</button>
         </div>
       </div>
 
@@ -206,10 +196,10 @@ export default function StoreDirectoryPage({ partner }: { partner?: string }) {
       {modal && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
           <div className="bg-white dark:bg-gray-800 rounded-xl p-6 w-full max-w-md shadow-xl">
-            <h2 className="font-bold text-gray-800 dark:text-gray-100 mb-4">{editing ? 'Edit Store' : 'Add Store'}</h2>
+            <h2 className="font-bold text-gray-800 dark:text-gray-100 mb-4">Edit Store</h2>
             <div className="space-y-3">
               {[
-                { label: 'Sub Affiliate ID', key: 'sub_affiliate', disabled: !!editing },
+                { label: 'Sub Affiliate ID', key: 'sub_affiliate', disabled: true },
                 { label: 'Store Name', key: 'store_name' },
                 { label: 'Partner', key: 'partner', disabled: !!partner },
                 { label: 'DSP', key: 'dsp' },
