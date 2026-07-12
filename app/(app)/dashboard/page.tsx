@@ -43,8 +43,8 @@ export default function DashboardPage() {
       const base = f && t ? `&from=${f}&to=${t}` : ''
       const [perfResults, memberResults, top50Res] = await Promise.all([
         Promise.all(PARTNERS.map(p => fetch(`/api/performance?partner=${encodeURIComponent(p.key)}${base}`).then(r => r.json()))),
-        Promise.all(PARTNERS.map(p => fetch(`/api/members?partner=${encodeURIComponent(p.key)}&summary=true`).then(r => r.json()))),
-        fetch('/api/members?top=deposit').then(r => r.json()),
+        Promise.all(PARTNERS.map(p => fetch(`/api/members?partner=${encodeURIComponent(p.key)}&summary=true${base}`).then(r => r.json()))),
+        fetch(`/api/members?top=deposit${base}`).then(r => r.json()),
       ])
       const nextPerf: Record<string, PerfTotals | null> = {}
       const nextMem: Record<string, MemberCounts | null> = {}

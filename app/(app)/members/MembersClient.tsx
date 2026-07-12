@@ -48,6 +48,17 @@ export default function MembersClient({ partner }: { partner: string }) {
   const [result, setResult] = useState<string | null>(null)
   const fileRef = useRef<HTMLInputElement>(null)
 
+  const today = new Date()
+  const [periodType, setPeriodType] = useState<'monthly' | 'daily'>('monthly')
+  const [month, setMonth] = useState(String(today.getMonth() + 1).padStart(2, '0'))
+  const [year, setYear] = useState(today.getFullYear().toString())
+  const [date, setDate] = useState(today.toISOString().slice(0, 10))
+
+  const getPeriod = () => {
+    if (periodType === 'monthly') return `${year}-${month.padStart(2, '0')}`
+    return date
+  }
+
   const fetchMembers = async () => {
     setLoading(true)
     setError(null)
@@ -78,6 +89,9 @@ export default function MembersClient({ partner }: { partner: string }) {
 
   const handleUpload = async () => {
     if (!parsed.length) return
+    if (periodType === 'monthly' && !month) { setError('Please select a month before uploading.'); return }
+    if (periodType === 'daily' && !date) { setError('Please select a date before uploading.'); return }
+    const period = getPeriod()
     setUploading(true)
     setError(null)
     try {
@@ -103,11 +117,11 @@ export default function MembersClient({ partner }: { partner: string }) {
       const res = await fetch('/api/members', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ records }),
+        body: JSON.stringify({ records, period, period_type: periodType }),
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || 'Upload failed.')
-      setResult(`✅ ${data.count} member records uploaded.`)
+      setResult(`✅ ${data.count} member records uploaded for period ${period}.`)
       setParsed([])
       setFile(null)
       if (fileRef.current) fileRef.current.value = ''
@@ -151,13 +165,34 @@ export default function MembersClient({ partner }: { partner: string }) {
       </div>
 
       {file && parsed.length > 0 && (
-        <div className="bg-blue-50 border border-blue-200 rounded-lg px-4 py-3 mb-6 flex items-center justify-between dark:bg-blue-900/20 dark:border-blue-800">
-          <p className="text-sm text-blue-700 dark:text-blue-300">{file.name} — {parsed.length} rows ready</p>
-          <div className="flex gap-2">
-            <button onClick={() => { setFile(null); setParsed([]); if (fileRef.current) fileRef.current.value = '' }} className="text-xs text-gray-500 hover:text-gray-700 px-2 py-1 rounded dark:text-gray-400">Cancel</button>
-            <button onClick={handleUpload} disabled={uploading} className="bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-xs font-medium px-4 py-1.5 rounded-lg transition-colors">
-              {uploading ? 'Uploading...' : 'Upload'}
-            </button>
+        <div className="bg-blue-50 border border-blue-200 rounded-lg px-4 py-3 mb-6 dark:bg-blue-900/20 dark:border-blue-800">
+          <div className="flex items-center justify-between mb-3">
+            <p className="text-sm text-blue-700 dark:text-blue-300">{file.name} — {parsed.length} rows ready</p>
+            <div className="flex gap-2">
+              <button onClick={() => { setFile(null); setParsed([]); if (fileRef.current) fileRef.current.value = '' }} className="text-xs text-gray-500 hover:text-gray-700 px-2 py-1 rounded dark:text-gray-400">Cancel</button>
+              <button onClick={handleUpload} disabled={uploading} className="bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-xs font-medium px-4 py-1.5 rounded-lg transition-colors">
+                {uploading ? 'Uploading...' : 'Upload'}
+              </button>
+            </div>
+          </div>
+          <div className="flex items-center gap-3">
+            <button onClick={() => setPeriodType('monthly')} className={`px-3 py-1.5 rounded-lg text-xs font-medium ${periodType === 'monthly' ? 'bg-blue-600 text-white' : 'bg-white text-gray-600 dark:bg-gray-700 dark:text-gray-300'}`}>Monthly</button>
+            <button onClick={() => setPeriodType('daily')} className={`px-3 py-1.5 rounded-lg text-xs font-medium ${periodType === 'daily' ? 'bg-blue-600 text-white' : 'bg-white text-gray-600 dark:bg-gray-700 dark:text-gray-300'}`}>Daily</button>
+            {periodType === 'monthly' ? (
+              <>
+                <select value={month} onChange={(e) => setMonth(e.target.value)} className="border border-gray-200 rounded-lg px-2 py-1.5 text-xs dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100">
+                  <option value="">Month</option>
+                  {['01','02','03','04','05','06','07','08','09','10','11','12'].map((m, i) => (
+                    <option key={m} value={m}>{['January','February','March','April','May','June','July','August','September','October','November','December'][i]}</option>
+                  ))}
+                </select>
+                <select value={year} onChange={(e) => setYear(e.target.value)} className="border border-gray-200 rounded-lg px-2 py-1.5 text-xs dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100">
+                  {['2024','2025','2026','2027'].map(y => <option key={y} value={y}>{y}</option>)}
+                </select>
+              </>
+            ) : (
+              <input type="date" value={date} onChange={(e) => setDate(e.target.value)} className="border border-gray-200 rounded-lg px-2 py-1.5 text-xs dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100" />
+            )}
           </div>
         </div>
       )}
