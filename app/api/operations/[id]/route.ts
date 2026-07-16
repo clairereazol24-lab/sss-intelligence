@@ -49,10 +49,13 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
   if (!existing) return NextResponse.json({ error: 'Task not found.' }, { status: 404 })
 
   const body = await request.json()
-  const { title, description, priority, is_archived, reference_links, collaborator_ids } = body
+  const { title, description, priority, reference_links, collaborator_ids } = body
   // Empty string means "cleared" in the edit form's date input — normalize to null
   // before it ever reaches the DATE column, otherwise Postgres rejects '' as an invalid date.
   const deadline = body.deadline === undefined ? undefined : (body.deadline || null)
+  // Normalize to an actual boolean so a truthy-but-non-boolean value (e.g. the string "true")
+  // can't bypass the archive guard below and still get written into the boolean column.
+  const is_archived = body.is_archived === undefined ? undefined : Boolean(body.is_archived)
 
   if (is_archived === true && !existing.is_special) {
     return NextResponse.json({ error: 'Only Special Tasks can be archived.' }, { status: 400 })
@@ -91,18 +94,31 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
   }
 
   if (Array.isArray(reference_links)) {
-    await supabaseAdmin.from('ops_reference_links').delete().eq('task_id', params.id)
-    if (reference_links.length > 0) {
-      await supabaseAdmin.from('ops_reference_links').insert(
-        reference_links.map((l: { label: string; url: string }, i: number) => ({
-          task_id: params.id,
-          label: l.label,
-          url: l.url,
-          sort_order: i,
-        }))
-      )
+    const { data: currentLinks } = await supabaseAdmin
+      .from('ops_reference_links')
+      .select('label, url')
+      .eq('task_id', params.id)
+      .order('sort_order')
+    const currentList = currentLinks || []
+    const newList = reference_links as { label: string; url: string }[]
+    const changed =
+      currentList.length !== newList.length ||
+      currentList.some((l: any, i: number) => l.label !== newList[i].label || l.url !== newList[i].url)
+
+    if (changed) {
+      await supabaseAdmin.from('ops_reference_links').delete().eq('task_id', params.id)
+      if (newList.length > 0) {
+        await supabaseAdmin.from('ops_reference_links').insert(
+          newList.map((l, i) => ({
+            task_id: params.id,
+            label: l.label,
+            url: l.url,
+            sort_order: i,
+          }))
+        )
+      }
+      activityEntries.push({ task_id: params.id, user_id: auth.userId, action_text: 'updated Reference Links' })
     }
-    activityEntries.push({ task_id: params.id, user_id: auth.userId, action_text: 'updated Reference Links' })
   }
 
   if (Array.isArray(collaborator_ids)) {
