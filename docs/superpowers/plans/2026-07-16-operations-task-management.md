@@ -157,7 +157,6 @@ Create `check-ops-schema.mjs` in the project root (per this project's establishe
 
 ```javascript
 import { createClient } from '@supabase/supabase-js'
-import 'dotenv/config'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,
