@@ -18,11 +18,21 @@ export default function NotificationBell() {
 
   useEffect(() => {
     fetchNotifications()
-    const channel = supabase
-      .channel('ops-notifications')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'ops_notifications' }, fetchNotifications)
-      .subscribe()
-    return () => { supabase.removeChannel(channel) }
+    let channel: ReturnType<typeof supabase.channel> | undefined
+    let cancelled = false
+
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (cancelled || !user) return
+      channel = supabase
+        .channel('ops-notifications')
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'ops_notifications', filter: `user_id=eq.${user.id}` }, fetchNotifications)
+        .subscribe()
+    })
+
+    return () => {
+      cancelled = true
+      if (channel) supabase.removeChannel(channel)
+    }
   }, [])
 
   const unreadCount = notifications.filter((n) => !n.is_read).length
