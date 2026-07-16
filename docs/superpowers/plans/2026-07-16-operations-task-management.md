@@ -4,7 +4,7 @@
 
 **Goal:** Build the "Operations" module in SSS Intelligence — a flat list of persistent operational task workspaces (Ocular, Fully Deployed & New Store, Community Marketing, Booth Activation, plus manually-created Special Tasks), each with reference links, priority, collaborators, a separate Updates feed and Comments thread with @mentions, an auto-logged activity history, in-app notifications, and Telegram alerts.
 
-**Architecture:** New Supabase tables (`ops_tasks`, `ops_reference_links`, `ops_collaborators`, `ops_updates`, `ops_comments`, `ops_activity_log`, `ops_notifications`) accessed exclusively through `supabaseAdmin` (this app's existing RLS-deny-all + admin-client pattern). A new `operations` module-permission key gates the module the same way every other module in `lib/auth.ts` already works. Six API route files under `app/api/operations/` serve the board, task detail, updates, comments, and notifications. Two client pages (board + task detail) subscribe to Supabase Realtime for live updates. A new `lib/telegram-ops.ts` sends immediate Telegram messages on mentions/updates/comments into a dedicated bot/chat, and a Vercel Cron route sends a daily deadline digest.
+**Architecture:** New Supabase tables (`ops_tasks`, `ops_reference_links`, `ops_collaborators`, `ops_updates`, `ops_comments`, `ops_activity_log`, `ops_notifications`) accessed exclusively through `supabaseAdmin` (this app's existing RLS-deny-all + admin-client pattern). A new `operations` module-permission key gates the module the same way every other module in `lib/auth.ts` already works. Six API route files under `app/api/operations/` serve the board, task detail, updates, comments, and notifications. Two client pages (board + task detail) subscribe to Supabase Realtime for live updates. A new `lib/telegram-ops.ts` sends immediate Telegram messages on mentions/updates/comments into a dedicated bot/chat, and a Vercel Cron route sends a daily "movement" digest of Comments/Updates activity.
 
 **Tech Stack:** Next.js 14 App Router, Supabase (`supabaseAdmin`, `@supabase/ssr` server client, Supabase Realtime), Tailwind — all existing project dependencies. No new npm packages.
 
@@ -157,7 +157,6 @@ Create `check-ops-schema.mjs` in the project root (per this project's establishe
 
 ```javascript
 import { createClient } from '@supabase/supabase-js'
-import 'dotenv/config'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -1956,15 +1955,17 @@ Note: `.env.local` is gitignored and intentionally not committed — confirm wit
 
 ---
 
-### Task 10: Daily deadline digest (Vercel Cron)
+### Task 10: Daily movement digest (Vercel Cron)
+
+**Revision note:** this task originally sent a deadline-reminder digest. Per a mid-build decision, it was changed to a daily activity ("movement") digest instead — every Comment and Update posted in the last 24 hours, grouped by task. `deadline` remains a display-only field on each task (still shown, still editable in Task 5's edit form) with no scheduled Telegram nudge tied to it. The `ops_notifications.type` CHECK constraint (already live from Task 1) still includes `'deadline'` as an allowed value — it's simply unused now; not worth another live-DB migration to remove an inert enum value.
 
 **Files:**
-- Create: `app/api/cron/operations-deadlines/route.ts`
+- Create: `app/api/cron/operations-digest/route.ts`
 - Create: `vercel.json`
 
 **Interfaces:**
 - Consumes: `sendOpsTelegramMessage` from `lib/telegram-ops.ts` (Task 9); `supabaseAdmin` from `lib/supabase-admin.ts`.
-- Produces: `GET /api/cron/operations-deadlines`, callable only with `Authorization: Bearer <CRON_SECRET>`, triggered daily by Vercel Cron at 9AM PHT (`0 1 * * *` UTC).
+- Produces: `GET /api/cron/operations-digest`, callable only with `Authorization: Bearer <CRON_SECRET>`, triggered daily by Vercel Cron at 9AM PHT (`0 1 * * *` UTC).
 
 - [ ] **Step 1: Add a `CRON_SECRET` environment variable**
 
@@ -1973,7 +1974,7 @@ Add the output to `.env.local` and to the Vercel project's Environment Variables
 
 - [ ] **Step 2: Create the cron route**
 
-Create `app/api/cron/operations-deadlines/route.ts`:
+Create `app/api/cron/operations-digest/route.ts`:
 ```typescript
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase-admin'
@@ -1985,38 +1986,50 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
-  const { data: tasks, error } = await supabaseAdmin
-    .from('ops_tasks')
-    .select('title, deadline')
-    .eq('is_archived', false)
-    .not('deadline', 'is', null)
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
 
-  const today = new Date()
-  today.setHours(0, 0, 0, 0)
-  const threeDaysOut = new Date(today)
-  threeDaysOut.setDate(threeDaysOut.getDate() + 3)
+  const [{ data: updates, error: updatesError }, { data: comments, error: commentsError }] = await Promise.all([
+    supabaseAdmin.from('ops_updates').select('task_id, created_at').gte('created_at', since),
+    supabaseAdmin.from('ops_comments').select('task_id, created_at').gte('created_at', since),
+  ])
+  if (updatesError) return NextResponse.json({ error: updatesError.message }, { status: 500 })
+  if (commentsError) return NextResponse.json({ error: commentsError.message }, { status: 500 })
 
-  const overdue: string[] = []
-  const upcoming: string[] = []
-
-  for (const t of tasks || []) {
-    const d = new Date(t.deadline + 'T00:00:00')
-    if (d < today) overdue.push(`${t.title} (was due ${t.deadline})`)
-    else if (d <= threeDaysOut) upcoming.push(`${t.title} (due ${t.deadline})`)
+  if ((updates || []).length === 0 && (comments || []).length === 0) {
+    return NextResponse.json({ sent: false, reason: 'No activity in the last 24 hours.' })
   }
 
-  if (overdue.length === 0 && upcoming.length === 0) {
-    return NextResponse.json({ sent: false, reason: 'No deadlines to report.' })
+  const taskIds = Array.from(new Set([...(updates || []), ...(comments || [])].map((r: any) => r.task_id)))
+  const { data: tasks } = await supabaseAdmin.from('ops_tasks').select('id, title').in('id', taskIds)
+  const titleById: Record<string, string> = {}
+  for (const t of tasks || []) titleById[t.id] = t.title
+
+  const countsByTask: Record<string, { updates: number; comments: number }> = {}
+  for (const u of updates || []) {
+    countsByTask[u.task_id] = countsByTask[u.task_id] || { updates: 0, comments: 0 }
+    countsByTask[u.task_id].updates += 1
+  }
+  for (const c of comments || []) {
+    countsByTask[c.task_id] = countsByTask[c.task_id] || { updates: 0, comments: 0 }
+    countsByTask[c.task_id].comments += 1
   }
 
-  const lines = ['📅 <b>Operations Deadline Digest</b>']
-  if (overdue.length > 0) lines.push('', '⚠️ Overdue:', ...overdue.map((l) => `• ${l}`))
-  if (upcoming.length > 0) lines.push('', '🔜 Upcoming (next 3 days):', ...upcoming.map((l) => `• ${l}`))
+  const lines = ['📋 <b>Operations Daily Movement</b>']
+  for (const [taskId, counts] of Object.entries(countsByTask)) {
+    const parts: string[] = []
+    if (counts.updates > 0) parts.push(`${counts.updates} update${counts.updates === 1 ? '' : 's'}`)
+    if (counts.comments > 0) parts.push(`${counts.comments} comment${counts.comments === 1 ? '' : 's'}`)
+    lines.push(`• ${titleById[taskId] || 'Unknown task'} — ${parts.join(', ')}`)
+  }
 
   await sendOpsTelegramMessage(lines.join('\n'))
 
-  return NextResponse.json({ sent: true, overdueCount: overdue.length, upcomingCount: upcoming.length })
+  return NextResponse.json({
+    sent: true,
+    taskCount: Object.keys(countsByTask).length,
+    updateCount: (updates || []).length,
+    commentCount: (comments || []).length,
+  })
 }
 ```
 
@@ -2026,7 +2039,7 @@ Create `vercel.json` in the project root:
 ```json
 {
   "crons": [
-    { "path": "/api/cron/operations-deadlines", "schedule": "0 1 * * *" }
+    { "path": "/api/cron/operations-digest", "schedule": "0 1 * * *" }
   ]
 }
 ```
@@ -2035,10 +2048,10 @@ Create `vercel.json` in the project root:
 
 Run: `npm run dev`, then (replace `<port>` and `<CRON_SECRET>` with the value from Step 1):
 ```bash
-curl -s http://localhost:<port>/api/cron/operations-deadlines
-curl -s http://localhost:<port>/api/cron/operations-deadlines -H "Authorization: Bearer <CRON_SECRET>"
+curl -s http://localhost:<port>/api/cron/operations-digest
+curl -s http://localhost:<port>/api/cron/operations-digest -H "Authorization: Bearer <CRON_SECRET>"
 ```
-Expected: the first call returns `{"error":"Unauthorized"}`; the second returns `{"sent":false,"reason":"No deadlines to report."}` if no seeded task currently has a near-term deadline, or `{"sent":true,...}` with a Telegram message received in the group chat if one of your test tasks (e.g. the Special Task from Task 4) has a deadline within the next 3 days or in the past — set one via the task's Edit form first if needed to test the positive path, then confirm the message and counts.
+Expected: the first call returns `{"error":"Unauthorized"}`; the second returns `{"sent":false,"reason":"No activity in the last 24 hours."}` if nothing was posted recently, or `{"sent":true,"taskCount":N,"updateCount":N,"commentCount":N}` with a Telegram message received in the group chat if any Update/Comment exists from within the last 24 hours (post one via the detail page first if needed to test the positive path, then confirm the message groups it under the correct task title with the correct counts).
 
 - [ ] **Step 5: Run the build**
 
@@ -2048,10 +2061,10 @@ Expected: build succeeds with no TypeScript errors.
 - [ ] **Step 6: Commit**
 
 ```bash
-git add app/api/cron/operations-deadlines/route.ts vercel.json
-git commit -m "Add daily Telegram deadline digest for Operations via Vercel Cron"
+git add app/api/cron/operations-digest/route.ts vercel.json
+git commit -m "Add daily Telegram movement digest for Operations via Vercel Cron"
 ```
 
 - [ ] **Step 7: Deploy and confirm the cron registers**
 
-After pushing to the branch Vercel deploys from, check the Vercel project's **Settings → Cron Jobs** tab and confirm `/api/cron/operations-deadlines` is listed with schedule `0 1 * * *`.
+After pushing to the branch Vercel deploys from, check the Vercel project's **Settings → Cron Jobs** tab and confirm `/api/cron/operations-digest` is listed with schedule `0 1 * * *`.
