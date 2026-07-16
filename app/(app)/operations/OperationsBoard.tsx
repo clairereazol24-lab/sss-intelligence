@@ -21,6 +21,7 @@ export default function OperationsBoard() {
   const [modal, setModal] = useState(false)
   const [form, setForm] = useState({ title: '', description: '', priority: 'medium', deadline: '' })
   const [saving, setSaving] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
   const fetchTasks = async () => {
     const res = await fetch('/api/operations')
@@ -43,6 +44,7 @@ export default function OperationsBoard() {
   }, [])
 
   const handleCreate = async () => {
+    setError(null)
     setSaving(true)
     try {
       const res = await fetch('/api/operations', {
@@ -54,9 +56,12 @@ export default function OperationsBoard() {
         const data = await res.json()
         throw new Error(data.error || 'Failed to create task.')
       }
+      setError(null)
       setModal(false)
       setForm({ title: '', description: '', priority: 'medium', deadline: '' })
       fetchTasks()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to create task.')
     } finally {
       setSaving(false)
     }
@@ -115,6 +120,11 @@ export default function OperationsBoard() {
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
           <div className="bg-white dark:bg-gray-800 rounded-xl p-6 w-full max-w-lg shadow-xl">
             <h2 className="font-bold text-gray-800 dark:text-gray-100 mb-4">New Special Task</h2>
+            {error && (
+              <div className="bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 text-red-800 dark:text-red-400 px-4 py-3 rounded-lg mb-4 text-sm">
+                {error}
+              </div>
+            )}
             <div className="space-y-3">
               <div>
                 <label className="text-xs font-medium text-gray-500 dark:text-gray-400 block mb-1">Title *</label>
@@ -140,7 +150,7 @@ export default function OperationsBoard() {
               </div>
             </div>
             <div className="flex gap-2 mt-5 justify-end">
-              <button onClick={() => setModal(false)} className="px-4 py-2 text-sm text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">Cancel</button>
+              <button onClick={() => { setModal(false); setError(null) }} className="px-4 py-2 text-sm text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">Cancel</button>
               <button onClick={handleCreate} disabled={saving || !form.title.trim()} className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-blue-300">
                 {saving ? 'Creating...' : 'Create'}
               </button>
