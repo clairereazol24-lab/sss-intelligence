@@ -1,6 +1,5 @@
 'use client'
 import { useEffect, useState } from 'react'
-import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import type { OpsTask, OpsReferenceLink, OpsCollaboratorUser, OpsActivityLogEntry, OpsUpdate, OpsComment, OpsAttachment } from '@/lib/supabase'
 
@@ -12,8 +11,13 @@ type Detail = {
   isAdmin: boolean
 }
 
-export default function TaskDetailClient({ taskId }: { taskId: string }) {
-  const router = useRouter()
+const PRIORITY_STYLES: Record<string, string> = {
+  low: 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400',
+  medium: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/40 dark:text-yellow-400',
+  high: 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-400',
+}
+
+export default function TaskDetailClient({ taskId, onClose }: { taskId: string; onClose: () => void }) {
   const [detail, setDetail] = useState<Detail | null>(null)
   const [allUsers, setAllUsers] = useState<OpsCollaboratorUser[]>([])
   const [isAdmin, setIsAdmin] = useState(false)
@@ -187,7 +191,7 @@ export default function TaskDetailClient({ taskId }: { taskId: string }) {
       setError(data.error || 'Failed to delete task.')
       return
     }
-    router.push('/operations')
+    onClose()
   }
 
   if (!detail) return <div className="p-6 text-gray-400 dark:text-gray-500 text-sm">Loading...</div>
@@ -195,8 +199,11 @@ export default function TaskDetailClient({ taskId }: { taskId: string }) {
   const { task, reference_links, collaborators, activity_log } = detail
 
   return (
-    <div className="p-6 max-w-3xl">
-      <button onClick={() => router.push('/operations')} className="text-xs text-gray-500 dark:text-gray-400 hover:underline mb-4">← Back to Operations</button>
+    <div className="p-6 h-full overflow-y-auto">
+      <div className="flex items-start justify-between mb-4">
+        <h1 className="text-lg font-bold text-gray-800 dark:text-gray-100">{task.title}</h1>
+        <button onClick={onClose} aria-label="Close" className="text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300 text-xl leading-none px-1">×</button>
+      </div>
 
       {error && (
         <div className="bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 text-red-800 dark:text-red-400 px-4 py-3 rounded-lg mb-4 text-sm">
@@ -273,7 +280,9 @@ export default function TaskDetailClient({ taskId }: { taskId: string }) {
       ) : (
         <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-5">
           <div className="flex items-start justify-between">
-            <h1 className="text-xl font-bold text-gray-800 dark:text-gray-100">{task.title}</h1>
+            <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${PRIORITY_STYLES[task.priority]}`}>
+              {task.priority.charAt(0).toUpperCase() + task.priority.slice(1)}
+            </span>
             {isAdmin && (
               <div className="flex gap-2">
                 <button onClick={() => setEditing(true)} className="text-xs text-blue-600 dark:text-blue-400 hover:underline">Edit</button>
@@ -300,7 +309,6 @@ export default function TaskDetailClient({ taskId }: { taskId: string }) {
           )}
 
           <div className="flex items-center gap-4 mt-4 text-xs text-gray-500 dark:text-gray-400">
-            <span>Priority: <strong className="text-gray-700 dark:text-gray-200">{task.priority}</strong></span>
             {task.deadline && <span>Deadline: <strong className="text-gray-700 dark:text-gray-200">{task.deadline}</strong></span>}
             {task.is_archived && <span className="text-gray-400">Archived</span>}
           </div>

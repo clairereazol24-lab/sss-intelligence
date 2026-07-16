@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import type { OpsTask } from '@/lib/supabase'
 import NotificationBell from './NotificationBell'
+import TaskDetailClient from './[id]/TaskDetailClient'
 
 type BoardTask = OpsTask & { collaborator_count: number; comment_count: number; unread_count: number }
 
@@ -13,8 +14,15 @@ const PRIORITY_STYLES: Record<string, string> = {
   high: 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-400',
 }
 
-export default function OperationsBoard() {
+const PRIORITY_BORDER: Record<string, string> = {
+  low: 'border-t-green-400',
+  medium: 'border-t-yellow-400',
+  high: 'border-t-red-400',
+}
+
+export default function OperationsBoard({ initialSelectedId }: { initialSelectedId?: string }) {
   const router = useRouter()
+  const [selectedId, setSelectedId] = useState<string | null>(initialSelectedId ?? null)
   const [tasks, setTasks] = useState<BoardTask[]>([])
   const [loading, setLoading] = useState(true)
   const [isAdmin, setIsAdmin] = useState(false)
@@ -70,8 +78,18 @@ export default function OperationsBoard() {
 
   const visibleTasks = tasks.filter((t) => showArchived || !t.is_archived)
 
+  const selectTask = (id: string) => {
+    setSelectedId(id)
+    router.push(`/operations/${id}`, { scroll: false })
+  }
+
+  const closeTask = () => {
+    setSelectedId(null)
+    router.push('/operations', { scroll: false })
+  }
+
   return (
-    <div className="p-6">
+    <div className="p-6 h-full flex flex-col">
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-bold text-gray-800 dark:text-gray-100">Operations</h1>
@@ -94,27 +112,41 @@ export default function OperationsBoard() {
       {loading ? (
         <p className="text-gray-400 dark:text-gray-500 text-sm">Loading...</p>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {visibleTasks.map((t) => (
-            <div
-              key={t.id}
-              onClick={() => router.push(`/operations/${t.id}`)}
-              className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4 cursor-pointer hover:shadow-md transition-shadow"
-            >
-              <div className="flex items-center justify-between mb-2">
-                <h3 className="font-semibold text-gray-800 dark:text-gray-100">{t.title}</h3>
-                <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${PRIORITY_STYLES[t.priority]}`}>
-                  {t.priority.charAt(0).toUpperCase() + t.priority.slice(1)}
-                </span>
+        <div className="flex flex-1 min-h-0 gap-4">
+          <div className={`w-full md:w-80 flex-shrink-0 space-y-3 overflow-y-auto pr-1 ${selectedId ? 'hidden md:block' : 'block'}`}>
+            {visibleTasks.map((t) => (
+              <div
+                key={t.id}
+                onClick={() => selectTask(t.id)}
+                className={`bg-white dark:bg-gray-800 rounded-lg border-t-4 ${PRIORITY_BORDER[t.priority]} border-x border-b border-gray-200 dark:border-gray-700 p-3 cursor-pointer hover:shadow-md transition-shadow ${
+                  selectedId === t.id ? 'ring-2 ring-blue-400' : ''
+                }`}
+              >
+                <h3 className="font-semibold text-sm text-gray-800 dark:text-gray-100 truncate">{t.title}</h3>
+                <div className="flex items-center gap-2 mt-1.5">
+                  <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${PRIORITY_STYLES[t.priority]}`}>
+                    {t.priority.charAt(0).toUpperCase() + t.priority.slice(1)}
+                  </span>
+                  {t.is_archived && <span className="text-xs text-gray-400">Archived</span>}
+                </div>
+                <div className="flex items-center gap-3 text-xs text-gray-500 dark:text-gray-400 mt-2">
+                  {t.unread_count > 0 && <span>🆕 {t.unread_count}</span>}
+                  <span>💬 {t.comment_count}</span>
+                  <span>👥 {t.collaborator_count}</span>
+                </div>
               </div>
-              {t.is_archived && <p className="text-xs text-gray-400 mb-2">Archived</p>}
-              <div className="flex items-center gap-4 text-xs text-gray-500 dark:text-gray-400">
-                {t.unread_count > 0 && <span>🆕 New Update ({t.unread_count})</span>}
-                <span>💬 Comments ({t.comment_count})</span>
-                <span>👥 Collaborators ({t.collaborator_count})</span>
+            ))}
+          </div>
+
+          <div className={`flex-1 min-w-0 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden ${selectedId ? 'block' : 'hidden md:block'}`}>
+            {selectedId ? (
+              <TaskDetailClient key={selectedId} taskId={selectedId} onClose={closeTask} />
+            ) : (
+              <div className="h-full flex items-center justify-center text-sm text-gray-400 dark:text-gray-500">
+                Select a task to view details
               </div>
-            </div>
-          ))}
+            )}
+          </div>
         </div>
       )}
 
