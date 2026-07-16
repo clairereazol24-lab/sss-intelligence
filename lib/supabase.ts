@@ -49,3 +49,61 @@ export type MarketingEffort = {
   notes: string
   created_at: string
 }
+
+export type OpsTask = {
+  id: string
+  title: string
+  description: string | null
+  priority: 'low' | 'medium' | 'high'
+  deadline: string | null
+  is_special: boolean
+  is_archived: boolean
+  created_by: string | null
+  created_at: string
+  updated_at: string
+}
+
+export type OpsReferenceLink = {
+  id: string
+  task_id: string
+  label: string
+  url: string
+  sort_order: number
+}
+
+export type OpsCollaboratorUser = {
+  id: string
+  username: string
+  name: string | null
+}
+
+export type OpsAttachment = { label: string; url: string }
+
+export type OpsUpdate = {
+  id: string
+  task_id: string
+  user_id: string
+  body: string
+  attachments: OpsAttachment[]
+  created_at: string
+  author: OpsCollaboratorUser | null
+}
+
+export type OpsComment = {
+  id: string
+  task_id: string
+  user_id: string
+  body: string
+  attachments: OpsAttachment[]
+  created_at: string
+  author: OpsCollaboratorUser | null
+}
+
+export type OpsActivityLogEntry = {
+  id: string
+  task_id: string
+  user_id: string
+  action_text: string
+  created_at: string
+  author: OpsCollaboratorUser | null
+}
