@@ -107,3 +107,14 @@ export type OpsActivityLogEntry = {
   created_at: string
   author: OpsCollaboratorUser | null
 }
+
+export type OpsNotification = {
+  id: string
+  user_id: string
+  task_id: string
+  task_title: string
+  type: 'mention' | 'update' | 'comment' | 'deadline'
+  body: string
+  is_read: boolean
+  created_at: string
+}
