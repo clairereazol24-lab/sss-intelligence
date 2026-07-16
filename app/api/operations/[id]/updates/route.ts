@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase-admin'
 import { requireOpsAccess } from '@/lib/ops-access'
+import { sendOpsTelegramMessage } from '@/lib/telegram-ops'
 
 async function fetchUsersById(userIds: string[]) {
   if (userIds.length === 0) return {}
@@ -50,7 +51,14 @@ async function notifyCollaboratorsAndMentions(taskId: string, authorId: string, 
         }))
       )
     }
+
+    for (const id of mentionedIds) {
+      const mentioned = (profiles || []).find((p: any) => p.id === id)
+      await sendOpsTelegramMessage(`🔔 <b>${mentioned?.name || mentioned?.username}</b> was mentioned on "${taskTitle}"`)
+    }
   }
+
+  await sendOpsTelegramMessage(`📋 New Update posted on "${taskTitle}"`)
 }
 
 export async function GET(_request: NextRequest, { params }: { params: { id: string } }) {
