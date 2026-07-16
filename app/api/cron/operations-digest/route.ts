@@ -2,9 +2,13 @@ import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase-admin'
 import { sendOpsTelegramMessage } from '@/lib/telegram-ops'
 
+function escapeHtml(text: string): string {
+  return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+}
+
 export async function GET(request: NextRequest) {
   const authHeader = request.headers.get('authorization')
-  if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+  if (!process.env.CRON_SECRET || authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
@@ -41,7 +45,7 @@ export async function GET(request: NextRequest) {
     const parts: string[] = []
     if (counts.updates > 0) parts.push(`${counts.updates} update${counts.updates === 1 ? '' : 's'}`)
     if (counts.comments > 0) parts.push(`${counts.comments} comment${counts.comments === 1 ? '' : 's'}`)
-    lines.push(`• ${titleById[taskId] || 'Unknown task'} — ${parts.join(', ')}`)
+    lines.push(`• ${escapeHtml(titleById[taskId] || 'Unknown task')} — ${parts.join(', ')}`)
   }
 
   await sendOpsTelegramMessage(lines.join('\n'))
