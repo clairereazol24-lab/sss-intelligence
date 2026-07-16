@@ -38,8 +38,7 @@ CREATE TABLE ops_tasks (
   description TEXT,
   priority VARCHAR(10) NOT NULL DEFAULT 'medium' CHECK (priority IN ('low', 'medium', 'high')),
   deadline DATE,
-  is_special BOOLEAN NOT NULL DEFAULT false,
-  is_deletable BOOLEAN NOT NULL DEFAULT false, -- true only for special tasks
+  is_special BOOLEAN NOT NULL DEFAULT false, -- special tasks are the only ones that can be deleted or archived
   is_archived BOOLEAN NOT NULL DEFAULT false,
   created_by UUID REFERENCES auth.users(id),
   created_at TIMESTAMPTZ DEFAULT NOW(),
@@ -98,7 +97,7 @@ CREATE TABLE ops_notifications (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
   task_id UUID NOT NULL REFERENCES ops_tasks(id) ON DELETE CASCADE,
-  type VARCHAR(20) NOT NULL CHECK (type IN ('mention', 'update', 'comment', 'priority', 'deadline', 'status')),
+  type VARCHAR(20) NOT NULL CHECK (type IN ('mention', 'update', 'comment', 'deadline')),
   body TEXT NOT NULL,
   is_read BOOLEAN NOT NULL DEFAULT false,
   created_at TIMESTAMPTZ DEFAULT NOW()
