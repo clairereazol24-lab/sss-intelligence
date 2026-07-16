@@ -8,7 +8,7 @@ A new "Operations" module for SSS Intelligence. Not a generic Kanban project tra
 
 - Centralize communication, reference links, and reporting for each major SSS operation in one place.
 - Let any team member with access post operational updates and discuss, without needing admin approval per-post.
-- Alert the team (in-app + Telegram) when someone is mentioned or posts an update/comment, and remind about upcoming deadlines.
+- Alert the team (in-app + Telegram) when someone is mentioned or posts an update/comment, and send a daily digest of task activity.
 
 ## Non-Goals
 
@@ -141,7 +141,7 @@ All access goes through `supabaseAdmin` (RLS deny-all pattern already used elsew
 **Telegram**: new dedicated bot (created via @BotFather specifically for this), added by the user into their existing team group chat. Chat ID obtained after the bot is added by sending it a message and reading `getUpdates`. A new `lib/telegram.ts` mirrors Kler-Management's existing implementation (same fetch-based send, same `/@[A-Z]\w*/` mention regex), but points at this new bot token/chat ID via its own env vars — kept fully separate from Kler-Management's bot.
 
 - **Immediate send** (fired synchronously from the API route that creates the row): new `@mention` in an Update or Comment, new Update posted, new Comment posted.
-- **Daily cron digest** (Vercel Cron, same 9AM PHT schedule Kler-Management uses): upcoming and overdue task deadlines across all tasks, batched into one message.
+- **Daily cron digest** (Vercel Cron, same 9AM PHT schedule Kler-Management uses): a "daily movement" activity report — every Comment and Update posted in the last 24 hours, grouped by task, batched into one message. Skipped (no message sent) if nothing was posted. This replaced an earlier deadline-reminder design; `deadline` is now a display-only field on each task (still shown, still editable) with no scheduled Telegram nudge tied to it.
 
 **Mentions**: `@Name` typed in Updates or Comments is autocompleted against `profiles` and, on submit, resolved via the same mention regex used by Kler-Management. Resolved mentions create an `ops_notifications` row (type `mention`) and trigger the immediate Telegram send.
 
