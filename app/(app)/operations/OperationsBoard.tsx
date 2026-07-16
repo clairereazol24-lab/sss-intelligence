@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import type { OpsTask } from '@/lib/supabase'
+import NotificationBell from './NotificationBell'
 
 type BoardTask = OpsTask & { collaborator_count: number; comment_count: number; unread_count: number }
 
@@ -77,6 +78,7 @@ export default function OperationsBoard() {
           <p className="text-sm text-gray-500 dark:text-gray-400">Operational workspaces for SSS activities</p>
         </div>
         <div className="flex items-center gap-3">
+          <NotificationBell />
           <label className="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1">
             <input type="checkbox" checked={showArchived} onChange={(e) => setShowArchived(e.target.checked)} />
             Show Archived
