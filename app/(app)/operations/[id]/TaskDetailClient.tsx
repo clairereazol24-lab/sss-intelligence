@@ -20,6 +20,7 @@ export default function TaskDetailClient({ taskId }: { taskId: string }) {
   const [editing, setEditing] = useState(false)
   const [saving, setSaving] = useState(false)
   const [showActivity, setShowActivity] = useState(false)
+  const [error, setError] = useState<string | null>(null)
   const [form, setForm] = useState({
     title: '', description: '', priority: 'medium' as 'low' | 'medium' | 'high', deadline: '',
     reference_links: [] as { label: string; url: string }[],
@@ -59,6 +60,7 @@ export default function TaskDetailClient({ taskId }: { taskId: string }) {
   }, [taskId])
 
   const handleSave = async () => {
+    setError(null)
     setSaving(true)
     try {
       const res = await fetch(`/api/operations/${taskId}`, {
@@ -66,7 +68,13 @@ export default function TaskDetailClient({ taskId }: { taskId: string }) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(form),
       })
-      if (res.ok) { setEditing(false); fetchDetail() }
+      if (!res.ok) {
+        const data = await res.json()
+        setError(data.error || 'Failed to save task.')
+        return
+      }
+      setEditing(false)
+      fetchDetail()
     } finally {
       setSaving(false)
     }
@@ -74,18 +82,30 @@ export default function TaskDetailClient({ taskId }: { taskId: string }) {
 
   const handleArchiveToggle = async () => {
     if (!detail) return
-    await fetch(`/api/operations/${taskId}`, {
+    setError(null)
+    const res = await fetch(`/api/operations/${taskId}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ is_archived: !detail.task.is_archived }),
     })
+    if (!res.ok) {
+      const data = await res.json()
+      setError(data.error || 'Failed to update archive status.')
+      return
+    }
     fetchDetail()
   }
 
   const handleDelete = async () => {
     if (!confirm('Delete this Special Task? This cannot be undone.')) return
+    setError(null)
     const res = await fetch(`/api/operations/${taskId}`, { method: 'DELETE' })
-    if (res.ok) router.push('/operations')
+    if (!res.ok) {
+      const data = await res.json()
+      setError(data.error || 'Failed to delete task.')
+      return
+    }
+    router.push('/operations')
   }
 
   if (!detail) return <div className="p-6 text-gray-400 dark:text-gray-500 text-sm">Loading...</div>
@@ -95,6 +115,12 @@ export default function TaskDetailClient({ taskId }: { taskId: string }) {
   return (
     <div className="p-6 max-w-3xl">
       <button onClick={() => router.push('/operations')} className="text-xs text-gray-500 dark:text-gray-400 hover:underline mb-4">← Back to Operations</button>
+
+      {error && (
+        <div className="bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 text-red-800 dark:text-red-400 px-4 py-3 rounded-lg mb-4 text-sm">
+          {error}
+        </div>
+      )}
 
       {editing ? (
         <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-5 space-y-4">
