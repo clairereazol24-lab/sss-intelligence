@@ -2,7 +2,7 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
-import type { OpsTask, OpsReferenceLink, OpsCollaboratorUser, OpsActivityLogEntry, OpsUpdate, OpsAttachment } from '@/lib/supabase'
+import type { OpsTask, OpsReferenceLink, OpsCollaboratorUser, OpsActivityLogEntry, OpsUpdate, OpsComment, OpsAttachment } from '@/lib/supabase'
 
 type Detail = {
   task: OpsTask
@@ -25,6 +25,11 @@ export default function TaskDetailClient({ taskId }: { taskId: string }) {
   const [updateBody, setUpdateBody] = useState('')
   const [updateAttachments, setUpdateAttachments] = useState<OpsAttachment[]>([])
   const [postingUpdate, setPostingUpdate] = useState(false)
+  const [comments, setComments] = useState<OpsComment[]>([])
+  const [commentBody, setCommentBody] = useState('')
+  const [commentAttachments, setCommentAttachments] = useState<OpsAttachment[]>([])
+  const [postingComment, setPostingComment] = useState(false)
+  const [mentionSuggestions, setMentionSuggestions] = useState<OpsCollaboratorUser[]>([])
   const [form, setForm] = useState({
     title: '', description: '', priority: 'medium' as 'low' | 'medium' | 'high', deadline: '',
     reference_links: [] as { label: string; url: string }[],
@@ -54,9 +59,17 @@ export default function TaskDetailClient({ taskId }: { taskId: string }) {
     setUpdates(data.updates || [])
   }
 
+  const fetchComments = async () => {
+    const res = await fetch(`/api/operations/${taskId}/comments`)
+    if (!res.ok) return
+    const data = await res.json()
+    setComments(data.comments || [])
+  }
+
   useEffect(() => {
     fetchDetail()
     fetchUpdates()
+    fetchComments()
     fetch('/api/operations/users').then((r) => r.json()).then((d) => setAllUsers(d.users || []))
 
     const channel = supabase
@@ -66,6 +79,7 @@ export default function TaskDetailClient({ taskId }: { taskId: string }) {
       .on('postgres_changes', { event: '*', schema: 'public', table: 'ops_collaborators', filter: `task_id=eq.${taskId}` }, fetchDetail)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'ops_reference_links', filter: `task_id=eq.${taskId}` }, fetchDetail)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'ops_updates', filter: `task_id=eq.${taskId}` }, fetchUpdates)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'ops_comments', filter: `task_id=eq.${taskId}` }, fetchComments)
       .subscribe()
 
     return () => { supabase.removeChannel(channel) }
@@ -108,6 +122,43 @@ export default function TaskDetailClient({ taskId }: { taskId: string }) {
       }
     } finally {
       setPostingUpdate(false)
+    }
+  }
+
+  const handleCommentBodyChange = (value: string) => {
+    setCommentBody(value)
+    const lastAt = value.lastIndexOf('@')
+    if (lastAt === -1) { setMentionSuggestions([]); return }
+    const fragment = value.slice(lastAt + 1).toLowerCase()
+    if (fragment.includes(' ')) { setMentionSuggestions([]); return }
+    setMentionSuggestions(
+      allUsers.filter((u) => (u.name || u.username).toLowerCase().startsWith(fragment)).slice(0, 5)
+    )
+  }
+
+  const applyMentionSuggestion = (u: OpsCollaboratorUser) => {
+    const lastAt = commentBody.lastIndexOf('@')
+    const firstName = (u.name || u.username).split(' ')[0]
+    setCommentBody(commentBody.slice(0, lastAt) + '@' + firstName + ' ')
+    setMentionSuggestions([])
+  }
+
+  const handlePostComment = async () => {
+    setPostingComment(true)
+    try {
+      const res = await fetch(`/api/operations/${taskId}/comments`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ body: commentBody, attachments: commentAttachments }),
+      })
+      if (res.ok) {
+        setCommentBody('')
+        setCommentAttachments([])
+        setMentionSuggestions([])
+        fetchComments()
+      }
+    } finally {
+      setPostingComment(false)
     }
   }
 
@@ -317,7 +368,67 @@ export default function TaskDetailClient({ taskId }: { taskId: string }) {
         </div>
       </div>
 
-      {/* Comments section added in Task 7 */}
+      <div className="mt-6 bg-gray-50 dark:bg-gray-900/40 rounded-xl border border-gray-200 dark:border-gray-700 p-5">
+        <h2 className="font-semibold text-gray-800 dark:text-gray-100 mb-3">Comments</h2>
+
+        <div className="relative">
+          <textarea
+            value={commentBody}
+            onChange={(e) => handleCommentBodyChange(e.target.value)}
+            placeholder="Discuss, clarify, or ask a question... (type @ to mention someone)"
+            rows={2}
+            className="w-full border border-gray-200 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 rounded-lg px-3 py-2 text-sm resize-none"
+          />
+          {mentionSuggestions.length > 0 && (
+            <div className="absolute z-10 bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg shadow-lg mt-1 w-48">
+              {mentionSuggestions.map((u) => (
+                <button key={u.id} onClick={() => applyMentionSuggestion(u)} className="block w-full text-left px-3 py-1.5 text-sm hover:bg-gray-100 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200">
+                  {u.name || u.username}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+        {commentAttachments.map((a, i) => (
+          <div key={i} className="flex gap-2 mt-2">
+            <input placeholder="Label" value={a.label} onChange={(e) => {
+              const next = [...commentAttachments]; next[i] = { ...next[i], label: e.target.value }; setCommentAttachments(next)
+            }} className="w-1/3 border border-gray-200 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 rounded-lg px-3 py-2 text-sm" />
+            <input placeholder="URL" value={a.url} onChange={(e) => {
+              const next = [...commentAttachments]; next[i] = { ...next[i], url: e.target.value }; setCommentAttachments(next)
+            }} className="flex-1 border border-gray-200 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 rounded-lg px-3 py-2 text-sm" />
+            <button onClick={() => setCommentAttachments(commentAttachments.filter((_, j) => j !== i))} className="text-red-400 hover:text-red-600 text-xs px-2">Remove</button>
+          </div>
+        ))}
+        <div className="flex items-center justify-between mt-2">
+          <button onClick={() => setCommentAttachments([...commentAttachments, { label: '', url: '' }])} className="text-xs text-blue-600 dark:text-blue-400 hover:underline">+ Add Attachment Link</button>
+          <button onClick={handlePostComment} disabled={postingComment || !commentBody.trim()} className="px-4 py-1.5 text-sm bg-gray-700 dark:bg-gray-600 text-white rounded-lg hover:bg-gray-800 dark:hover:bg-gray-500 disabled:bg-gray-300">
+            {postingComment ? 'Posting...' : 'Post Comment'}
+          </button>
+        </div>
+
+        <div className="mt-4 space-y-3">
+          {comments.length === 0 && <p className="text-xs text-gray-400 dark:text-gray-500">No comments yet.</p>}
+          {comments.map((c) => (
+            <div key={c.id} className="border-t border-gray-200 dark:border-gray-700 pt-3">
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-medium text-gray-800 dark:text-gray-100">{c.author?.name || c.author?.username || 'Someone'}</span>
+                <span className="text-xs text-gray-400 dark:text-gray-500">{new Date(c.created_at).toLocaleString()}</span>
+              </div>
+              <p className="text-sm text-gray-600 dark:text-gray-300 mt-1 whitespace-pre-wrap">{c.body}</p>
+              {c.attachments.length > 0 && (
+                <div className="flex flex-wrap gap-2 mt-2">
+                  {c.attachments.map((a, i) => (
+                    <a key={i} href={a.url} target="_blank" rel="noopener noreferrer" className="text-xs px-2 py-1 rounded-full bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-600">
+                      📎 {a.label || a.url}
+                    </a>
+                  ))}
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
 
       <div className="mt-6">
         <button onClick={() => setShowActivity(!showActivity)} className="text-xs font-medium text-gray-500 dark:text-gray-400 hover:underline">
