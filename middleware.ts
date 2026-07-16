@@ -4,6 +4,14 @@ import { getUserAccess, hasModuleAccess, moduleForPath } from '@/lib/auth'
 import { supabaseAdmin } from '@/lib/supabase-admin'
 
 export async function middleware(request: NextRequest) {
+  const path = request.nextUrl.pathname
+
+  // Vercel Cron requests carry no Supabase session cookie; these routes gate
+  // themselves via a CRON_SECRET bearer token instead of the user-session check below.
+  if (path.startsWith('/api/cron/')) {
+    return NextResponse.next()
+  }
+
   const response = NextResponse.next({ request: { headers: request.headers } })
 
   function withCookies(target: NextResponse) {
@@ -30,7 +38,6 @@ export async function middleware(request: NextRequest) {
   )
 
   const { data: { user } } = await supabase.auth.getUser()
-  const path = request.nextUrl.pathname
 
   if (!user) {
     if (path === '/login') return response
