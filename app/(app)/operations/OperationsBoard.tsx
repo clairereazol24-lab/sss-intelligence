@@ -14,12 +14,6 @@ const PRIORITY_STYLES: Record<string, string> = {
   high: 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-400',
 }
 
-const PRIORITY_BORDER: Record<string, string> = {
-  low: 'border-t-green-400',
-  medium: 'border-t-yellow-400',
-  high: 'border-t-red-400',
-}
-
 export default function OperationsBoard({ initialSelectedId }: { initialSelectedId?: string }) {
   const router = useRouter()
   const [selectedId, setSelectedId] = useState<string | null>(initialSelectedId ?? null)
@@ -113,13 +107,13 @@ export default function OperationsBoard({ initialSelectedId }: { initialSelected
         <p className="text-gray-400 dark:text-gray-500 text-sm">Loading...</p>
       ) : (
         <div className="flex flex-1 min-h-0 gap-4">
-          <div className={`w-full md:w-80 flex-shrink-0 space-y-3 overflow-y-auto pr-1 ${selectedId ? 'hidden md:block' : 'block'}`}>
+          <div className={`w-full md:w-80 flex-shrink-0 overflow-y-auto pr-1 ${selectedId ? 'hidden md:block' : 'block'}`}>
             {visibleTasks.map((t) => (
               <div
                 key={t.id}
                 onClick={() => selectTask(t.id)}
-                className={`bg-white dark:bg-gray-800 rounded-lg border-t-4 ${PRIORITY_BORDER[t.priority]} border-x border-b border-gray-200 dark:border-gray-700 p-3 cursor-pointer hover:shadow-md transition-shadow ${
-                  selectedId === t.id ? 'ring-2 ring-blue-400' : ''
+                className={`border-b border-gray-100 dark:border-gray-800 py-3 px-2 cursor-pointer transition-colors ${
+                  selectedId === t.id ? 'bg-blue-50 dark:bg-blue-900/20' : 'hover:bg-gray-50 dark:hover:bg-gray-800/50'
                 }`}
               >
                 <h3 className="font-semibold text-sm text-gray-800 dark:text-gray-100 truncate">{t.title}</h3>
@@ -127,10 +121,14 @@ export default function OperationsBoard({ initialSelectedId }: { initialSelected
                   <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${PRIORITY_STYLES[t.priority]}`}>
                     {t.priority.charAt(0).toUpperCase() + t.priority.slice(1)}
                   </span>
+                  {t.unread_count > 0 && (
+                    <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400">
+                      New Updates
+                    </span>
+                  )}
                   {t.is_archived && <span className="text-xs text-gray-400">Archived</span>}
                 </div>
                 <div className="flex items-center gap-3 text-xs text-gray-500 dark:text-gray-400 mt-2">
-                  {t.unread_count > 0 && <span>🆕 {t.unread_count}</span>}
                   <span>💬 {t.comment_count}</span>
                   <span>👥 {t.collaborator_count}</span>
                 </div>
