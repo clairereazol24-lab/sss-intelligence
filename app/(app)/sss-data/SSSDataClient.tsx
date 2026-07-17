@@ -37,7 +37,7 @@ type LastUpdated = {
   period_type: string
 }
 
-export default function SSSDataClient({ partner }: { partner: string }) {
+export default function SSSDataClient({ partner, canImport }: { partner: string; canImport: boolean }) {
   const [file, setFile] = useState<File | null>(null)
   const [parsed, setParsed] = useState<any[]>([])
   const [headers, setHeaders] = useState<string[]>([])
@@ -237,13 +237,17 @@ export default function SSSDataClient({ partner }: { partner: string }) {
             onChange={(e) => handleOverallToChange(e.target.value)}
             className="border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white shadow-sm dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100"
           />
-          <input ref={fileRef} type="file" accept=".csv" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFile(f) }} />
-          <button
-            onClick={() => fileRef.current?.click()}
-            className="bg-blue-600 hover:bg-blue-700 text-white font-medium px-4 py-2 rounded-lg transition-colors text-sm whitespace-nowrap"
-          >
-            📤 Import
-          </button>
+          {canImport && (
+            <>
+              <input ref={fileRef} type="file" accept=".csv" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFile(f) }} />
+              <button
+                onClick={() => fileRef.current?.click()}
+                className="bg-blue-600 hover:bg-blue-700 text-white font-medium px-4 py-2 rounded-lg transition-colors text-sm whitespace-nowrap"
+              >
+                📤 Import
+              </button>
+            </>
+          )}
           <button
             onClick={handleExport}
             className="bg-white border border-gray-200 hover:bg-gray-50 text-gray-700 font-medium px-4 py-2 rounded-lg shadow-sm transition-colors text-sm whitespace-nowrap dark:bg-gray-800 dark:border-gray-700 dark:hover:bg-gray-700 dark:text-gray-200"

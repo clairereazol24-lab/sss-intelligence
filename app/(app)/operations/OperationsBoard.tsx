@@ -3,7 +3,6 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import type { OpsTask } from '@/lib/supabase'
-import NotificationBell from './NotificationBell'
 import TaskDetailClient from './[id]/TaskDetailClient'
 
 type BoardTask = OpsTask & { collaborator_count: number; comment_count: number; unread_count: number }
@@ -28,7 +27,6 @@ export default function OperationsBoard({
   const [tasks, setTasks] = useState<BoardTask[]>(initialTasks ?? [])
   const [loading, setLoading] = useState(!initialTasks)
   const [isAdmin, setIsAdmin] = useState(!!initialIsAdmin)
-  const [showArchived, setShowArchived] = useState(false)
   const [modal, setModal] = useState(false)
   const [form, setForm] = useState({ title: '', description: '', priority: 'medium', deadline: '' })
   const [saving, setSaving] = useState(false)
@@ -78,7 +76,7 @@ export default function OperationsBoard({
     }
   }
 
-  const visibleTasks = tasks.filter((t) => showArchived || !t.is_archived)
+  const visibleTasks = tasks.filter((t) => !t.is_archived)
 
   const selectTask = (id: string) => {
     setSelectedId(id)
@@ -98,11 +96,6 @@ export default function OperationsBoard({
           <p className="text-sm text-gray-500 dark:text-gray-400">Operational workspaces for SSS activities</p>
         </div>
         <div className="flex items-center gap-3">
-          <NotificationBell />
-          <label className="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1">
-            <input type="checkbox" checked={showArchived} onChange={(e) => setShowArchived(e.target.checked)} />
-            Show Archived
-          </label>
           {isAdmin && (
             <button onClick={() => setModal(true)} className="bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors">
               + New Special Task
@@ -151,7 +144,7 @@ export default function OperationsBoard({
             ))}
           </div>
 
-          <div className={`flex-1 min-w-0 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden ${selectedId ? 'block' : 'hidden md:block'}`}>
+          <div className={`flex-1 min-w-0 overflow-y-auto ${selectedId ? 'block' : 'hidden md:block'}`}>
             {selectedId ? (
               <TaskDetailClient
                 key={selectedId}

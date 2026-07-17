@@ -1,7 +1,7 @@
 'use client'
 import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
-import type { OpsTask, OpsReferenceLink, OpsCollaboratorUser, OpsActivityLogEntry, OpsUpdate, OpsComment, OpsAttachment } from '@/lib/supabase'
+import type { OpsTask, OpsReferenceLink, OpsCollaboratorUser, OpsActivityLogEntry, OpsUpdate, OpsComment } from '@/lib/supabase'
 
 type Detail = {
   task: OpsTask
@@ -27,7 +27,6 @@ export default function TaskDetailClient({ taskId, onClose, initialTitle, initia
   const [error, setError] = useState<string | null>(null)
   const [updates, setUpdates] = useState<OpsUpdate[]>([])
   const [updateBody, setUpdateBody] = useState('')
-  const [updateAttachments, setUpdateAttachments] = useState<OpsAttachment[]>([])
   const [postingUpdate, setPostingUpdate] = useState(false)
   const [comments, setComments] = useState<OpsComment[]>([])
   const [mentionSuggestions, setMentionSuggestions] = useState<OpsCollaboratorUser[]>([])
@@ -132,11 +131,10 @@ export default function TaskDetailClient({ taskId, onClose, initialTitle, initia
       const res = await fetch(`/api/operations/${taskId}/updates`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ body: updateBody, attachments: updateAttachments }),
+        body: JSON.stringify({ body: updateBody, attachments: [] }),
       })
       if (res.ok) {
         setUpdateBody('')
-        setUpdateAttachments([])
         setMentionSuggestions([])
         fetchUpdates()
       }
@@ -382,18 +380,6 @@ export default function TaskDetailClient({ taskId, onClose, initialTitle, initia
             </div>
           )}
         </div>
-        {updateAttachments.map((a, i) => (
-          <div key={i} className="flex gap-2 mt-2">
-            <input placeholder="Label" value={a.label} onChange={(e) => {
-              const next = [...updateAttachments]; next[i] = { ...next[i], label: e.target.value }; setUpdateAttachments(next)
-            }} className="w-1/3 border border-gray-200 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 rounded-lg px-3 py-2 text-sm" />
-            <input placeholder="URL" value={a.url} onChange={(e) => {
-              const next = [...updateAttachments]; next[i] = { ...next[i], url: e.target.value }; setUpdateAttachments(next)
-            }} className="flex-1 border border-gray-200 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 rounded-lg px-3 py-2 text-sm" />
-            <button onClick={() => setUpdateAttachments(updateAttachments.filter((_, j) => j !== i))} className="text-red-400 hover:text-red-600 text-xs px-2">Remove</button>
-          </div>
-        ))}
-        <button onClick={() => setUpdateAttachments([...updateAttachments, { label: '', url: '' }])} className="text-xs text-blue-600 dark:text-blue-400 hover:underline mt-2 inline-block">+ Add Attachment Link</button>
         <button onClick={handlePostUpdate} disabled={postingUpdate || !updateBody.trim()} className="w-full mt-2 py-2 text-sm font-medium bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-blue-300 disabled:dark:bg-blue-900/40">
           {postingUpdate ? 'Saving...' : 'Save Update'}
         </button>

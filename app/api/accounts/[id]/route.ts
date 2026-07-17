@@ -68,3 +68,29 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
     return NextResponse.json({ error: err.message }, { status: 500 })
   }
 }
+
+export async function DELETE(_request: NextRequest, { params }: { params: { id: string } }) {
+  const admin = await requireAdmin()
+  if (!admin) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+
+  const userId = params.id
+  if (userId === admin.id) {
+    return NextResponse.json({ error: 'You cannot delete your own account.' }, { status: 400 })
+  }
+
+  try {
+    await supabaseAdmin.from('module_permissions').delete().eq('user_id', userId)
+    const { error: profileError } = await supabaseAdmin.from('profiles').delete().eq('id', userId)
+    if (profileError) throw profileError
+
+    // Deleting the profile already revokes app access (login redirects to /login with
+    // no profile row). Removing the underlying auth user can fail if their id is still
+    // referenced by historical rows (e.g. ops_activity_log) — treat that as best-effort
+    // rather than failing the whole request.
+    const { error: authError } = await supabaseAdmin.auth.admin.deleteUser(userId)
+
+    return NextResponse.json({ success: true, authDeleted: !authError })
+  } catch (err: any) {
+    return NextResponse.json({ error: err.message }, { status: 500 })
+  }
+}

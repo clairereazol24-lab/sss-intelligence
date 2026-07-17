@@ -33,6 +33,16 @@ export async function GET(_request: NextRequest, { params }: { params: { id: str
   const collaborators = (collabRows || []).map((c: any) => usersById[c.user_id]).filter(Boolean)
   const activity_log = (activity || []).map((a: any) => ({ ...a, author: usersById[a.user_id] || null }))
 
+  // Viewing a task's detail is how "New Updates" gets cleared now that there's no
+  // notification bell to mark things read explicitly.
+  await supabaseAdmin
+    .from('ops_notifications')
+    .update({ is_read: true })
+    .eq('task_id', params.id)
+    .eq('user_id', auth.userId)
+    .eq('is_read', false)
+    .in('type', ['update', 'comment'])
+
   return NextResponse.json({ task, reference_links: links || [], collaborators, activity_log, isAdmin: auth.access.role === 'admin' })
 }
 

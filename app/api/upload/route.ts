@@ -1,7 +1,19 @@
 import { supabaseAdmin as supabase } from '@/lib/supabase-admin'
 import { NextRequest, NextResponse } from 'next/server'
+import { createClient as createServerClient } from '@/lib/supabase-server'
+import { getUserAccess, DATA_IMPORT_ALLOWED_USERNAME } from '@/lib/auth'
+
+async function requireImportAccess() {
+  const server = createServerClient()
+  const { data: { user } } = await server.auth.getUser()
+  if (!user) return false
+  const access = await getUserAccess(supabase, user.id)
+  return access?.username === DATA_IMPORT_ALLOWED_USERNAME
+}
 
 export async function DELETE(_request: NextRequest) {
+  if (!(await requireImportAccess())) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+
   try {
     // Find the most recent updated_at across all rows (the last upload batch)
     const { data: latest, error: findError } = await supabase
@@ -29,6 +41,8 @@ export async function DELETE(_request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
+  if (!(await requireImportAccess())) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+
   try {
     const { records, period, periodType, mode = 'new' } = await request.json()
 

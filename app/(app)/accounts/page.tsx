@@ -19,6 +19,7 @@ export default function AccountsPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [saving, setSaving] = useState(false)
+  const [deletingId, setDeletingId] = useState<string | null>(null)
 
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editUsername, setEditUsername] = useState('')
@@ -112,6 +113,22 @@ export default function AccountsPage() {
     setAddUsername(''); setAddName(''); setAddPassword(''); setAddModules([])
   }
 
+  const handleDelete = async (acct: Account) => {
+    if (!confirm(`Delete the account for ${acct.username}? This cannot be undone.`)) return
+    setDeletingId(acct.id)
+    setError('')
+    try {
+      const res = await fetch(`/api/accounts/${acct.id}`, { method: 'DELETE' })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Failed to delete account.')
+      fetchAccounts()
+    } catch (err: any) {
+      setError(err.message)
+    } finally {
+      setDeletingId(null)
+    }
+  }
+
   const thCls = 'text-left px-4 py-3 font-semibold text-gray-700 dark:text-gray-200 bg-gray-50 dark:bg-gray-700/50 text-sm'
 
   return (
@@ -148,7 +165,7 @@ export default function AccountsPage() {
                 <th className={thCls}>Name</th>
                 <th className={thCls}>Password</th>
                 <th className={thCls}>Access</th>
-                <th className="bg-gray-50 dark:bg-gray-700/50 w-28"></th>
+                <th className="bg-gray-50 dark:bg-gray-700/50 w-40"></th>
               </tr>
             </thead>
             <tbody>
@@ -216,7 +233,16 @@ export default function AccountsPage() {
                       )}
                     </td>
                     <td className="px-4 py-3">
-                      <button onClick={() => startEdit(acct)} className={btnSecondary}>Edit</button>
+                      <div className="flex gap-2">
+                        <button onClick={() => startEdit(acct)} className={btnSecondary}>Edit</button>
+                        <button
+                          onClick={() => handleDelete(acct)}
+                          disabled={deletingId === acct.id}
+                          className="border border-red-200 dark:border-red-800 text-red-500 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 disabled:opacity-50 font-medium px-3 py-1.5 rounded-lg text-xs transition-colors"
+                        >
+                          {deletingId === acct.id ? 'Deleting...' : 'Delete'}
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 )

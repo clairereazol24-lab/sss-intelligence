@@ -66,6 +66,10 @@ export type UserAccess = {
   allowedModules: ModuleKey[]
 }
 
+// SSS Data's CSV import can wipe/replace live performance data (see the Alpharus
+// wipe incident) — restrict it to this one account rather than the whole admin role.
+export const DATA_IMPORT_ALLOWED_USERNAME = 'claire@racphil.com'
+
 export async function getUserAccess(supabase: SupabaseClient, userId: string): Promise<UserAccess | null> {
   const { data: profile } = await supabase
     .from('profiles')
