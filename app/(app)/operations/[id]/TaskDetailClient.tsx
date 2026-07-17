@@ -189,7 +189,7 @@ export default function TaskDetailClient({ taskId, onClose, initialTitle, initia
           <div className="h-3 w-3/4 bg-gray-200 dark:bg-gray-700 rounded" />
           <div className="h-3 w-1/2 bg-gray-200 dark:bg-gray-700 rounded" />
         </div>
-        <div className="mt-8 space-y-3 animate-pulse">
+        <div className="mt-6 pt-6 border-t border-gray-200 dark:border-gray-700 space-y-3 animate-pulse">
           <div className="h-3 w-24 bg-gray-200 dark:bg-gray-700 rounded" />
           <div className="h-10 w-full bg-gray-100 dark:bg-gray-800 rounded" />
           <div className="h-10 w-5/6 bg-gray-100 dark:bg-gray-800 rounded" />
@@ -332,7 +332,7 @@ export default function TaskDetailClient({ taskId, onClose, initialTitle, initia
         </div>
       )}
 
-      <div className="mt-6">
+      <div className="mt-6 pt-6 border-t border-gray-200 dark:border-gray-700">
         <h2 className="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-3">Activity</h2>
 
         <div className="space-y-4">
