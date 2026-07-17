@@ -98,3 +98,33 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
 
   return NextResponse.json({ id: data.id })
 }
+
+export async function PATCH(request: NextRequest, { params }: { params: { id: string } }) {
+  const auth = await requireOpsAccess()
+  if (!auth) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+
+  const { id, body } = await request.json()
+  if (!id || !body || !String(body).trim()) {
+    return NextResponse.json({ error: 'Update id and body are required.' }, { status: 400 })
+  }
+
+  const { data: latest } = await supabaseAdmin
+    .from('ops_updates')
+    .select('id, user_id')
+    .eq('task_id', params.id)
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle()
+
+  if (!latest || latest.id !== id) {
+    return NextResponse.json({ error: 'Only the latest update can be edited.' }, { status: 400 })
+  }
+  if (latest.user_id !== auth.userId) {
+    return NextResponse.json({ error: 'You can only edit your own update.' }, { status: 403 })
+  }
+
+  const { error } = await supabaseAdmin.from('ops_updates').update({ body: String(body).trim() }).eq('id', id)
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+
+  return NextResponse.json({ success: true })
+}

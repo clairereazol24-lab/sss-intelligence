@@ -43,7 +43,14 @@ export async function GET(_request: NextRequest, { params }: { params: { id: str
     .eq('is_read', false)
     .in('type', ['update', 'comment'])
 
-  return NextResponse.json({ task, reference_links: links || [], collaborators, activity_log, isAdmin: auth.access.role === 'admin' })
+  return NextResponse.json({
+    task,
+    reference_links: links || [],
+    collaborators,
+    activity_log,
+    isAdmin: auth.access.role === 'admin',
+    currentUserId: auth.userId,
+  })
 }
 
 export async function PATCH(request: NextRequest, { params }: { params: { id: string } }) {

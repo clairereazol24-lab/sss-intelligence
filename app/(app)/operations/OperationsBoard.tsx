@@ -13,6 +13,12 @@ const PRIORITY_STYLES: Record<string, string> = {
   high: 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-400',
 }
 
+const PRIORITY_BORDER: Record<string, string> = {
+  low: 'border-t-green-400',
+  medium: 'border-t-yellow-400',
+  high: 'border-t-red-400',
+}
+
 export default function OperationsBoard({
   initialSelectedId,
   initialTasks,
@@ -115,13 +121,13 @@ export default function OperationsBoard({
         </div>
       ) : (
         <div className="flex flex-1 min-h-0 gap-4">
-          <div className={`w-full md:w-80 flex-shrink-0 overflow-y-auto pr-1 ${selectedId ? 'hidden md:block' : 'block'}`}>
+          <div className={`w-full md:w-80 flex-shrink-0 space-y-3 overflow-y-auto pr-1 ${selectedId ? 'hidden md:block' : 'block'}`}>
             {visibleTasks.map((t) => (
               <div
                 key={t.id}
                 onClick={() => selectTask(t.id)}
-                className={`border-b border-gray-100 dark:border-gray-800 py-3 px-2 cursor-pointer transition-colors ${
-                  selectedId === t.id ? 'bg-blue-50 dark:bg-blue-900/20' : 'hover:bg-gray-50 dark:hover:bg-gray-800/50'
+                className={`bg-white dark:bg-gray-800 rounded-lg border-t-4 ${PRIORITY_BORDER[t.priority]} border-x border-b border-gray-200 dark:border-gray-700 p-3 cursor-pointer hover:shadow-md transition-shadow ${
+                  selectedId === t.id ? 'ring-2 ring-blue-400' : ''
                 }`}
               >
                 <h3 className="font-semibold text-sm text-gray-800 dark:text-gray-100 truncate">{t.title}</h3>
@@ -144,7 +150,9 @@ export default function OperationsBoard({
             ))}
           </div>
 
-          <div className={`flex-1 min-w-0 overflow-y-auto ${selectedId ? 'block' : 'hidden md:block'}`}>
+          <div
+            className={`flex-1 min-w-0 overflow-y-auto ${selectedId ? 'block bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700' : 'hidden md:block'}`}
+          >
             {selectedId ? (
               <TaskDetailClient
                 key={selectedId}

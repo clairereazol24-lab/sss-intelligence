@@ -9,6 +9,7 @@ type Detail = {
   collaborators: OpsCollaboratorUser[]
   activity_log: OpsActivityLogEntry[]
   isAdmin: boolean
+  currentUserId: string
 }
 
 const PRIORITY_STYLES: Record<string, string> = {
@@ -30,6 +31,10 @@ export default function TaskDetailClient({ taskId, onClose, initialTitle, initia
   const [postingUpdate, setPostingUpdate] = useState(false)
   const [comments, setComments] = useState<OpsComment[]>([])
   const [mentionSuggestions, setMentionSuggestions] = useState<OpsCollaboratorUser[]>([])
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null)
+  const [editingUpdateId, setEditingUpdateId] = useState<string | null>(null)
+  const [editUpdateBody, setEditUpdateBody] = useState('')
+  const [savingEditUpdate, setSavingEditUpdate] = useState(false)
   const [form, setForm] = useState({
     title: '', description: '', priority: 'medium' as 'low' | 'medium' | 'high', deadline: '',
     reference_links: [] as { label: string; url: string }[],
@@ -42,6 +47,7 @@ export default function TaskDetailClient({ taskId, onClose, initialTitle, initia
     const data: Detail = await res.json()
     setDetail(data)
     setIsAdmin(!!data.isAdmin)
+    setCurrentUserId(data.currentUserId)
     setForm({
       title: data.task.title,
       description: data.task.description || '',
@@ -143,6 +149,29 @@ export default function TaskDetailClient({ taskId, onClose, initialTitle, initia
     }
   }
 
+  const startEditUpdate = (id: string, body: string) => {
+    setEditingUpdateId(id)
+    setEditUpdateBody(body)
+  }
+
+  const handleSaveEditUpdate = async () => {
+    if (!editingUpdateId) return
+    setSavingEditUpdate(true)
+    try {
+      const res = await fetch(`/api/operations/${taskId}/updates`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: editingUpdateId, body: editUpdateBody }),
+      })
+      if (res.ok) {
+        setEditingUpdateId(null)
+        fetchUpdates()
+      }
+    } finally {
+      setSavingEditUpdate(false)
+    }
+  }
+
   const handleArchiveToggle = async () => {
     if (!detail) return
     setError(null)
@@ -201,9 +230,13 @@ export default function TaskDetailClient({ taskId, onClose, initialTitle, initia
   const { task, reference_links, collaborators, activity_log } = detail
 
   const feed = [
-    ...updates.map((u) => ({ id: u.id, body: u.body, attachments: u.attachments, created_at: u.created_at, author: u.author })),
-    ...comments.map((c) => ({ id: c.id, body: c.body, attachments: c.attachments, created_at: c.created_at, author: c.author })),
+    ...updates.map((u) => ({ id: u.id, body: u.body, attachments: u.attachments, created_at: u.created_at, author: u.author, kind: 'update' as const })),
+    ...comments.map((c) => ({ id: c.id, body: c.body, attachments: c.attachments, created_at: c.created_at, author: c.author, kind: 'comment' as const })),
   ].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+
+  const latestUpdateId = updates.length > 0
+    ? updates.reduce((latest, u) => (new Date(u.created_at) > new Date(latest.created_at) ? u : latest)).id
+    : null
 
   return (
     <div className="p-6 h-full overflow-y-auto">
@@ -346,8 +379,28 @@ export default function TaskDetailClient({ taskId, onClose, initialTitle, initia
                 <div className="flex items-baseline gap-2">
                   <span className="text-sm font-medium text-gray-800 dark:text-gray-100">{entry.author?.name || entry.author?.username || 'Someone'}</span>
                   <span className="text-xs text-gray-400 dark:text-gray-500">{new Date(entry.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</span>
+                  {entry.kind === 'update' && entry.id === latestUpdateId && entry.author?.id === currentUserId && editingUpdateId !== entry.id && (
+                    <button onClick={() => startEditUpdate(entry.id, entry.body)} className="text-xs text-blue-600 dark:text-blue-400 hover:underline">Edit</button>
+                  )}
                 </div>
-                <p className="text-sm text-gray-600 dark:text-gray-300 mt-0.5 whitespace-pre-wrap">{entry.body}</p>
+                {editingUpdateId === entry.id ? (
+                  <div className="mt-1">
+                    <textarea
+                      value={editUpdateBody}
+                      onChange={(e) => setEditUpdateBody(e.target.value)}
+                      rows={2}
+                      className="w-full border border-gray-200 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 rounded-lg px-3 py-2 text-sm resize-none"
+                    />
+                    <div className="flex gap-2 mt-1">
+                      <button onClick={handleSaveEditUpdate} disabled={savingEditUpdate || !editUpdateBody.trim()} className="text-xs px-3 py-1 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-blue-300">
+                        {savingEditUpdate ? 'Saving...' : 'Save'}
+                      </button>
+                      <button onClick={() => setEditingUpdateId(null)} className="text-xs px-3 py-1 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">Cancel</button>
+                    </div>
+                  </div>
+                ) : (
+                  <p className="text-sm text-gray-600 dark:text-gray-300 mt-0.5 whitespace-pre-wrap">{entry.body}</p>
+                )}
                 {entry.attachments.length > 0 && (
                   <div className="flex flex-wrap gap-x-3 gap-y-1 mt-1">
                     {entry.attachments.map((a, i) => (
