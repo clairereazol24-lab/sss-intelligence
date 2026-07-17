@@ -14,12 +14,20 @@ const PRIORITY_STYLES: Record<string, string> = {
   high: 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-400',
 }
 
-export default function OperationsBoard({ initialSelectedId }: { initialSelectedId?: string }) {
+export default function OperationsBoard({
+  initialSelectedId,
+  initialTasks,
+  initialIsAdmin,
+}: {
+  initialSelectedId?: string
+  initialTasks?: BoardTask[]
+  initialIsAdmin?: boolean
+}) {
   const router = useRouter()
   const [selectedId, setSelectedId] = useState<string | null>(initialSelectedId ?? null)
-  const [tasks, setTasks] = useState<BoardTask[]>([])
-  const [loading, setLoading] = useState(true)
-  const [isAdmin, setIsAdmin] = useState(false)
+  const [tasks, setTasks] = useState<BoardTask[]>(initialTasks ?? [])
+  const [loading, setLoading] = useState(!initialTasks)
+  const [isAdmin, setIsAdmin] = useState(!!initialIsAdmin)
   const [showArchived, setShowArchived] = useState(false)
   const [modal, setModal] = useState(false)
   const [form, setForm] = useState({ title: '', description: '', priority: 'medium', deadline: '' })
@@ -104,7 +112,14 @@ export default function OperationsBoard({ initialSelectedId }: { initialSelected
       </div>
 
       {loading ? (
-        <p className="text-gray-400 dark:text-gray-500 text-sm">Loading...</p>
+        <div className="w-full md:w-80 space-y-4 animate-pulse">
+          {[0, 1, 2, 3].map((i) => (
+            <div key={i} className="space-y-2 border-b border-gray-100 dark:border-gray-800 pb-3">
+              <div className="h-4 w-2/3 bg-gray-200 dark:bg-gray-700 rounded" />
+              <div className="h-4 w-16 bg-gray-100 dark:bg-gray-800 rounded-full" />
+            </div>
+          ))}
+        </div>
       ) : (
         <div className="flex flex-1 min-h-0 gap-4">
           <div className={`w-full md:w-80 flex-shrink-0 overflow-y-auto pr-1 ${selectedId ? 'hidden md:block' : 'block'}`}>
