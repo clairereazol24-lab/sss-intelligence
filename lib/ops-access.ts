@@ -1,16 +1,24 @@
-import { createClient as createServerClient } from '@/lib/supabase-server'
-import { supabaseAdmin } from '@/lib/supabase-admin'
-import { getUserAccess, hasModuleAccess, type UserAccess } from '@/lib/auth'
+import { headers } from 'next/headers'
+import { hasModuleAccess, type ModuleKey, type UserAccess } from '@/lib/auth'
 
 export type OpsAccess = { userId: string; access: UserAccess }
 
+// middleware.ts already ran auth.getUser() + getUserAccess() for this request and
+// forwarded the result via headers — read that instead of repeating both round-trips.
 export async function requireOpsAccess(): Promise<OpsAccess | null> {
-  const supabase = createServerClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return null
-  const access = await getUserAccess(supabaseAdmin, user.id)
-  if (!access || !hasModuleAccess(access, 'operations')) return null
-  return { userId: user.id, access }
+  const h = headers()
+  const userId = h.get('x-user-id')
+  const role = h.get('x-user-role') as UserAccess['role'] | null
+  if (!userId || !role) return null
+
+  const access: UserAccess = {
+    role,
+    username: h.get('x-user-username') || '',
+    name: h.get('x-user-name') || null,
+    allowedModules: (h.get('x-user-modules') || '').split(',').filter(Boolean) as ModuleKey[],
+  }
+  if (!hasModuleAccess(access, 'operations')) return null
+  return { userId, access }
 }
 
 export async function requireOpsAdmin(): Promise<OpsAccess | null> {

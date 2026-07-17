@@ -14,8 +14,9 @@ export async function fetchOpsTaskList(auth: OpsAccess): Promise<OpsBoardTask[]>
 
   const taskIds = (tasks || []).map((t: any) => t.id)
 
-  const [{ data: collabRows }, { data: commentRows }, { data: notifRows }] = await Promise.all([
+  const [{ data: collabRows }, { data: updateRows }, { data: commentRows }, { data: notifRows }] = await Promise.all([
     supabaseAdmin.from('ops_collaborators').select('task_id').in('task_id', taskIds),
+    supabaseAdmin.from('ops_updates').select('task_id').in('task_id', taskIds),
     supabaseAdmin.from('ops_comments').select('task_id').in('task_id', taskIds),
     supabaseAdmin
       .from('ops_notifications')
@@ -32,13 +33,14 @@ export async function fetchOpsTaskList(auth: OpsAccess): Promise<OpsBoardTask[]>
     return map
   }
   const collabCounts = countBy(collabRows)
+  const updateCounts = countBy(updateRows)
   const commentCounts = countBy(commentRows)
   const unreadCounts = countBy(notifRows)
 
   return (tasks || []).map((t: any) => ({
     ...t,
     collaborator_count: collabCounts[t.id] || 0,
-    comment_count: commentCounts[t.id] || 0,
+    comment_count: (updateCounts[t.id] || 0) + (commentCounts[t.id] || 0),
     unread_count: unreadCounts[t.id] || 0,
   }))
 }

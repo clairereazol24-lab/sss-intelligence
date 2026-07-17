@@ -67,7 +67,17 @@ export async function middleware(request: NextRequest) {
     return withCookies(NextResponse.redirect(new URL('/', request.url)))
   }
 
-  return response
+  // Forward the already-verified user so Route Handlers (e.g. requireOpsAccess) can
+  // read it instead of re-running auth.getUser() + getUserAccess() themselves — that
+  // repeats the same Auth network round-trip and DB queries this middleware just did.
+  const forwardedHeaders = new Headers(request.headers)
+  forwardedHeaders.set('x-user-id', user.id)
+  forwardedHeaders.set('x-user-role', access.role)
+  forwardedHeaders.set('x-user-username', access.username)
+  forwardedHeaders.set('x-user-name', access.name ?? '')
+  forwardedHeaders.set('x-user-modules', access.allowedModules.join(','))
+
+  return withCookies(NextResponse.next({ request: { headers: forwardedHeaders } }))
 }
 
 export const config = {

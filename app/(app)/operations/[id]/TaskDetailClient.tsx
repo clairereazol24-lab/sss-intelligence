@@ -29,6 +29,35 @@ function renderFormattedText(text: string) {
   })
 }
 
+// Ctrl/Cmd+B wraps the selection in ** ** (or strips it if already bolded), mirroring the ** syntax renderFormattedText understands.
+function handleBoldShortcut(e: React.KeyboardEvent<HTMLTextAreaElement>, value: string, setValue: (v: string) => void) {
+  if (!(e.ctrlKey || e.metaKey) || e.key.toLowerCase() !== 'b') return
+  e.preventDefault()
+  const textarea = e.currentTarget
+  const { selectionStart: start, selectionEnd: end } = textarea
+  const selected = value.slice(start, end)
+
+  let newValue: string
+  let newStart: number
+  let newEnd: number
+  if (selected.startsWith('**') && selected.endsWith('**') && selected.length >= 4) {
+    const unwrapped = selected.slice(2, -2)
+    newValue = value.slice(0, start) + unwrapped + value.slice(end)
+    newStart = start
+    newEnd = start + unwrapped.length
+  } else {
+    newValue = value.slice(0, start) + '**' + selected + '**' + value.slice(end)
+    newStart = start + 2
+    newEnd = end + 2
+  }
+
+  setValue(newValue)
+  requestAnimationFrame(() => {
+    textarea.setSelectionRange(newStart, newEnd)
+    textarea.focus()
+  })
+}
+
 export default function TaskDetailClient({ taskId, onClose, initialTitle, initialPriority }: { taskId: string; onClose: () => void; initialTitle?: string; initialPriority?: 'low' | 'medium' | 'high' }) {
   const [detail, setDetail] = useState<Detail | null>(null)
   const [allUsers, setAllUsers] = useState<OpsCollaboratorUser[]>([])
@@ -399,6 +428,7 @@ export default function TaskDetailClient({ taskId, onClose, initialTitle, initia
                     <textarea
                       value={editUpdateBody}
                       onChange={(e) => setEditUpdateBody(e.target.value)}
+                      onKeyDown={(e) => handleBoldShortcut(e, editUpdateBody, setEditUpdateBody)}
                       rows={2}
                       className="w-full border border-gray-200 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 rounded-lg px-3 py-2 text-sm resize-none"
                     />
@@ -430,7 +460,8 @@ export default function TaskDetailClient({ taskId, onClose, initialTitle, initia
           <textarea
             value={updateBody}
             onChange={(e) => handleUpdateBodyChange(e.target.value)}
-            placeholder="Add a progress update... (use @Name to mention someone, **bold** for emphasis)"
+            onKeyDown={(e) => handleBoldShortcut(e, updateBody, setUpdateBody)}
+            placeholder="Add a progress update... (use @Name to mention someone, Ctrl+B to bold)"
             rows={2}
             className="w-full border border-gray-200 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 rounded-lg px-3 py-2 text-sm resize-none"
           />
