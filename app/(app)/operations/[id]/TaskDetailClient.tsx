@@ -30,9 +30,6 @@ export default function TaskDetailClient({ taskId, onClose }: { taskId: string; 
   const [updateAttachments, setUpdateAttachments] = useState<OpsAttachment[]>([])
   const [postingUpdate, setPostingUpdate] = useState(false)
   const [comments, setComments] = useState<OpsComment[]>([])
-  const [commentBody, setCommentBody] = useState('')
-  const [commentAttachments, setCommentAttachments] = useState<OpsAttachment[]>([])
-  const [postingComment, setPostingComment] = useState(false)
   const [mentionSuggestions, setMentionSuggestions] = useState<OpsCollaboratorUser[]>([])
   const [form, setForm] = useState({
     title: '', description: '', priority: 'medium' as 'low' | 'medium' | 'high', deadline: '',
@@ -111,6 +108,24 @@ export default function TaskDetailClient({ taskId, onClose }: { taskId: string; 
     }
   }
 
+  const handleUpdateBodyChange = (value: string) => {
+    setUpdateBody(value)
+    const lastAt = value.lastIndexOf('@')
+    if (lastAt === -1) { setMentionSuggestions([]); return }
+    const fragment = value.slice(lastAt + 1).toLowerCase()
+    if (fragment.includes(' ')) { setMentionSuggestions([]); return }
+    setMentionSuggestions(
+      allUsers.filter((u) => (u.name || u.username).toLowerCase().startsWith(fragment)).slice(0, 5)
+    )
+  }
+
+  const applyMentionSuggestion = (u: OpsCollaboratorUser) => {
+    const lastAt = updateBody.lastIndexOf('@')
+    const firstName = (u.name || u.username).split(' ')[0]
+    setUpdateBody(updateBody.slice(0, lastAt) + '@' + firstName + ' ')
+    setMentionSuggestions([])
+  }
+
   const handlePostUpdate = async () => {
     setPostingUpdate(true)
     try {
@@ -122,47 +137,11 @@ export default function TaskDetailClient({ taskId, onClose }: { taskId: string; 
       if (res.ok) {
         setUpdateBody('')
         setUpdateAttachments([])
+        setMentionSuggestions([])
         fetchUpdates()
       }
     } finally {
       setPostingUpdate(false)
-    }
-  }
-
-  const handleCommentBodyChange = (value: string) => {
-    setCommentBody(value)
-    const lastAt = value.lastIndexOf('@')
-    if (lastAt === -1) { setMentionSuggestions([]); return }
-    const fragment = value.slice(lastAt + 1).toLowerCase()
-    if (fragment.includes(' ')) { setMentionSuggestions([]); return }
-    setMentionSuggestions(
-      allUsers.filter((u) => (u.name || u.username).toLowerCase().startsWith(fragment)).slice(0, 5)
-    )
-  }
-
-  const applyMentionSuggestion = (u: OpsCollaboratorUser) => {
-    const lastAt = commentBody.lastIndexOf('@')
-    const firstName = (u.name || u.username).split(' ')[0]
-    setCommentBody(commentBody.slice(0, lastAt) + '@' + firstName + ' ')
-    setMentionSuggestions([])
-  }
-
-  const handlePostComment = async () => {
-    setPostingComment(true)
-    try {
-      const res = await fetch(`/api/operations/${taskId}/comments`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ body: commentBody, attachments: commentAttachments }),
-      })
-      if (res.ok) {
-        setCommentBody('')
-        setCommentAttachments([])
-        setMentionSuggestions([])
-        fetchComments()
-      }
-    } finally {
-      setPostingComment(false)
     }
   }
 
@@ -197,6 +176,13 @@ export default function TaskDetailClient({ taskId, onClose }: { taskId: string; 
   if (!detail) return <div className="p-6 text-gray-400 dark:text-gray-500 text-sm">Loading...</div>
 
   const { task, reference_links, collaborators, activity_log } = detail
+
+  const initials = (name: string) => (name || '?').trim().charAt(0).toUpperCase() || '?'
+
+  const feed = [
+    ...updates.map((u) => ({ id: u.id, body: u.body, attachments: u.attachments, created_at: u.created_at, author: u.author })),
+    ...comments.map((c) => ({ id: c.id, body: c.body, attachments: c.attachments, created_at: c.created_at, author: c.author })),
+  ].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
 
   return (
     <div className="p-6 h-full overflow-y-auto">
@@ -278,7 +264,7 @@ export default function TaskDetailClient({ taskId, onClose }: { taskId: string; 
           </div>
         </div>
       ) : (
-        <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-5">
+        <div>
           <div className="flex items-start justify-between">
             <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${PRIORITY_STYLES[task.priority]}`}>
               {task.priority.charAt(0).toUpperCase() + task.priority.slice(1)}
@@ -299,10 +285,10 @@ export default function TaskDetailClient({ taskId, onClose }: { taskId: string; 
           {task.description && <p className="text-sm text-gray-600 dark:text-gray-300 mt-2">{task.description}</p>}
 
           {reference_links.length > 0 && (
-            <div className="flex flex-wrap gap-2 mt-3">
+            <div className="flex flex-wrap gap-x-4 gap-y-1 mt-3">
               {reference_links.map((l) => (
-                <a key={l.id} href={l.url} target="_blank" rel="noopener noreferrer" className="text-xs px-3 py-1.5 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-600">
-                  📄 {l.label}
+                <a key={l.id} href={l.url} target="_blank" rel="noopener noreferrer" className="text-sm text-blue-600 dark:text-blue-400 hover:underline">
+                  {l.label}
                 </a>
               ))}
             </div>
@@ -325,65 +311,41 @@ export default function TaskDetailClient({ taskId, onClose }: { taskId: string; 
         </div>
       )}
 
-      <div className="mt-6 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-5">
-        <h2 className="font-semibold text-gray-800 dark:text-gray-100 mb-3">Updates</h2>
+      <div className="mt-6">
+        <h2 className="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-3">Activity</h2>
 
-        <textarea
-          value={updateBody}
-          onChange={(e) => setUpdateBody(e.target.value)}
-          placeholder="Post an operational update... (use @Name to mention someone)"
-          rows={3}
-          className="w-full border border-gray-200 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg px-3 py-2 text-sm resize-none"
-        />
-        {updateAttachments.map((a, i) => (
-          <div key={i} className="flex gap-2 mt-2">
-            <input placeholder="Label" value={a.label} onChange={(e) => {
-              const next = [...updateAttachments]; next[i] = { ...next[i], label: e.target.value }; setUpdateAttachments(next)
-            }} className="w-1/3 border border-gray-200 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg px-3 py-2 text-sm" />
-            <input placeholder="URL" value={a.url} onChange={(e) => {
-              const next = [...updateAttachments]; next[i] = { ...next[i], url: e.target.value }; setUpdateAttachments(next)
-            }} className="flex-1 border border-gray-200 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg px-3 py-2 text-sm" />
-            <button onClick={() => setUpdateAttachments(updateAttachments.filter((_, j) => j !== i))} className="text-red-400 hover:text-red-600 text-xs px-2">Remove</button>
-          </div>
-        ))}
-        <div className="flex items-center justify-between mt-2">
-          <button onClick={() => setUpdateAttachments([...updateAttachments, { label: '', url: '' }])} className="text-xs text-blue-600 dark:text-blue-400 hover:underline">+ Add Attachment Link</button>
-          <button onClick={handlePostUpdate} disabled={postingUpdate || !updateBody.trim()} className="px-4 py-1.5 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-blue-300">
-            {postingUpdate ? 'Posting...' : 'Post Update'}
-          </button>
-        </div>
-
-        <div className="mt-4 space-y-3">
-          {updates.length === 0 && <p className="text-xs text-gray-400 dark:text-gray-500">No updates yet.</p>}
-          {updates.map((u) => (
-            <div key={u.id} className="border-t border-gray-100 dark:border-gray-700 pt-3">
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-medium text-gray-800 dark:text-gray-100">{u.author?.name || u.author?.username || 'Someone'}</span>
-                <span className="text-xs text-gray-400 dark:text-gray-500">{new Date(u.created_at).toLocaleString()}</span>
+        <div className="space-y-4">
+          {feed.length === 0 && <p className="text-xs text-gray-400 dark:text-gray-500">No activity yet.</p>}
+          {feed.map((entry) => (
+            <div key={entry.id} className="flex gap-3">
+              <div className="w-7 h-7 shrink-0 rounded-full bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 text-xs font-semibold flex items-center justify-center">
+                {initials(entry.author?.name || entry.author?.username || '?')}
               </div>
-              <p className="text-sm text-gray-600 dark:text-gray-300 mt-1 whitespace-pre-wrap">{u.body}</p>
-              {u.attachments.length > 0 && (
-                <div className="flex flex-wrap gap-2 mt-2">
-                  {u.attachments.map((a, i) => (
-                    <a key={i} href={a.url} target="_blank" rel="noopener noreferrer" className="text-xs px-2 py-1 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-600">
-                      📎 {a.label || a.url}
-                    </a>
-                  ))}
+              <div className="flex-1 min-w-0">
+                <div className="flex items-baseline gap-2">
+                  <span className="text-sm font-medium text-gray-800 dark:text-gray-100">{entry.author?.name || entry.author?.username || 'Someone'}</span>
+                  <span className="text-xs text-gray-400 dark:text-gray-500">{new Date(entry.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</span>
                 </div>
-              )}
+                <p className="text-sm text-gray-600 dark:text-gray-300 mt-0.5 whitespace-pre-wrap">{entry.body}</p>
+                {entry.attachments.length > 0 && (
+                  <div className="flex flex-wrap gap-x-3 gap-y-1 mt-1">
+                    {entry.attachments.map((a, i) => (
+                      <a key={i} href={a.url} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-600 dark:text-blue-400 hover:underline">
+                        {a.label || a.url}
+                      </a>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
           ))}
         </div>
-      </div>
 
-      <div className="mt-6 bg-gray-50 dark:bg-gray-900/40 rounded-xl border border-gray-200 dark:border-gray-700 p-5">
-        <h2 className="font-semibold text-gray-800 dark:text-gray-100 mb-3">Comments</h2>
-
-        <div className="relative">
+        <div className="relative mt-4">
           <textarea
-            value={commentBody}
-            onChange={(e) => handleCommentBodyChange(e.target.value)}
-            placeholder="Discuss, clarify, or ask a question... (type @ to mention someone)"
+            value={updateBody}
+            onChange={(e) => handleUpdateBodyChange(e.target.value)}
+            placeholder="Add a progress update... (use @Name to mention someone)"
             rows={2}
             className="w-full border border-gray-200 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 rounded-lg px-3 py-2 text-sm resize-none"
           />
@@ -397,45 +359,21 @@ export default function TaskDetailClient({ taskId, onClose }: { taskId: string; 
             </div>
           )}
         </div>
-        {commentAttachments.map((a, i) => (
+        {updateAttachments.map((a, i) => (
           <div key={i} className="flex gap-2 mt-2">
             <input placeholder="Label" value={a.label} onChange={(e) => {
-              const next = [...commentAttachments]; next[i] = { ...next[i], label: e.target.value }; setCommentAttachments(next)
+              const next = [...updateAttachments]; next[i] = { ...next[i], label: e.target.value }; setUpdateAttachments(next)
             }} className="w-1/3 border border-gray-200 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 rounded-lg px-3 py-2 text-sm" />
             <input placeholder="URL" value={a.url} onChange={(e) => {
-              const next = [...commentAttachments]; next[i] = { ...next[i], url: e.target.value }; setCommentAttachments(next)
+              const next = [...updateAttachments]; next[i] = { ...next[i], url: e.target.value }; setUpdateAttachments(next)
             }} className="flex-1 border border-gray-200 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 rounded-lg px-3 py-2 text-sm" />
-            <button onClick={() => setCommentAttachments(commentAttachments.filter((_, j) => j !== i))} className="text-red-400 hover:text-red-600 text-xs px-2">Remove</button>
+            <button onClick={() => setUpdateAttachments(updateAttachments.filter((_, j) => j !== i))} className="text-red-400 hover:text-red-600 text-xs px-2">Remove</button>
           </div>
         ))}
-        <div className="flex items-center justify-between mt-2">
-          <button onClick={() => setCommentAttachments([...commentAttachments, { label: '', url: '' }])} className="text-xs text-blue-600 dark:text-blue-400 hover:underline">+ Add Attachment Link</button>
-          <button onClick={handlePostComment} disabled={postingComment || !commentBody.trim()} className="px-4 py-1.5 text-sm bg-gray-700 dark:bg-gray-600 text-white rounded-lg hover:bg-gray-800 dark:hover:bg-gray-500 disabled:bg-gray-300">
-            {postingComment ? 'Posting...' : 'Post Comment'}
-          </button>
-        </div>
-
-        <div className="mt-4 space-y-3">
-          {comments.length === 0 && <p className="text-xs text-gray-400 dark:text-gray-500">No comments yet.</p>}
-          {comments.map((c) => (
-            <div key={c.id} className="border-t border-gray-200 dark:border-gray-700 pt-3">
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-medium text-gray-800 dark:text-gray-100">{c.author?.name || c.author?.username || 'Someone'}</span>
-                <span className="text-xs text-gray-400 dark:text-gray-500">{new Date(c.created_at).toLocaleString()}</span>
-              </div>
-              <p className="text-sm text-gray-600 dark:text-gray-300 mt-1 whitespace-pre-wrap">{c.body}</p>
-              {c.attachments.length > 0 && (
-                <div className="flex flex-wrap gap-2 mt-2">
-                  {c.attachments.map((a, i) => (
-                    <a key={i} href={a.url} target="_blank" rel="noopener noreferrer" className="text-xs px-2 py-1 rounded-full bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-600">
-                      📎 {a.label || a.url}
-                    </a>
-                  ))}
-                </div>
-              )}
-            </div>
-          ))}
-        </div>
+        <button onClick={() => setUpdateAttachments([...updateAttachments, { label: '', url: '' }])} className="text-xs text-blue-600 dark:text-blue-400 hover:underline mt-2 inline-block">+ Add Attachment Link</button>
+        <button onClick={handlePostUpdate} disabled={postingUpdate || !updateBody.trim()} className="w-full mt-2 py-2 text-sm font-medium bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-blue-300 disabled:dark:bg-blue-900/40">
+          {postingUpdate ? 'Saving...' : 'Save Update'}
+        </button>
       </div>
 
       <div className="mt-6">
