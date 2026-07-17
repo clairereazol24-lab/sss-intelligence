@@ -18,6 +18,17 @@ const PRIORITY_STYLES: Record<string, string> = {
   high: 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-400',
 }
 
+// Supports **bold** so activity text can highlight a heading or key phrase inline.
+function renderFormattedText(text: string) {
+  const parts = text.split(/(\*\*[^*]+\*\*)/g)
+  return parts.map((part, i) => {
+    if (part.startsWith('**') && part.endsWith('**') && part.length > 4) {
+      return <strong key={i}>{part.slice(2, -2)}</strong>
+    }
+    return part
+  })
+}
+
 export default function TaskDetailClient({ taskId, onClose, initialTitle, initialPriority }: { taskId: string; onClose: () => void; initialTitle?: string; initialPriority?: 'low' | 'medium' | 'high' }) {
   const [detail, setDetail] = useState<Detail | null>(null)
   const [allUsers, setAllUsers] = useState<OpsCollaboratorUser[]>([])
@@ -399,7 +410,7 @@ export default function TaskDetailClient({ taskId, onClose, initialTitle, initia
                     </div>
                   </div>
                 ) : (
-                  <p className="text-sm text-gray-600 dark:text-gray-300 mt-0.5 whitespace-pre-wrap">{entry.body}</p>
+                  <p className="text-sm text-gray-600 dark:text-gray-300 mt-0.5 whitespace-pre-wrap">{renderFormattedText(entry.body)}</p>
                 )}
                 {entry.attachments.length > 0 && (
                   <div className="flex flex-wrap gap-x-3 gap-y-1 mt-1">
@@ -419,7 +430,7 @@ export default function TaskDetailClient({ taskId, onClose, initialTitle, initia
           <textarea
             value={updateBody}
             onChange={(e) => handleUpdateBodyChange(e.target.value)}
-            placeholder="Add a progress update... (use @Name to mention someone)"
+            placeholder="Add a progress update... (use @Name to mention someone, **bold** for emphasis)"
             rows={2}
             className="w-full border border-gray-200 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 rounded-lg px-3 py-2 text-sm resize-none"
           />
