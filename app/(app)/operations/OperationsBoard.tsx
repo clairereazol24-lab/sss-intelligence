@@ -140,7 +140,13 @@ export default function OperationsBoard({ initialSelectedId }: { initialSelected
 
           <div className={`flex-1 min-w-0 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden ${selectedId ? 'block' : 'hidden md:block'}`}>
             {selectedId ? (
-              <TaskDetailClient key={selectedId} taskId={selectedId} onClose={closeTask} />
+              <TaskDetailClient
+                key={selectedId}
+                taskId={selectedId}
+                onClose={closeTask}
+                initialTitle={tasks.find((t) => t.id === selectedId)?.title}
+                initialPriority={tasks.find((t) => t.id === selectedId)?.priority}
+              />
             ) : (
               <div className="h-full flex items-center justify-center text-sm text-gray-400 dark:text-gray-500">
                 Select a task to view details

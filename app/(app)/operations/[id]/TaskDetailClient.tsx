@@ -17,7 +17,7 @@ const PRIORITY_STYLES: Record<string, string> = {
   high: 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-400',
 }
 
-export default function TaskDetailClient({ taskId, onClose }: { taskId: string; onClose: () => void }) {
+export default function TaskDetailClient({ taskId, onClose, initialTitle, initialPriority }: { taskId: string; onClose: () => void; initialTitle?: string; initialPriority?: 'low' | 'medium' | 'high' }) {
   const [detail, setDetail] = useState<Detail | null>(null)
   const [allUsers, setAllUsers] = useState<OpsCollaboratorUser[]>([])
   const [isAdmin, setIsAdmin] = useState(false)
@@ -173,11 +173,34 @@ export default function TaskDetailClient({ taskId, onClose }: { taskId: string; 
     onClose()
   }
 
-  if (!detail) return <div className="p-6 text-gray-400 dark:text-gray-500 text-sm">Loading...</div>
+  const initials = (name: string) => (name || '?').trim().charAt(0).toUpperCase() || '?'
+
+  if (!detail) {
+    return (
+      <div className="p-6 h-full overflow-y-auto">
+        <div className="flex items-start justify-between mb-4">
+          <h1 className="text-lg font-bold text-gray-800 dark:text-gray-100">{initialTitle || ' '}</h1>
+          <button onClick={onClose} aria-label="Close" className="text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300 text-xl leading-none px-1">×</button>
+        </div>
+        {initialPriority && (
+          <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${PRIORITY_STYLES[initialPriority]}`}>
+            {initialPriority.charAt(0).toUpperCase() + initialPriority.slice(1)}
+          </span>
+        )}
+        <div className="mt-4 space-y-2 animate-pulse">
+          <div className="h-3 w-3/4 bg-gray-200 dark:bg-gray-700 rounded" />
+          <div className="h-3 w-1/2 bg-gray-200 dark:bg-gray-700 rounded" />
+        </div>
+        <div className="mt-8 space-y-3 animate-pulse">
+          <div className="h-3 w-24 bg-gray-200 dark:bg-gray-700 rounded" />
+          <div className="h-10 w-full bg-gray-100 dark:bg-gray-800 rounded" />
+          <div className="h-10 w-5/6 bg-gray-100 dark:bg-gray-800 rounded" />
+        </div>
+      </div>
+    )
+  }
 
   const { task, reference_links, collaborators, activity_log } = detail
-
-  const initials = (name: string) => (name || '?').trim().charAt(0).toUpperCase() || '?'
 
   const feed = [
     ...updates.map((u) => ({ id: u.id, body: u.body, attachments: u.attachments, created_at: u.created_at, author: u.author })),
