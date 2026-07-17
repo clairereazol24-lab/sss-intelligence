@@ -2,46 +2,44 @@ import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase-admin'
 import { requireOpsAccess, requireOpsAdmin } from '@/lib/ops-access'
 
-async function fetchUsersById(userIds: string[]) {
-  if (userIds.length === 0) return {}
-  const { data } = await supabaseAdmin
-    .from('profiles')
-    .select('id, username, name')
-    .in('id', Array.from(new Set(userIds)))
-  const map: Record<string, { id: string; username: string; name: string | null }> = {}
-  for (const u of data || []) map[u.id] = u
-  return map
-}
-
 export async function GET(_request: NextRequest, { params }: { params: { id: string } }) {
   const auth = await requireOpsAccess()
   if (!auth) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
-  const [{ data: task, error: taskError }, { data: links }, { data: collabRows }, { data: activity }] =
-    await Promise.all([
-      supabaseAdmin.from('ops_tasks').select('*').eq('id', params.id).maybeSingle(),
-      supabaseAdmin.from('ops_reference_links').select('*').eq('task_id', params.id).order('sort_order'),
-      supabaseAdmin.from('ops_collaborators').select('user_id').eq('task_id', params.id),
-      supabaseAdmin.from('ops_activity_log').select('*').eq('task_id', params.id).order('created_at', { ascending: false }),
-    ])
+  // Every query below is independent of the others' results, so they run as one parallel
+  // batch instead of a chain of sequential round-trips (task+links+collabs+activity, then
+  // profiles keyed off the collab/activity user ids, then the notifications write) — that
+  // chain was the main source of the multi-second delay opening a task.
+  const [
+    { data: task, error: taskError },
+    { data: links },
+    { data: collabRows },
+    { data: activity },
+    { data: profiles },
+  ] = await Promise.all([
+    supabaseAdmin.from('ops_tasks').select('*').eq('id', params.id).maybeSingle(),
+    supabaseAdmin.from('ops_reference_links').select('*').eq('task_id', params.id).order('sort_order'),
+    supabaseAdmin.from('ops_collaborators').select('user_id').eq('task_id', params.id),
+    supabaseAdmin.from('ops_activity_log').select('*').eq('task_id', params.id).order('created_at', { ascending: false }),
+    supabaseAdmin.from('profiles').select('id, username, name'),
+    // Viewing a task's detail is how "New Updates" gets cleared now that there's no
+    // notification bell to mark things read explicitly.
+    supabaseAdmin
+      .from('ops_notifications')
+      .update({ is_read: true })
+      .eq('task_id', params.id)
+      .eq('user_id', auth.userId)
+      .eq('is_read', false)
+      .in('type', ['update', 'comment']),
+  ])
   if (taskError) return NextResponse.json({ error: taskError.message }, { status: 500 })
   if (!task) return NextResponse.json({ error: 'Task not found.' }, { status: 404 })
 
-  const userIds = [...(collabRows || []).map((c: any) => c.user_id), ...(activity || []).map((a: any) => a.user_id)]
-  const usersById = await fetchUsersById(userIds)
+  const usersById: Record<string, { id: string; username: string; name: string | null }> = {}
+  for (const u of profiles || []) usersById[u.id] = u
 
   const collaborators = (collabRows || []).map((c: any) => usersById[c.user_id]).filter(Boolean)
   const activity_log = (activity || []).map((a: any) => ({ ...a, author: usersById[a.user_id] || null }))
-
-  // Viewing a task's detail is how "New Updates" gets cleared now that there's no
-  // notification bell to mark things read explicitly.
-  await supabaseAdmin
-    .from('ops_notifications')
-    .update({ is_read: true })
-    .eq('task_id', params.id)
-    .eq('user_id', auth.userId)
-    .eq('is_read', false)
-    .in('type', ['update', 'comment'])
 
   return NextResponse.json({
     task,

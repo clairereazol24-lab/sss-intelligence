@@ -3,14 +3,6 @@ import { supabaseAdmin } from '@/lib/supabase-admin'
 import { requireOpsAccess } from '@/lib/ops-access'
 import { sendOpsTelegramMessage } from '@/lib/telegram-ops'
 
-async function fetchUsersById(userIds: string[]) {
-  if (userIds.length === 0) return {}
-  const { data } = await supabaseAdmin.from('profiles').select('id, username, name').in('id', Array.from(new Set(userIds)))
-  const map: Record<string, { id: string; username: string; name: string | null }> = {}
-  for (const u of data || []) map[u.id] = u
-  return map
-}
-
 async function notifyCollaboratorsAndMentions(taskId: string, authorId: string, body: string, type: 'update' | 'comment') {
   const { data: task } = await supabaseAdmin.from('ops_tasks').select('title').eq('id', taskId).maybeSingle()
   const taskTitle = task?.title || 'a task'
@@ -65,14 +57,14 @@ export async function GET(_request: NextRequest, { params }: { params: { id: str
   const auth = await requireOpsAccess()
   if (!auth) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
-  const { data, error } = await supabaseAdmin
-    .from('ops_comments')
-    .select('*')
-    .eq('task_id', params.id)
-    .order('created_at', { ascending: false })
+  const [{ data, error }, { data: profiles }] = await Promise.all([
+    supabaseAdmin.from('ops_comments').select('*').eq('task_id', params.id).order('created_at', { ascending: false }),
+    supabaseAdmin.from('profiles').select('id, username, name'),
+  ])
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
-  const usersById = await fetchUsersById((data || []).map((c: any) => c.user_id))
+  const usersById: Record<string, { id: string; username: string; name: string | null }> = {}
+  for (const u of profiles || []) usersById[u.id] = u
   const comments = (data || []).map((c: any) => ({ ...c, author: usersById[c.user_id] || null }))
 
   return NextResponse.json({ comments })
