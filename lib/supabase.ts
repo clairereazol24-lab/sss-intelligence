@@ -118,3 +118,14 @@ export type OpsNotification = {
   is_read: boolean
   created_at: string
 }
+
+export type CalendarEvent = {
+  id: string
+  date: string
+  title: string
+  time: string | null
+  details: string
+  attendees: string[]
+  created_by: string | null
+  created_at: string
+}
