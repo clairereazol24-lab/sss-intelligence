@@ -1,6 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 
-export type ModuleKey = 'dashboard' | 'sss_data' | 'members' | 'performance' | 'store_directory' | 'locked_retailers' | 'operations' | 'ai_report' | 'marketing_efforts'
+export type ModuleKey = 'dashboard' | 'sss_data' | 'members' | 'performance' | 'store_directory' | 'locked_retailers' | 'operations' | 'calendar' | 'ai_report' | 'marketing_efforts'
 
 export type ModuleDef = {
   key: ModuleKey
@@ -54,6 +54,7 @@ export const MODULES: ModuleDef[] = [
   },
   { key: 'locked_retailers', label: 'Shortcut', href: '/locked-retailers', icon: '🔒' },
   { key: 'operations', label: 'Operations', href: '/operations', icon: '📋' },
+  { key: 'calendar', label: 'Calendar', href: '/calendar', icon: '📅' },
   // ai_report and marketing_efforts hidden — restore by uncommenting
   // { key: 'ai_report', label: 'AI Report', href: '/ai-report', icon: '🤖' },
   // { key: 'marketing_efforts', label: 'Marketing Efforts', href: '/marketing-efforts', icon: '📣' },
