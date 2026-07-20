@@ -227,6 +227,7 @@ export default function CalendarClient({
   }
 
   const canEditCurrent = isAdmin || (editingId ? events.find((e) => e.id === editingId)?.created_by === userId : true)
+  const canEditForm = panelMode === 'create' || canEditCurrent
 
   return (
     <div className="p-6 h-full flex flex-col md:flex-row gap-4">
@@ -323,15 +324,15 @@ export default function CalendarClient({
               <div className="flex-1 overflow-y-auto px-5 py-4 space-y-4">
                 <div>
                   <label className="block text-[11px] font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500 mb-1">Event Title</label>
-                  <input type="text" value={form.title} onChange={(e) => setField('title', e.target.value)} placeholder="Event name…" className="w-full text-sm rounded-lg border border-gray-200 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 px-3 py-2 outline-none focus:ring-2 focus:ring-blue-300" />
+                  <input type="text" value={form.title} onChange={(e) => setField('title', e.target.value)} placeholder="Event name…" disabled={!canEditForm} className="w-full text-sm rounded-lg border border-gray-200 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 px-3 py-2 outline-none focus:ring-2 focus:ring-blue-300 disabled:opacity-50 disabled:cursor-not-allowed" />
                 </div>
                 <div>
                   <label className="block text-[11px] font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500 mb-1">Time <span className="normal-case font-normal">(optional)</span></label>
-                  <input type="time" value={form.time} onChange={(e) => setField('time', e.target.value)} className="w-full text-sm rounded-lg border border-gray-200 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 px-3 py-2 outline-none focus:ring-2 focus:ring-blue-300" />
+                  <input type="time" value={form.time} onChange={(e) => setField('time', e.target.value)} disabled={!canEditForm} className="w-full text-sm rounded-lg border border-gray-200 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 px-3 py-2 outline-none focus:ring-2 focus:ring-blue-300 disabled:opacity-50 disabled:cursor-not-allowed" />
                 </div>
                 <div>
                   <label className="block text-[11px] font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500 mb-1">Details</label>
-                  <textarea value={form.details} onChange={(e) => setField('details', e.target.value)} rows={5} placeholder="What's this event about…" className="w-full text-sm rounded-lg border border-gray-200 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 px-3 py-2 outline-none resize-none focus:ring-2 focus:ring-blue-300" />
+                  <textarea value={form.details} onChange={(e) => setField('details', e.target.value)} rows={5} placeholder="What's this event about…" disabled={!canEditForm} className="w-full text-sm rounded-lg border border-gray-200 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 px-3 py-2 outline-none resize-none focus:ring-2 focus:ring-blue-300 disabled:opacity-50 disabled:cursor-not-allowed" />
                 </div>
                 <div>
                   <label className="block text-[11px] font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500 mb-1">Who&apos;s Present</label>
@@ -339,9 +340,12 @@ export default function CalendarClient({
                     {form.attendees.map((a) => (
                       <span key={a} className="inline-flex items-center gap-1 bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-full px-2 py-0.5 text-[11px] font-medium">
                         {a}
-                        <button onClick={() => toggleAttendee(a)} className="text-blue-400 hover:text-blue-600 dark:hover:text-blue-200 leading-none ml-0.5">×</button>
+                        {canEditForm && (
+                          <button onClick={() => toggleAttendee(a)} className="text-blue-400 hover:text-blue-600 dark:hover:text-blue-200 leading-none ml-0.5">×</button>
+                        )}
                       </span>
                     ))}
+                    {canEditForm && (
                     <select value="" onChange={(e) => { if (e.target.value) toggleAttendee(e.target.value) }} className="text-[11px] text-gray-500 dark:text-gray-400 bg-transparent outline-none cursor-pointer">
                       <option value="">+ Add person…</option>
                       {users
@@ -349,6 +353,7 @@ export default function CalendarClient({
                         .sort((a, b) => (a.name || a.username).localeCompare(b.name || b.username))
                         .map((u) => <option key={u.id} value={u.name || u.username}>{u.name || u.username}</option>)}
                     </select>
+                    )}
                   </div>
                 </div>
                 {formError && <p className="text-xs text-red-500 dark:text-red-400 bg-red-50 dark:bg-red-900/20 rounded-lg px-3 py-2">{formError}</p>}
@@ -369,7 +374,7 @@ export default function CalendarClient({
                 )}
                 <div className="flex-1" />
                 <button onClick={backToList} disabled={saving || deleting} className="px-3 py-2 text-xs font-semibold text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition disabled:opacity-50">Cancel</button>
-                <button onClick={handleSave} disabled={saving || deleting} className="px-4 py-2 text-xs font-semibold bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition disabled:opacity-50">
+                <button onClick={handleSave} disabled={saving || deleting || !canEditForm} className="px-4 py-2 text-xs font-semibold bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition disabled:opacity-50">
                   {saving ? 'Saving…' : panelMode === 'create' ? 'Create' : 'Save'}
                 </button>
               </div>
