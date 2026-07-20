@@ -65,17 +65,18 @@ export default function CalendarClient({
   const [saving, setSaving] = useState(false)
   const [deleting, setDeleting] = useState(false)
   const [formError, setFormError] = useState<string | null>(null)
-  const [pendingTodayOpen, setPendingTodayOpen] = useState(false)
 
-  const fetchEvents = async (y: number, m: number) => {
+  const fetchEvents = async (y: number, m: number): Promise<CalendarEvent[]> => {
     setLoading(true)
     const res = await fetch(`/api/calendar?year=${y}&month=${m}`)
-    if (!res.ok) { setLoading(false); return }
+    if (!res.ok) { setLoading(false); return [] }
     const data = await res.json()
-    setEvents(data.events || [])
+    const freshEvents: CalendarEvent[] = data.events || []
+    setEvents(freshEvents)
     setIsAdmin(!!data.isAdmin)
     setUserId(data.userId || '')
     setLoading(false)
+    return freshEvents
   }
 
   useEffect(() => {
@@ -147,29 +148,33 @@ export default function CalendarClient({
     setPanelMode('create')
   }
 
-  function openToday() {
+  async function openToday() {
     const now = new Date()
     const y = now.getFullYear()
     const m = now.getMonth() + 1
+    const d = now.getDate()
     if (y !== year || m !== month) {
-      // Switching months triggers a refetch (see the year/month effect below) — events
-      // for the new month aren't in state yet, so defer opening the panel until that
-      // refetch lands (pendingTodayOpen effect) instead of reading stale eventsByDate.
-      setPendingTodayOpen(true)
+      // Switching months — await the fresh fetch directly instead of relying on a
+      // later effect/re-render to see updated state, which raced and opened a
+      // blank panel using the previous month's stale eventsByDate.
       setYear(y)
       setMonth(m)
+      const freshEvents = await fetchEvents(y, m)
+      const dateStr = padDate(y, m, d)
+      const dayEvents = freshEvents.filter((e) => e.date === dateStr)
+      setSelectedDate(dateStr)
+      setFormError(null)
+      if (dayEvents.length === 0) {
+        setForm({ ...BLANK_EVENT, date: dateStr })
+        setEditingId(null)
+        setPanelMode('create')
+      } else {
+        setPanelMode('list')
+      }
     } else {
-      openDay(now.getDate())
+      openDay(d)
     }
   }
-
-  useEffect(() => {
-    if (pendingTodayOpen && !loading) {
-      setPendingTodayOpen(false)
-      openDay(new Date().getDate())
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pendingTodayOpen, loading])
 
   function backToList() { setEditingId(null); setFormError(null); setPanelMode('list') }
   function closePanel() { setPanelMode('closed'); setSelectedDate(null); setEditingId(null); setFormError(null) }
