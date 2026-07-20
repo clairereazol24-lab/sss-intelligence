@@ -224,3 +224,32 @@ WHERE NOT EXISTS (SELECT 1 FROM ops_tasks WHERE title = 'Community Marketing');
 INSERT INTO ops_tasks (title, description, is_special)
 SELECT 'Booth Activation', 'Track booth activation proposals, budgets, liquidation, and final reports.', false
 WHERE NOT EXISTS (SELECT 1 FROM ops_tasks WHERE title = 'Booth Activation');
+
+-- ============================================================
+-- CALENDAR MODULE (general team events: meetings, deadlines, reminders)
+-- ============================================================
+CREATE TABLE IF NOT EXISTS calendar_events (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  date TEXT NOT NULL,
+  title TEXT NOT NULL DEFAULT '',
+  time TEXT,
+  details TEXT DEFAULT '',
+  attendees TEXT[] DEFAULT '{}',
+  created_by UUID REFERENCES auth.users(id),
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  is_deleted BOOLEAN NOT NULL DEFAULT false
+);
+
+CREATE INDEX IF NOT EXISTS idx_calendar_events_date ON calendar_events(date);
+
+-- Realtime (postgres_changes) enforces RLS — this policy must exist before the
+-- client subscribes, or live updates silently stop delivering with no error.
+-- All writes go through supabaseAdmin (service role) in the API routes, which
+-- bypasses RLS regardless of this policy.
+ALTER TABLE calendar_events ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "authenticated_read" ON calendar_events FOR SELECT TO authenticated USING (true);
+
+-- Allow the 'calendar' module in module_permissions
+ALTER TABLE module_permissions DROP CONSTRAINT IF EXISTS module_permissions_module_check;
+ALTER TABLE module_permissions ADD CONSTRAINT module_permissions_module_check
+  CHECK (module IN ('dashboard', 'sss_data', 'members', 'performance', 'store_directory', 'ai_report', 'marketing_efforts', 'locked_retailers', 'operations', 'calendar'));
