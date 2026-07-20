@@ -52,7 +52,8 @@ export async function PATCH(request: NextRequest) {
   const { id } = body
   if (!id) return NextResponse.json({ error: 'id is required.' }, { status: 400 })
 
-  const { data: existing } = await supabaseAdmin.from('calendar_events').select('created_by').eq('id', id).maybeSingle()
+  const { data: existing, error: fetchError } = await supabaseAdmin.from('calendar_events').select('created_by').eq('id', id).maybeSingle()
+  if (fetchError) return NextResponse.json({ error: fetchError.message }, { status: 500 })
   if (!existing) return NextResponse.json({ error: 'Event not found.' }, { status: 404 })
   if (auth.access.role !== 'admin' && existing.created_by !== auth.userId) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
@@ -78,7 +79,8 @@ export async function DELETE(request: NextRequest) {
   const { id, permanent } = await request.json()
   if (!id) return NextResponse.json({ error: 'id is required.' }, { status: 400 })
 
-  const { data: existing } = await supabaseAdmin.from('calendar_events').select('created_by').eq('id', id).maybeSingle()
+  const { data: existing, error: fetchError } = await supabaseAdmin.from('calendar_events').select('created_by').eq('id', id).maybeSingle()
+  if (fetchError) return NextResponse.json({ error: fetchError.message }, { status: 500 })
   if (!existing) return NextResponse.json({ error: 'Event not found.' }, { status: 404 })
 
   if (permanent) {
