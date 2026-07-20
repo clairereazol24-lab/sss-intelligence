@@ -249,6 +249,11 @@ CREATE INDEX IF NOT EXISTS idx_calendar_events_date ON calendar_events(date);
 ALTER TABLE calendar_events ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "authenticated_read" ON calendar_events FOR SELECT TO authenticated USING (true);
 
+-- RLS alone is not sufficient for postgres_changes — the table must also be a
+-- member of the supabase_realtime publication, or the client's channel subscribes
+-- successfully but never receives any events (no error either — it just goes quiet).
+ALTER PUBLICATION supabase_realtime ADD TABLE calendar_events;
+
 -- Allow the 'calendar' module in module_permissions
 ALTER TABLE module_permissions DROP CONSTRAINT IF EXISTS module_permissions_module_check;
 ALTER TABLE module_permissions ADD CONSTRAINT module_permissions_module_check
