@@ -41,21 +41,15 @@ export default function CalendarClient({
   initialEvents,
   initialYear,
   initialMonth,
-  initialIsAdmin,
-  initialUserId,
 }: {
   initialEvents: CalendarEvent[]
   initialYear: number
   initialMonth: number
-  initialIsAdmin?: boolean
-  initialUserId?: string
 }) {
   const [year, setYear] = useState(initialYear)
   const [month, setMonth] = useState(initialMonth)
   const [events, setEvents] = useState<CalendarEvent[]>(initialEvents)
   const [loading, setLoading] = useState(false)
-  const [isAdmin, setIsAdmin] = useState(!!initialIsAdmin)
-  const [userId, setUserId] = useState(initialUserId ?? '')
   const [users, setUsers] = useState<ProfileUser[]>([])
 
   const [panelMode, setPanelMode] = useState<PanelMode>('closed')
@@ -73,8 +67,6 @@ export default function CalendarClient({
     const data = await res.json()
     const freshEvents: CalendarEvent[] = data.events || []
     setEvents(freshEvents)
-    setIsAdmin(!!data.isAdmin)
-    setUserId(data.userId || '')
     setLoading(false)
     return freshEvents
   }
@@ -225,7 +217,7 @@ export default function CalendarClient({
     setDeleting(false)
   }
 
-  const canEditCurrent = isAdmin || (editingId ? events.find((e) => e.id === editingId)?.created_by === userId : true)
+  const canEditCurrent = true
   const canEditForm = panelMode === 'create' || canEditCurrent
 
   return (

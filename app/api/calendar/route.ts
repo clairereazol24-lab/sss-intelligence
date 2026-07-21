@@ -15,7 +15,7 @@ export async function GET(request: NextRequest) {
   }
 
   const events = await fetchCalendarEvents(year, month)
-  return NextResponse.json({ events, isAdmin: auth.access.role === 'admin', userId: auth.userId })
+  return NextResponse.json({ events })
 }
 
 export async function POST(request: NextRequest) {
@@ -52,12 +52,9 @@ export async function PATCH(request: NextRequest) {
   const { id } = body
   if (!id) return NextResponse.json({ error: 'id is required.' }, { status: 400 })
 
-  const { data: existing, error: fetchError } = await supabaseAdmin.from('calendar_events').select('created_by').eq('id', id).maybeSingle()
+  const { data: existing, error: fetchError } = await supabaseAdmin.from('calendar_events').select('id').eq('id', id).maybeSingle()
   if (fetchError) return NextResponse.json({ error: fetchError.message }, { status: 500 })
   if (!existing) return NextResponse.json({ error: 'Event not found.' }, { status: 404 })
-  if (auth.access.role !== 'admin' && existing.created_by !== auth.userId) {
-    return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
-  }
 
   const updates: Record<string, unknown> = {}
   if ('title' in body) updates.title = String(body.title).trim()
@@ -79,13 +76,10 @@ export async function DELETE(request: NextRequest) {
   const { id } = await request.json()
   if (!id) return NextResponse.json({ error: 'id is required.' }, { status: 400 })
 
-  const { data: existing, error: fetchError } = await supabaseAdmin.from('calendar_events').select('created_by').eq('id', id).maybeSingle()
+  const { data: existing, error: fetchError } = await supabaseAdmin.from('calendar_events').select('id').eq('id', id).maybeSingle()
   if (fetchError) return NextResponse.json({ error: fetchError.message }, { status: 500 })
   if (!existing) return NextResponse.json({ error: 'Event not found.' }, { status: 404 })
 
-  if (auth.access.role !== 'admin' && existing.created_by !== auth.userId) {
-    return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
-  }
   const { error } = await supabaseAdmin.from('calendar_events').update({ is_deleted: true }).eq('id', id)
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 

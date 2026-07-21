@@ -15,8 +15,6 @@ export default async function Page() {
       initialEvents={initialEvents}
       initialYear={year}
       initialMonth={month}
-      initialIsAdmin={auth?.access.role === 'admin'}
-      initialUserId={auth?.userId}
     />
   )
 }
