@@ -35,6 +35,7 @@ export async function POST(request: NextRequest) {
       time: body.time || null,
       details: body.details || '',
       attendees: Array.isArray(body.attendees) ? body.attendees : [],
+      remarks: body.remarks || '',
       created_by: auth.userId,
     })
     .select('*')
@@ -62,6 +63,7 @@ export async function PATCH(request: NextRequest) {
   if ('time' in body) updates.time = body.time || null
   if ('details' in body) updates.details = body.details || ''
   if ('attendees' in body) updates.attendees = Array.isArray(body.attendees) ? body.attendees : []
+  if ('remarks' in body) updates.remarks = body.remarks || ''
 
   const { data, error } = await supabaseAdmin.from('calendar_events').update(updates).eq('id', id).select('*').single()
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })

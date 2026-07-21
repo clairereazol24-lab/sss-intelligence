@@ -235,10 +235,13 @@ CREATE TABLE IF NOT EXISTS calendar_events (
   time TEXT,
   details TEXT DEFAULT '',
   attendees TEXT[] DEFAULT '{}',
+  remarks TEXT DEFAULT '',
   created_by UUID REFERENCES auth.users(id),
   created_at TIMESTAMPTZ DEFAULT NOW(),
   is_deleted BOOLEAN NOT NULL DEFAULT false
 );
+
+ALTER TABLE calendar_events ADD COLUMN IF NOT EXISTS remarks TEXT DEFAULT '';
 
 CREATE INDEX IF NOT EXISTS idx_calendar_events_date ON calendar_events(date);
 

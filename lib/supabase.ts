@@ -126,6 +126,7 @@ export type CalendarEvent = {
   time: string | null
   details: string
   attendees: string[]
+  remarks: string
   created_by: string | null
   created_at: string
 }

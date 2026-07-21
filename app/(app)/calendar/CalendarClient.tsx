@@ -4,12 +4,12 @@ import { supabase } from '@/lib/supabase'
 import type { CalendarEvent } from '@/lib/supabase'
 
 type PanelMode = 'closed' | 'list' | 'create' | 'edit'
-type EventForm = { date: string; title: string; time: string; details: string; attendees: string[] }
+type EventForm = { date: string; title: string; time: string; details: string; attendees: string[]; remarks: string }
 type ProfileUser = { id: string; username: string; name: string | null }
 
 const DAYS_SHORT = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
 const MONTHS_FULL = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
-const BLANK_EVENT: EventForm = { date: '', title: '', time: '', details: '', attendees: [] }
+const BLANK_EVENT: EventForm = { date: '', title: '', time: '', details: '', attendees: [], remarks: '' }
 
 function getCalendarDays(year: number, month: number): (number | null)[] {
   const firstDay = new Date(year, month - 1, 1).getDay()
@@ -128,7 +128,7 @@ export default function CalendarClient({
   }
 
   function openFromList(ev: CalendarEvent) {
-    setForm({ date: ev.date, title: ev.title, time: ev.time ?? '', details: ev.details ?? '', attendees: ev.attendees ?? [] })
+    setForm({ date: ev.date, title: ev.title, time: ev.time ?? '', details: ev.details ?? '', attendees: ev.attendees ?? [], remarks: ev.remarks ?? '' })
     setEditingId(ev.id)
     setFormError(null)
     setPanelMode('edit')
@@ -347,6 +347,10 @@ export default function CalendarClient({
                     </select>
                     )}
                   </div>
+                </div>
+                <div>
+                  <label className="block text-[11px] font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500 mb-1">Remarks <span className="normal-case font-normal">(optional)</span></label>
+                  <textarea value={form.remarks} onChange={(e) => setField('remarks', e.target.value)} rows={3} placeholder="Comments, updates…" disabled={!canEditForm} className="w-full text-sm rounded-lg border border-gray-200 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 px-3 py-2 outline-none resize-none focus:ring-2 focus:ring-blue-300 disabled:opacity-50 disabled:cursor-not-allowed" />
                 </div>
                 {formError && <p className="text-xs text-red-500 dark:text-red-400 bg-red-50 dark:bg-red-900/20 rounded-lg px-3 py-2">{formError}</p>}
               </div>
