@@ -76,24 +76,18 @@ export async function DELETE(request: NextRequest) {
   const auth = await requireCalendarAccess()
   if (!auth) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
-  const { id, permanent } = await request.json()
+  const { id } = await request.json()
   if (!id) return NextResponse.json({ error: 'id is required.' }, { status: 400 })
 
   const { data: existing, error: fetchError } = await supabaseAdmin.from('calendar_events').select('created_by').eq('id', id).maybeSingle()
   if (fetchError) return NextResponse.json({ error: fetchError.message }, { status: 500 })
   if (!existing) return NextResponse.json({ error: 'Event not found.' }, { status: 404 })
 
-  if (permanent) {
-    if (auth.access.role !== 'admin') return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
-    const { error } = await supabaseAdmin.from('calendar_events').delete().eq('id', id)
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-  } else {
-    if (auth.access.role !== 'admin' && existing.created_by !== auth.userId) {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
-    }
-    const { error } = await supabaseAdmin.from('calendar_events').update({ is_deleted: true }).eq('id', id)
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  if (auth.access.role !== 'admin' && existing.created_by !== auth.userId) {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   }
+  const { error } = await supabaseAdmin.from('calendar_events').update({ is_deleted: true }).eq('id', id)
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
   return NextResponse.json({ success: true })
 }

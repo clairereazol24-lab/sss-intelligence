@@ -206,15 +206,14 @@ export default function CalendarClient({
     setSaving(false)
   }
 
-  async function handleDelete(permanent: boolean) {
+  async function handleDelete() {
     if (!editingId) return
-    const message = permanent ? 'Permanently delete this event? This cannot be undone.' : 'Delete this event?'
-    if (!confirm(message)) return
+    if (!confirm('Delete this event?')) return
     setDeleting(true)
     const res = await fetch('/api/calendar', {
       method: 'DELETE',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ id: editingId, permanent }),
+      body: JSON.stringify({ id: editingId }),
     })
     if (res.ok) {
       await fetchEvents(year, month)
@@ -361,16 +360,9 @@ export default function CalendarClient({
 
               <div className="flex items-center gap-2 px-5 py-4 border-t border-gray-100 dark:border-gray-700 flex-shrink-0">
                 {panelMode === 'edit' && canEditCurrent && (
-                  <>
-                    <button onClick={() => handleDelete(false)} disabled={deleting || saving} className="px-3 py-2 text-xs font-semibold text-red-500 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition disabled:opacity-50">
-                      {deleting ? 'Deleting…' : 'Delete'}
-                    </button>
-                    {isAdmin && (
-                      <button onClick={() => handleDelete(true)} disabled={deleting || saving} className="px-3 py-2 text-xs font-semibold text-red-700 dark:text-red-300 border border-red-300 dark:border-red-700 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition disabled:opacity-50">
-                        Permanently Delete
-                      </button>
-                    )}
-                  </>
+                  <button onClick={handleDelete} disabled={deleting || saving} className="px-3 py-2 text-xs font-semibold text-red-500 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition disabled:opacity-50">
+                    {deleting ? 'Deleting…' : 'Delete'}
+                  </button>
                 )}
                 <div className="flex-1" />
                 <button onClick={backToList} disabled={saving || deleting} className="px-3 py-2 text-xs font-semibold text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition disabled:opacity-50">Cancel</button>
