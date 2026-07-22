@@ -45,19 +45,44 @@ CREATE TABLE IF NOT EXISTS performance_data (
 );
 
 -- ============================================================
--- MARKETING EFFORTS TABLE
+-- MARKETING EFFORTS TABLE (rebuilt 2026-07-22 as "Marketing Performance":
+-- logs store visits and computes Before/After SSS Data live, split at
+-- date_visit — see docs/superpowers/specs/2026-07-22-marketing-performance-design.md)
 -- ============================================================
 CREATE TABLE IF NOT EXISTS marketing_efforts (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-  date DATE NOT NULL,
-  location VARCHAR(200),
-  store_name VARCHAR(200),
-  sub_affiliate VARCHAR(100),
-  activities_done TEXT,
-  headcount INTEGER DEFAULT 0,
-  notes TEXT,
+  date_visit DATE NOT NULL DEFAULT CURRENT_DATE,
+  partner VARCHAR(100),
+  dsp VARCHAR(200),
+  sub_affiliate VARCHAR(100) NOT NULL,
+  sub_affiliate_name VARCHAR(200),
+  marketing_type VARCHAR(20) NOT NULL CHECK (marketing_type IN ('Community', 'Booth Activation')),
+  created_by UUID REFERENCES auth.users(id),
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
+
+-- Migration for the LIVE table (table confirmed empty, 0 rows, as of
+-- 2026-07-22 — safe to drop columns with no data loss):
+ALTER TABLE marketing_efforts DROP COLUMN IF EXISTS date;
+ALTER TABLE marketing_efforts DROP COLUMN IF EXISTS location;
+ALTER TABLE marketing_efforts DROP COLUMN IF EXISTS store_name;
+ALTER TABLE marketing_efforts DROP COLUMN IF EXISTS activities_done;
+ALTER TABLE marketing_efforts DROP COLUMN IF EXISTS headcount;
+ALTER TABLE marketing_efforts DROP COLUMN IF EXISTS notes;
+ALTER TABLE marketing_efforts DROP COLUMN IF EXISTS report_file_url;
+ALTER TABLE marketing_efforts DROP COLUMN IF EXISTS report_file_name;
+ALTER TABLE marketing_efforts DROP COLUMN IF EXISTS report_file_type;
+ALTER TABLE marketing_efforts DROP COLUMN IF EXISTS total_deposit;
+ALTER TABLE marketing_efforts ADD COLUMN IF NOT EXISTS date_visit DATE NOT NULL DEFAULT CURRENT_DATE;
+ALTER TABLE marketing_efforts ADD COLUMN IF NOT EXISTS partner VARCHAR(100);
+ALTER TABLE marketing_efforts ADD COLUMN IF NOT EXISTS dsp VARCHAR(200);
+ALTER TABLE marketing_efforts ADD COLUMN IF NOT EXISTS sub_affiliate VARCHAR(100) NOT NULL DEFAULT '';
+ALTER TABLE marketing_efforts ADD COLUMN IF NOT EXISTS sub_affiliate_name VARCHAR(200);
+ALTER TABLE marketing_efforts ADD COLUMN IF NOT EXISTS marketing_type VARCHAR(20) NOT NULL DEFAULT 'Community'
+  CHECK (marketing_type IN ('Community', 'Booth Activation'));
+ALTER TABLE marketing_efforts ADD COLUMN IF NOT EXISTS created_by UUID REFERENCES auth.users(id);
+CREATE INDEX IF NOT EXISTS idx_marketing_sub_affiliate ON marketing_efforts(sub_affiliate, partner);
+CREATE INDEX IF NOT EXISTS idx_marketing_date_visit ON marketing_efforts(date_visit);
 
 -- ============================================================
 -- PERFORMANCE DATA: updated_at (tracks value changes on upsert,
@@ -107,8 +132,6 @@ CREATE INDEX IF NOT EXISTS idx_perf_sub ON performance_data(sub_affiliate);
 CREATE INDEX IF NOT EXISTS idx_perf_partner ON performance_data(partner);
 CREATE INDEX IF NOT EXISTS idx_perf_dsp ON performance_data(dsp);
 CREATE INDEX IF NOT EXISTS idx_stores_status ON stores(deployment_status);
-CREATE INDEX IF NOT EXISTS idx_marketing_date ON marketing_efforts(date);
-CREATE INDEX IF NOT EXISTS idx_marketing_store ON marketing_efforts(sub_affiliate);
 
 -- ============================================================
 -- DISABLE RLS (enable later when you add authentication)
