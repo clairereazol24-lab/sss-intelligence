@@ -32,10 +32,16 @@ export default function MarketingEffortsPage() {
 
   const fetchVisits = async () => {
     setLoading(true)
-    const res = await fetch('/api/marketing-efforts')
-    const data = await res.json()
-    setVisits(Array.isArray(data) ? data : [])
-    setLoading(false)
+    try {
+      const res = await fetch('/api/marketing-efforts')
+      if (!res.ok) { setError('Failed to load visits.'); return }
+      const data = await res.json()
+      setVisits(Array.isArray(data) ? data : [])
+    } catch {
+      setError('Network error while loading visits.')
+    } finally {
+      setLoading(false)
+    }
   }
 
   useEffect(() => { fetchVisits() }, [])
@@ -44,29 +50,34 @@ export default function MarketingEffortsPage() {
     setError('')
     if (!store) { setError('Pick a store first.'); return }
     setSaving(true)
-    const res = await fetch('/api/marketing-efforts', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        date_visit: dateVisit,
-        partner: store.partner,
-        dsp: store.dsp,
-        sub_affiliate: store.sub_affiliate,
-        sub_affiliate_name: store.store_name,
-        marketing_type: marketingType,
-      }),
-    })
-    setSaving(false)
-    if (!res.ok) {
-      const j = await res.json().catch(() => ({}))
-      setError(j.error ?? 'Failed to save.')
-      return
+    try {
+      const res = await fetch('/api/marketing-efforts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          date_visit: dateVisit,
+          partner: store.partner,
+          dsp: store.dsp,
+          sub_affiliate: store.sub_affiliate,
+          sub_affiliate_name: store.store_name,
+          marketing_type: marketingType,
+        }),
+      })
+      if (!res.ok) {
+        const j = await res.json().catch(() => ({}))
+        setError(j.error ?? 'Failed to save.')
+        return
+      }
+      setModal(false)
+      setStore(null)
+      setDateVisit(new Date().toISOString().slice(0, 10))
+      setMarketingType('Community')
+      fetchVisits()
+    } catch {
+      setError('Network error while saving.')
+    } finally {
+      setSaving(false)
     }
-    setModal(false)
-    setStore(null)
-    setDateVisit(new Date().toISOString().slice(0, 10))
-    setMarketingType('Community')
-    fetchVisits()
   }
 
   const filtered = useMemo(() => {
