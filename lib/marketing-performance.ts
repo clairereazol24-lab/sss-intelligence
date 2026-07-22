@@ -55,6 +55,7 @@ export async function attachBeforeAfterMetrics(visits: MarketingVisit[]): Promis
       .from('performance_data')
       .select('sub_affiliate, partner, period, total_deposit, company_net_win')
       .in('sub_affiliate', subAffiliates)
+      .order('id', { ascending: true })
       .range(from, to)
   )
 
@@ -63,6 +64,7 @@ export async function attachBeforeAfterMetrics(visits: MarketingVisit[]): Promis
       .from('members')
       .select('username, sub_affiliate, partner, registered_time')
       .in('sub_affiliate', subAffiliates)
+      .order('id', { ascending: true })
       .range(from, to)
   )
 
