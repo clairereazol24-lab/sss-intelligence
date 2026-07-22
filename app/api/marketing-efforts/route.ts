@@ -55,6 +55,7 @@ export async function POST(request: NextRequest) {
       sub_affiliate,
       sub_affiliate_name: sub_affiliate_name ?? null,
       marketing_type,
+      created_by: auth.userId,
     })
     .select()
     .single()
