@@ -1,10 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin as supabase } from '@/lib/supabase-admin'
 import { attachBeforeAfterMetrics, type MarketingVisit } from '@/lib/marketing-performance'
+import { requireMarketingAccess } from '@/lib/marketing-access'
 
 const PAGE = 1000
 
 export async function GET() {
+  const auth = await requireMarketingAccess()
+  if (!auth) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+
   const rows: MarketingVisit[] = []
   let start = 0
   while (true) {
@@ -29,6 +33,9 @@ export async function GET() {
 }
 
 export async function POST(request: NextRequest) {
+  const auth = await requireMarketingAccess()
+  if (!auth) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+
   const body = await request.json()
   const { date_visit, partner, dsp, sub_affiliate, sub_affiliate_name, marketing_type } = body
 
