@@ -20,6 +20,7 @@ export default function AccountsPage() {
   const [error, setError] = useState('')
   const [saving, setSaving] = useState(false)
   const [deletingId, setDeletingId] = useState<string | null>(null)
+  const [deleteTarget, setDeleteTarget] = useState<Account | null>(null)
 
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editUsername, setEditUsername] = useState('')
@@ -113,8 +114,10 @@ export default function AccountsPage() {
     setAddUsername(''); setAddName(''); setAddPassword(''); setAddModules([])
   }
 
-  const handleDelete = async (acct: Account) => {
-    if (!confirm(`Delete the account for ${acct.username}? This cannot be undone.`)) return
+  const confirmDelete = async () => {
+    if (!deleteTarget) return
+    const acct = deleteTarget
+    setDeleteTarget(null)
     setDeletingId(acct.id)
     setError('')
     try {
@@ -236,7 +239,7 @@ export default function AccountsPage() {
                       <div className="flex gap-2">
                         <button onClick={() => startEdit(acct)} className={btnSecondary}>Edit</button>
                         <button
-                          onClick={() => handleDelete(acct)}
+                          onClick={() => setDeleteTarget(acct)}
                           disabled={deletingId === acct.id}
                           className="border border-red-200 dark:border-red-800 text-red-500 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 disabled:opacity-50 font-medium px-3 py-1.5 rounded-lg text-xs transition-colors"
                         >
@@ -277,6 +280,28 @@ export default function AccountsPage() {
           </table>
         )}
       </div>
+
+      {deleteTarget && (
+        <div
+          className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4"
+          onClick={(e) => e.target === e.currentTarget && setDeleteTarget(null)}
+        >
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg w-full max-w-sm p-5">
+            <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">Delete this account?</p>
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+              {deleteTarget.username} — this can&apos;t be undone.
+            </p>
+            <div className="flex items-center justify-end gap-2 mt-4">
+              <button onClick={() => setDeleteTarget(null)} className="px-3 py-2 text-xs font-semibold text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition">
+                Cancel
+              </button>
+              <button onClick={confirmDelete} className="px-3 py-2 text-xs font-semibold text-white bg-red-600 hover:bg-red-700 rounded-lg transition">
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

@@ -1,4 +1,5 @@
 'use client'
+import { useState } from 'react'
 import type { VisitWithMetrics } from '@/lib/marketing-performance'
 
 function fmt(n: number) {
@@ -27,10 +28,25 @@ export default function VisitDrawer({ visit, onClose, onDeleted }: {
   onClose: () => void
   onDeleted: (id: string) => void
 }) {
-  const handleDelete = async () => {
-    if (!confirm(`Delete this visit entry for ${visit.sub_affiliate_name || visit.sub_affiliate}?`)) return
-    const res = await fetch(`/api/marketing-efforts/${visit.id}`, { method: 'DELETE' })
-    if (res.ok) onDeleted(visit.id)
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
+  const [deleting, setDeleting] = useState(false)
+  const [deleteError, setDeleteError] = useState('')
+
+  const confirmDelete = async () => {
+    setDeleteConfirmOpen(false)
+    setDeleting(true)
+    try {
+      const res = await fetch(`/api/marketing-efforts/${visit.id}`, { method: 'DELETE' })
+      if (res.ok) {
+        onDeleted(visit.id)
+      } else {
+        setDeleteError('Failed to delete.')
+      }
+    } catch {
+      setDeleteError('Network error. Please try again.')
+    } finally {
+      setDeleting(false)
+    }
   }
 
   return (
@@ -77,11 +93,38 @@ export default function VisitDrawer({ visit, onClose, onDeleted }: {
         </div>
 
         <div className="p-5 border-t border-gray-100 dark:border-gray-700">
-          <button onClick={handleDelete} className="w-full text-sm text-red-600 border border-red-200 dark:border-red-800 rounded-lg px-4 py-2 hover:bg-red-50 dark:hover:bg-red-950/30">
-            Delete this visit
+          {deleteError && <p className="text-xs text-red-600 mb-2">{deleteError}</p>}
+          <button
+            onClick={() => setDeleteConfirmOpen(true)}
+            disabled={deleting}
+            className="w-full text-sm text-red-600 border border-red-200 dark:border-red-800 rounded-lg px-4 py-2 hover:bg-red-50 dark:hover:bg-red-950/30 disabled:opacity-50"
+          >
+            {deleting ? 'Deleting…' : 'Delete this visit'}
           </button>
         </div>
       </div>
+
+      {deleteConfirmOpen && (
+        <div
+          className="fixed inset-0 bg-black/40 flex items-center justify-center z-[60] p-4"
+          onClick={(e) => e.target === e.currentTarget && setDeleteConfirmOpen(false)}
+        >
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg w-full max-w-sm p-5">
+            <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">Delete this visit?</p>
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+              {visit.sub_affiliate_name || visit.sub_affiliate} — this can&apos;t be undone.
+            </p>
+            <div className="flex items-center justify-end gap-2 mt-4">
+              <button onClick={() => setDeleteConfirmOpen(false)} className="px-3 py-2 text-xs font-semibold text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition">
+                Cancel
+              </button>
+              <button onClick={confirmDelete} className="px-3 py-2 text-xs font-semibold text-white bg-red-600 hover:bg-red-700 rounded-lg transition">
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   )
 }

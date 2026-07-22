@@ -66,6 +66,7 @@ export default function TaskDetailClient({ taskId, onClose, initialTitle, initia
   const [saving, setSaving] = useState(false)
   const [showActivity, setShowActivity] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
   const [updates, setUpdates] = useState<OpsUpdate[]>([])
   const [updateBody, setUpdateBody] = useState('')
   const [postingUpdate, setPostingUpdate] = useState(false)
@@ -228,8 +229,8 @@ export default function TaskDetailClient({ taskId, onClose, initialTitle, initia
     fetchDetail()
   }
 
-  const handleDelete = async () => {
-    if (!confirm('Delete this Special Task? This cannot be undone.')) return
+  const confirmDelete = async () => {
+    setDeleteConfirmOpen(false)
     setError(null)
     const res = await fetch(`/api/operations/${taskId}`, { method: 'DELETE' })
     if (!res.ok) {
@@ -371,7 +372,7 @@ export default function TaskDetailClient({ taskId, onClose, initialTitle, initia
                     {task.is_archived ? 'Restore' : 'Archive'}
                   </button>
                 )}
-                {task.is_special && <button onClick={handleDelete} className="text-xs text-red-400 hover:text-red-600">Delete</button>}
+                {task.is_special && <button onClick={() => setDeleteConfirmOpen(true)} className="text-xs text-red-400 hover:text-red-600">Delete</button>}
               </div>
             )}
           </div>
@@ -494,6 +495,26 @@ export default function TaskDetailClient({ taskId, onClose, initialTitle, initia
           </div>
         )}
       </div>
+
+      {deleteConfirmOpen && (
+        <div
+          className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4"
+          onClick={(e) => e.target === e.currentTarget && setDeleteConfirmOpen(false)}
+        >
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg w-full max-w-sm p-5">
+            <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">Delete this Special Task?</p>
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">This can&apos;t be undone.</p>
+            <div className="flex items-center justify-end gap-2 mt-4">
+              <button onClick={() => setDeleteConfirmOpen(false)} className="px-3 py-2 text-xs font-semibold text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition">
+                Cancel
+              </button>
+              <button onClick={confirmDelete} className="px-3 py-2 text-xs font-semibold text-white bg-red-600 hover:bg-red-700 rounded-lg transition">
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
