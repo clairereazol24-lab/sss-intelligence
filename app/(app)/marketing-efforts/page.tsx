@@ -1,225 +1,174 @@
 'use client'
-import { useEffect, useState } from 'react'
-import { supabase } from '@/lib/supabase'
+import { useEffect, useMemo, useState } from 'react'
+import StorePicker, { type StoreOption } from './StorePicker'
+import VisitDrawer from './VisitDrawer'
+import type { VisitWithMetrics } from '@/lib/marketing-performance'
 
-type Effort = {
-  id: string
-  date: string
-  location: string
-  store_name: string
-  sub_affiliate: string
-  activities_done: string
-  headcount: number
-  total_deposit: number
-  notes: string
-  report_file_url: string | null
-  report_file_name: string | null
-  report_file_type: string | null
+function fmt(n: number) {
+  return `₱${n.toLocaleString('en-PH', { maximumFractionDigits: 0 })}`
+}
+
+function DeltaCell({ before, after, money }: { before: number; after: number; money: boolean }) {
+  const delta = after - before
+  return (
+    <span className={delta >= 0 ? 'text-green-600' : 'text-red-500'}>
+      {delta >= 0 ? '+' : ''}{money ? fmt(delta) : delta.toLocaleString()}
+    </span>
+  )
 }
 
 export default function MarketingEffortsPage() {
-  const [efforts, setEfforts] = useState<Effort[]>([])
+  const [visits, setVisits] = useState<VisitWithMetrics[]>([])
   const [loading, setLoading] = useState(true)
   const [modal, setModal] = useState(false)
   const [saving, setSaving] = useState(false)
-  const [form, setForm] = useState({ date: '', location: '', store_name: '', sub_affiliate: '', activities_done: '', headcount: '', total_deposit: '', notes: '' })
+  const [error, setError] = useState('')
   const [search, setSearch] = useState('')
-  const [reportFile, setReportFile] = useState<File | null>(null)
-  const [fileError, setFileError] = useState('')
+  const [selected, setSelected] = useState<VisitWithMetrics | null>(null)
 
-  const handleFileSelect = (f: File | null) => {
-    setFileError('')
-    if (!f) { setReportFile(null); return }
-    const ext = f.name.toLowerCase().split('.').pop()
-    if (ext !== 'pdf' && ext !== 'docx') {
-      setFileError('Only .pdf and .docx files are supported.')
-      setReportFile(null)
-      return
-    }
-    setReportFile(f)
-  }
+  const [store, setStore] = useState<StoreOption | null>(null)
+  const [dateVisit, setDateVisit] = useState(() => new Date().toISOString().slice(0, 10))
+  const [marketingType, setMarketingType] = useState<'Community' | 'Booth Activation'>('Community')
 
-  const fetchEfforts = async () => {
+  const fetchVisits = async () => {
     setLoading(true)
-    const res = await fetch('/api/marketing')
+    const res = await fetch('/api/marketing-efforts')
     const data = await res.json()
-    setEfforts(data)
+    setVisits(Array.isArray(data) ? data : [])
     setLoading(false)
   }
 
-  useEffect(() => { fetchEfforts() }, [])
+  useEffect(() => { fetchVisits() }, [])
 
   const handleSave = async () => {
+    setError('')
+    if (!store) { setError('Pick a store first.'); return }
     setSaving(true)
-
-    let report_file_url: string | null = null
-    let report_file_name: string | null = null
-    let report_file_type: string | null = null
-
-    if (reportFile) {
-      const ext = reportFile.name.toLowerCase().split('.').pop()
-      const path = `${crypto.randomUUID()}.${ext}`
-      const { error: uploadError } = await supabase.storage.from('marketing-reports').upload(path, reportFile)
-      if (uploadError) {
-        setFileError(`Upload failed: ${uploadError.message}`)
-        setSaving(false)
-        return
-      }
-      const { data: urlData } = supabase.storage.from('marketing-reports').getPublicUrl(path)
-      report_file_url = urlData.publicUrl
-      report_file_name = reportFile.name
-      report_file_type = ext || null
-    }
-
-    await fetch('/api/marketing', {
+    const res = await fetch('/api/marketing-efforts', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        ...form,
-        headcount: parseInt(form.headcount) || 0,
-        total_deposit: parseFloat(form.total_deposit) || 0,
-        report_file_url,
-        report_file_name,
-        report_file_type,
+        date_visit: dateVisit,
+        partner: store.partner,
+        dsp: store.dsp,
+        sub_affiliate: store.sub_affiliate,
+        sub_affiliate_name: store.store_name,
+        marketing_type: marketingType,
       }),
     })
     setSaving(false)
+    if (!res.ok) {
+      const j = await res.json().catch(() => ({}))
+      setError(j.error ?? 'Failed to save.')
+      return
+    }
     setModal(false)
-    setForm({ date: '', location: '', store_name: '', sub_affiliate: '', activities_done: '', headcount: '', total_deposit: '', notes: '' })
-    setReportFile(null)
-    setFileError('')
-    fetchEfforts()
+    setStore(null)
+    setDateVisit(new Date().toISOString().slice(0, 10))
+    setMarketingType('Community')
+    fetchVisits()
   }
 
-  const handleDelete = async (id: string) => {
-    if (!confirm('Delete this entry?')) return
-    await fetch(`/api/marketing?id=${id}`, { method: 'DELETE' })
-    fetchEfforts()
-  }
-
-  const filtered = efforts.filter(e =>
-    !search ||
-    e.store_name?.toLowerCase().includes(search.toLowerCase()) ||
-    e.location?.toLowerCase().includes(search.toLowerCase())
-  )
+  const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase()
+    if (!q) return visits
+    return visits.filter(v =>
+      v.sub_affiliate_name?.toLowerCase().includes(q) ||
+      v.sub_affiliate?.toLowerCase().includes(q) ||
+      v.partner?.toLowerCase().includes(q) ||
+      v.marketing_type?.toLowerCase().includes(q)
+    )
+  }, [visits, search])
 
   return (
     <div className="p-6">
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-gray-800 dark:text-gray-100">Marketing Efforts</h1>
-          <p className="text-sm text-gray-500 dark:text-gray-400">Booth activations and field activities</p>
+          <h1 className="text-2xl font-bold text-gray-800 dark:text-gray-100">Marketing Performance</h1>
+          <p className="text-sm text-gray-500 dark:text-gray-400">Store visits mapped to before/after SSS Data</p>
         </div>
-        <button onClick={() => setModal(true)} className="bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors">+ Add Entry</button>
+        <button onClick={() => setModal(true)} className="bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors">+ Add Visit</button>
       </div>
 
       <div className="mb-4">
-        <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search by store or location..." className="border border-gray-200 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg px-3 py-2 text-sm w-full max-w-xs" />
+        <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search store, partner, or marketing type..." className="border border-gray-200 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg px-3 py-2 text-sm w-full max-w-sm" />
       </div>
 
-      <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
-        <table className="w-full text-sm">
+      <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden overflow-x-auto">
+        <table className="w-full text-sm" style={{ minWidth: '1000px' }}>
           <thead>
             <tr className="bg-gray-50 dark:bg-gray-700 text-left">
-              <th className="px-4 py-3 text-gray-500 dark:text-gray-400 font-medium">Date</th>
+              <th className="px-4 py-3 text-gray-500 dark:text-gray-400 font-medium">Date Visit</th>
               <th className="px-4 py-3 text-gray-500 dark:text-gray-400 font-medium">Store</th>
-              <th className="px-4 py-3 text-gray-500 dark:text-gray-400 font-medium">Location</th>
-              <th className="px-4 py-3 text-gray-500 dark:text-gray-400 font-medium">Activities</th>
-              <th className="px-4 py-3 text-gray-500 dark:text-gray-400 font-medium text-center">Registration</th>
-              <th className="px-4 py-3 text-gray-500 dark:text-gray-400 font-medium text-right">Total Deposit</th>
-              <th className="px-4 py-3 text-gray-500 dark:text-gray-400 font-medium">Notes</th>
-              <th className="px-4 py-3 text-gray-500 dark:text-gray-400 font-medium">Report</th>
-              <th className="px-4 py-3"></th>
+              <th className="px-4 py-3 text-gray-500 dark:text-gray-400 font-medium">Partner</th>
+              <th className="px-4 py-3 text-gray-500 dark:text-gray-400 font-medium">Marketing Type</th>
+              <th className="px-4 py-3 text-gray-500 dark:text-gray-400 font-medium text-right">Deposit (Δ)</th>
+              <th className="px-4 py-3 text-gray-500 dark:text-gray-400 font-medium text-right">GGR (Δ)</th>
+              <th className="px-4 py-3 text-gray-500 dark:text-gray-400 font-medium text-right">Members (Δ)</th>
             </tr>
           </thead>
           <tbody>
             {loading ? (
-              <tr><td colSpan={9} className="px-4 py-12 text-center text-gray-400 dark:text-gray-500">Loading...</td></tr>
+              <tr><td colSpan={7} className="px-4 py-12 text-center text-gray-400 dark:text-gray-500">Loading...</td></tr>
             ) : filtered.length === 0 ? (
-              <tr><td colSpan={9} className="px-4 py-12 text-center text-gray-400 dark:text-gray-500">No entries yet. Add your first booth activation.</td></tr>
-            ) : filtered.map(e => (
-              <tr key={e.id} className="border-t border-gray-50 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700">
-                <td className="px-4 py-3 text-gray-600 dark:text-gray-300 whitespace-nowrap">{e.date}</td>
+              <tr><td colSpan={7} className="px-4 py-12 text-center text-gray-400 dark:text-gray-500">No visits logged yet.</td></tr>
+            ) : filtered.map(v => (
+              <tr key={v.id} onClick={() => setSelected(v)} className="border-t border-gray-50 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer">
+                <td className="px-4 py-3 text-gray-600 dark:text-gray-300 whitespace-nowrap">{v.date_visit}</td>
                 <td className="px-4 py-3">
-                  <div className="font-medium text-gray-800 dark:text-gray-100">{e.store_name || '—'}</div>
-                  {e.sub_affiliate && <div className="text-xs text-gray-400 dark:text-gray-500">{e.sub_affiliate}</div>}
+                  <div className="font-medium text-gray-800 dark:text-gray-100">{v.sub_affiliate_name || v.sub_affiliate}</div>
+                  <div className="text-xs text-gray-400 dark:text-gray-500">{v.sub_affiliate}</div>
                 </td>
-                <td className="px-4 py-3 text-gray-600 dark:text-gray-300">{e.location || '—'}</td>
-                <td className="px-4 py-3 text-gray-600 dark:text-gray-300 max-w-xs">
-                  <p className="truncate">{e.activities_done || '—'}</p>
-                </td>
-                <td className="px-4 py-3 text-center font-medium text-gray-700 dark:text-gray-200">{e.headcount}</td>
-                <td className="px-4 py-3 text-right text-gray-700 dark:text-gray-200">₱{(e.total_deposit || 0).toLocaleString()}</td>
-                <td className="px-4 py-3 text-gray-500 dark:text-gray-400 max-w-xs">
-                  <p className="truncate text-xs">{e.notes || '—'}</p>
-                </td>
-                <td className="px-4 py-3">
-                  {e.report_file_url ? (
-                    <a href={e.report_file_url} target="_blank" rel="noopener noreferrer" className="text-blue-600 dark:text-blue-400 hover:underline text-xs whitespace-nowrap">📄 View Report</a>
-                  ) : (
-                    <span className="text-gray-300 dark:text-gray-600 text-xs">—</span>
-                  )}
-                </td>
-                <td className="px-4 py-3 text-right">
-                  <button onClick={() => handleDelete(e.id)} className="text-red-400 hover:text-red-600 text-xs">Delete</button>
-                </td>
+                <td className="px-4 py-3 text-gray-600 dark:text-gray-300">{v.partner || '—'}</td>
+                <td className="px-4 py-3 text-gray-600 dark:text-gray-300">{v.marketing_type}</td>
+                <td className="px-4 py-3 text-right"><DeltaCell before={v.before.deposit} after={v.after.deposit} money /></td>
+                <td className="px-4 py-3 text-right"><DeltaCell before={v.before.ggr} after={v.after.ggr} money /></td>
+                <td className="px-4 py-3 text-right"><DeltaCell before={v.before.members} after={v.after.members} money={false} /></td>
               </tr>
             ))}
           </tbody>
         </table>
       </div>
 
-      {/* Modal */}
       {modal && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
-          <div className="bg-white dark:bg-gray-800 rounded-xl p-6 w-full max-w-lg shadow-xl max-h-[90vh] overflow-y-auto">
-            <h2 className="font-bold text-gray-800 dark:text-gray-100 mb-4">Add Marketing Entry</h2>
+          <div className="bg-white dark:bg-gray-800 rounded-xl p-6 w-full max-w-md shadow-xl">
+            <h2 className="font-bold text-gray-800 dark:text-gray-100 mb-4">Add Store Visit</h2>
             <div className="space-y-3">
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="text-xs font-medium text-gray-500 dark:text-gray-400 block mb-1">Date *</label>
-                  <input type="date" value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} className="w-full border border-gray-200 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg px-3 py-2 text-sm" />
-                </div>
-                <div>
-                  <label className="text-xs font-medium text-gray-500 dark:text-gray-400 block mb-1">Registration</label>
-                  <input type="number" value={form.headcount} onChange={(e) => setForm({ ...form, headcount: e.target.value })} className="w-full border border-gray-200 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg px-3 py-2 text-sm" />
-                </div>
+              <div>
+                <label className="text-xs font-medium text-gray-500 dark:text-gray-400 block mb-1">Store *</label>
+                <StorePicker value={store} onSelect={setStore} />
+                {store && (
+                  <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">{store.dsp ?? '—'} · {store.partner ?? '—'}</p>
+                )}
               </div>
               <div>
-                <label className="text-xs font-medium text-gray-500 dark:text-gray-400 block mb-1">Total Deposit</label>
-                <input type="number" value={form.total_deposit} onChange={(e) => setForm({ ...form, total_deposit: e.target.value })} className="w-full border border-gray-200 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg px-3 py-2 text-sm" />
-              </div>
-              {[
-                { label: 'Store Name', key: 'store_name' },
-                { label: 'Sub Affiliate ID', key: 'sub_affiliate' },
-                { label: 'Location', key: 'location' },
-              ].map(({ label, key }) => (
-                <div key={key}>
-                  <label className="text-xs font-medium text-gray-500 dark:text-gray-400 block mb-1">{label}</label>
-                  <input value={(form as any)[key]} onChange={(e) => setForm({ ...form, [key]: e.target.value })} className="w-full border border-gray-200 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg px-3 py-2 text-sm" />
-                </div>
-              ))}
-              <div>
-                <label className="text-xs font-medium text-gray-500 dark:text-gray-400 block mb-1">Activities Done</label>
-                <textarea value={form.activities_done} onChange={(e) => setForm({ ...form, activities_done: e.target.value })} rows={2} className="w-full border border-gray-200 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg px-3 py-2 text-sm resize-none" />
+                <label className="text-xs font-medium text-gray-500 dark:text-gray-400 block mb-1">Date Visit *</label>
+                <input type="date" value={dateVisit} onChange={(e) => setDateVisit(e.target.value)} className="w-full border border-gray-200 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg px-3 py-2 text-sm" />
               </div>
               <div>
-                <label className="text-xs font-medium text-gray-500 dark:text-gray-400 block mb-1">Notes</label>
-                <textarea value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} rows={2} className="w-full border border-gray-200 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg px-3 py-2 text-sm resize-none" />
+                <label className="text-xs font-medium text-gray-500 dark:text-gray-400 block mb-1">Marketing Type *</label>
+                <select value={marketingType} onChange={(e) => setMarketingType(e.target.value as 'Community' | 'Booth Activation')} className="w-full border border-gray-200 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg px-3 py-2 text-sm">
+                  <option value="Community">Community</option>
+                  <option value="Booth Activation">Booth Activation</option>
+                </select>
               </div>
-              <div>
-                <label className="text-xs font-medium text-gray-500 dark:text-gray-400 block mb-1">Report File (.pdf or .docx)</label>
-                <input type="file" accept=".pdf,.docx" onChange={(e) => handleFileSelect(e.target.files?.[0] || null)} className="w-full text-sm" />
-                {reportFile && <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Selected: {reportFile.name}</p>}
-                {fileError && <p className="text-xs text-red-600 mt-1">{fileError}</p>}
-              </div>
+              {error && <p className="text-xs text-red-600">{error}</p>}
             </div>
             <div className="flex gap-2 mt-5 justify-end">
-              <button onClick={() => { setModal(false); setReportFile(null); setFileError('') }} className="px-4 py-2 text-sm text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">Cancel</button>
-              <button onClick={handleSave} disabled={saving || !form.date} className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-blue-300">{saving ? 'Saving...' : 'Save'}</button>
+              <button onClick={() => { setModal(false); setError('') }} className="px-4 py-2 text-sm text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">Cancel</button>
+              <button onClick={handleSave} disabled={saving || !store} className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-blue-300">{saving ? 'Saving...' : 'Save'}</button>
             </div>
           </div>
         </div>
+      )}
+
+      {selected && (
+        <VisitDrawer
+          visit={selected}
+          onClose={() => setSelected(null)}
+          onDeleted={(id) => { setVisits(prev => prev.filter(v => v.id !== id)); setSelected(null) }}
+        />
       )}
     </div>
   )
