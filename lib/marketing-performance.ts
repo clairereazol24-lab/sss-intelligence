@@ -40,10 +40,12 @@ type PerfRow = { sub_affiliate: string; partner: string | null; period: string; 
 type MemberRow = { username: string; sub_affiliate: string; partner: string | null; registered_time: string | null }
 
 /**
- * For each visit, splits that store's entire performance_data/members history at
- * date_visit: everything with period/registered_time before date_visit is "before",
- * everything from date_visit onward is "after". "After" is never stored — it's
- * recomputed from live data on every call, so it grows as new SSS Data is uploaded.
+ * For each visit: "before" sums that store's performance_data/members strictly
+ * prior to date_visit (the pre-visit baseline). "after" is the store's overall,
+ * all-time total as of today (not just the post-visit increment) — so it always
+ * includes everything in "before" plus everything since. Neither is stored — both
+ * are recomputed from live data on every call, so "after" grows as new SSS Data
+ * is uploaded.
  */
 export async function attachBeforeAfterMetrics(visits: MarketingVisit[]): Promise<VisitWithMetrics[]> {
   if (visits.length === 0) return []
@@ -90,21 +92,19 @@ export async function attachBeforeAfterMetrics(visits: MarketingVisit[]): Promis
     let beforeDeposit = 0, beforeGGR = 0, afterDeposit = 0, afterGGR = 0
     for (const row of perfRows) {
       if (!sameStore(row.sub_affiliate, row.partner)) continue
+      afterDeposit += row.total_deposit || 0
+      afterGGR += row.company_net_win || 0
       if (row.period < visit.date_visit) {
         beforeDeposit += row.total_deposit || 0
         beforeGGR += row.company_net_win || 0
-      } else {
-        afterDeposit += row.total_deposit || 0
-        afterGGR += row.company_net_win || 0
       }
     }
 
     let beforeMembers = 0, afterMembers = 0
     for (const m of dedupedMembers) {
-      if (!sameStore(m.sub_affiliate, m.partner) || !m.registered_time) continue
-      const regDate = m.registered_time.slice(0, 10)
-      if (regDate < visit.date_visit) beforeMembers++
-      else afterMembers++
+      if (!sameStore(m.sub_affiliate, m.partner)) continue
+      afterMembers++
+      if (m.registered_time && m.registered_time.slice(0, 10) < visit.date_visit) beforeMembers++
     }
 
     return {

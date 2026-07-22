@@ -8,12 +8,19 @@ function fmt(n: number) {
   return `₱${n.toLocaleString('en-PH', { maximumFractionDigits: 0 })}`
 }
 
-function DeltaCell({ before, after, money }: { before: number; after: number; money: boolean }) {
+function MetricCell({ before, after, money }: { before: number; after: number; money: boolean }) {
   const delta = after - before
+  const format = (n: number) => (money ? fmt(n) : n.toLocaleString())
   return (
-    <span className={delta >= 0 ? 'text-green-600' : 'text-red-500'}>
-      {delta >= 0 ? '+' : ''}{money ? fmt(delta) : delta.toLocaleString()}
-    </span>
+    <div>
+      <div className="text-[11px] text-gray-400 dark:text-gray-500">Before {format(before)}</div>
+      <div className="text-sm text-gray-800 dark:text-gray-100">
+        {format(after)}{' '}
+        <span className={delta >= 0 ? 'text-green-600' : 'text-red-500'}>
+          ({delta >= 0 ? '+' : ''}{format(delta)})
+        </span>
+      </div>
+    </div>
   )
 }
 
@@ -113,9 +120,9 @@ export default function MarketingEffortsPage() {
               <th className="px-4 py-3 text-gray-500 dark:text-gray-400 font-medium">Store</th>
               <th className="px-4 py-3 text-gray-500 dark:text-gray-400 font-medium">Partner</th>
               <th className="px-4 py-3 text-gray-500 dark:text-gray-400 font-medium">Marketing Type</th>
-              <th className="px-4 py-3 text-gray-500 dark:text-gray-400 font-medium text-right">Deposit (Δ)</th>
-              <th className="px-4 py-3 text-gray-500 dark:text-gray-400 font-medium text-right">GGR (Δ)</th>
-              <th className="px-4 py-3 text-gray-500 dark:text-gray-400 font-medium text-right">Members (Δ)</th>
+              <th className="px-4 py-3 text-gray-500 dark:text-gray-400 font-medium text-right">Deposit</th>
+              <th className="px-4 py-3 text-gray-500 dark:text-gray-400 font-medium text-right">GGR</th>
+              <th className="px-4 py-3 text-gray-500 dark:text-gray-400 font-medium text-right">Members</th>
             </tr>
           </thead>
           <tbody>
@@ -132,9 +139,9 @@ export default function MarketingEffortsPage() {
                 </td>
                 <td className="px-4 py-3 text-gray-600 dark:text-gray-300">{v.partner || '—'}</td>
                 <td className="px-4 py-3 text-gray-600 dark:text-gray-300">{v.marketing_type}</td>
-                <td className="px-4 py-3 text-right"><DeltaCell before={v.before.deposit} after={v.after.deposit} money /></td>
-                <td className="px-4 py-3 text-right"><DeltaCell before={v.before.ggr} after={v.after.ggr} money /></td>
-                <td className="px-4 py-3 text-right"><DeltaCell before={v.before.members} after={v.after.members} money={false} /></td>
+                <td className="px-4 py-3 text-right"><MetricCell before={v.before.deposit} after={v.after.deposit} money /></td>
+                <td className="px-4 py-3 text-right"><MetricCell before={v.before.ggr} after={v.after.ggr} money /></td>
+                <td className="px-4 py-3 text-right"><MetricCell before={v.before.members} after={v.after.members} money={false} /></td>
               </tr>
             ))}
           </tbody>

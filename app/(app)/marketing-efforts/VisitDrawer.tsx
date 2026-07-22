@@ -87,7 +87,7 @@ export default function VisitDrawer({ visit, onClose, onDeleted }: {
           </div>
 
           <p className="text-xs text-gray-400 dark:text-gray-500">
-            Before: all SSS Data through {visit.date_visit}. After: {visit.date_visit} → today,
+            Before: all SSS Data through {visit.date_visit}. After: overall total as of today,
             updates automatically as new data is uploaded.
           </p>
         </div>
