@@ -6,14 +6,8 @@ const fmt = (n: number) => `₱${n.toLocaleString('en-PH', { minimumFractionDigi
 type PerfTotals = {
   total_deposit: number
   company_net_win: number
+  registered_members: number
   store_count: number
-}
-
-type MemberCounts = {
-  total: number
-  active: number
-  locked: number
-  disabled: number
 }
 
 type TopMember = {
@@ -30,7 +24,6 @@ const PARTNERS = [
 
 export default function DashboardPage() {
   const [perf, setPerf] = useState<Record<string, PerfTotals | null>>({ Alpharus: null, 'Relevant Tech': null })
-  const [memberCounts, setMemberCounts] = useState<Record<string, MemberCounts | null>>({ Alpharus: null, 'Relevant Tech': null })
   const [top50, setTop50] = useState<TopMember[]>([])
   const [loading, setLoading] = useState(true)
   const [from, setFrom] = useState('')
@@ -40,19 +33,15 @@ export default function DashboardPage() {
     setLoading(true)
     try {
       const base = f && t ? `&from=${f}&to=${t}` : ''
-      const [perfResults, memberResults, top50Res] = await Promise.all([
+      const [perfResults, top50Res] = await Promise.all([
         Promise.all(PARTNERS.map(p => fetch(`/api/performance?partner=${encodeURIComponent(p.key)}${base}`).then(r => r.json()))),
-        Promise.all(PARTNERS.map(p => fetch(`/api/members?partner=${encodeURIComponent(p.key)}&summary=true${base}`).then(r => r.json()))),
         fetch(`/api/members?top=deposit${base}`).then(r => r.json()),
       ])
       const nextPerf: Record<string, PerfTotals | null> = {}
-      const nextMem: Record<string, MemberCounts | null> = {}
       PARTNERS.forEach((p, i) => {
         nextPerf[p.key] = perfResults[i].overallTotals || null
-        nextMem[p.key] = memberResults[i].summary || null
       })
       setPerf(nextPerf)
-      setMemberCounts(nextMem)
       setTop50(top50Res.members || [])
     } finally {
       setLoading(false)
@@ -66,7 +55,7 @@ export default function DashboardPage() {
 
   const combinedDeposit = PARTNERS.reduce((acc, p) => acc + (perf[p.key]?.total_deposit || 0), 0)
   const combinedGGR = PARTNERS.reduce((acc, p) => acc + (perf[p.key]?.company_net_win || 0), 0)
-  const combinedMembers = PARTNERS.reduce((acc, p) => acc + (memberCounts[p.key]?.total || 0), 0)
+  const combinedMembers = PARTNERS.reduce((acc, p) => acc + (perf[p.key]?.registered_members || 0), 0)
   const combinedStores = PARTNERS.reduce((acc, p) => acc + (perf[p.key]?.store_count || 0), 0)
 
   return (
@@ -117,7 +106,6 @@ export default function DashboardPage() {
       <div className="grid grid-cols-2 gap-4 mb-6">
         {PARTNERS.map(p => {
           const t = perf[p.key]
-          const m = memberCounts[p.key]
           return (
             <div key={p.key} className="bg-white rounded-xl border border-gray-200 p-5 dark:bg-gray-800 dark:border-gray-700">
               <h2 className="font-semibold text-gray-700 dark:text-gray-200 mb-4 text-center">{p.label}</h2>
@@ -135,7 +123,7 @@ export default function DashboardPage() {
                   </div>
                   <div className="text-center">
                     <p className="text-xs text-gray-400 dark:text-gray-500 mb-1">Registered Members</p>
-                    <p className="font-semibold text-gray-800 dark:text-gray-100 text-sm">{(m?.total || 0).toLocaleString()}</p>
+                    <p className="font-semibold text-gray-800 dark:text-gray-100 text-sm">{(t?.registered_members || 0).toLocaleString()}</p>
                   </div>
                   <div className="text-center">
                     <p className="text-xs text-gray-400 dark:text-gray-500 mb-1">Stores</p>
