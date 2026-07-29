@@ -118,15 +118,15 @@ export async function GET(request: NextRequest) {
     // member active across multiple periods; keep each username's most
     // recently-periodned record instead. This is a "right now" figure, not
     // the uploaded performance_data snapshot.
-    const latestByUsername: Record<string, { sub_affiliate: string; partner: string | null; status: string; period: string | null }> = {}
+    const latestByUsername: Record<string, { sub_affiliate: string; partner: string | null; status: string; period: string | null; deposit: number; withdraw: number; company_net_win: number | null }> = {}
     let mStart = 0
     while (true) {
-      let mQuery = supabase.from('members').select('username, sub_affiliate, partner, status, period')
+      let mQuery = supabase.from('members').select('username, sub_affiliate, partner, status, period, deposit, withdraw, company_net_win')
       if (partner) mQuery = mQuery.eq('partner', partner)
       const { data: mPage, error: mError } = await mQuery.range(mStart, mStart + PAGE - 1)
       if (mError) throw mError
       if (!mPage || mPage.length === 0) break
-      for (const m of mPage as { username: string; sub_affiliate: string; partner: string | null; status: string; period: string | null }[]) {
+      for (const m of mPage as { username: string; sub_affiliate: string; partner: string | null; status: string; period: string | null; deposit: number; withdraw: number; company_net_win: number | null }[]) {
         const key = `${m.username}__${m.partner ?? ''}`
         const existing = latestByUsername[key]
         if (!existing) { latestByUsername[key] = m; continue }
@@ -146,6 +146,34 @@ export async function GET(request: NextRequest) {
     }
     for (const [key, s] of Object.entries(storeMap) as [string, any][]) {
       s.effective_member = activeCounts[key] || 0
+    }
+
+    // Company stores never get a performance_data CSV upload (there is no such
+    // pipeline for Company) — every figure instead comes live from the members
+    // table (added/updated via the existing Members CSV import), deduped by
+    // username the same way effective_member already is above. Per-username
+    // deposit/withdraw are treated as running totals-to-date, so a username's
+    // latest-periodned row wins rather than summing across periods. GGR uses
+    // Company's own reported company_net_win directly (not deposit - withdraw
+    // — Company's figure includes things like unwithdrawn bonuses).
+    const companyTotals: Record<string, { deposit: number; withdraw: number; ggr: number; registered: number }> = {}
+    for (const m of Object.values(latestByUsername)) {
+      if (m.partner !== 'Company') continue
+      const key = `${m.sub_affiliate}__Company`
+      const t = companyTotals[key] || { deposit: 0, withdraw: 0, ggr: 0, registered: 0 }
+      t.deposit += m.deposit || 0
+      t.withdraw += m.withdraw || 0
+      t.ggr += m.company_net_win != null ? m.company_net_win : (m.deposit || 0) - (m.withdraw || 0)
+      t.registered += 1
+      companyTotals[key] = t
+    }
+    for (const [key, t] of Object.entries(companyTotals)) {
+      const s = storeMap[key]
+      if (!s) continue
+      s.total_deposit = t.deposit
+      s.total_withdraw = t.withdraw
+      s.company_net_win = t.ggr
+      s.registered_members = t.registered
     }
 
     const stores = Object.values(storeMap)

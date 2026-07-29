@@ -91,6 +91,15 @@ CREATE INDEX IF NOT EXISTS idx_marketing_date_visit ON marketing_efforts(date_vi
 ALTER TABLE performance_data ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT NOW();
 
 -- ============================================================
+-- MEMBERS: company_net_win (added 2026-07-29 for the "Company" partner —
+-- Company's per-member CSV report gives an authoritative GGR figure per
+-- member that is NOT deposit - withdraw (differs due to bonuses etc.), so
+-- it's stored directly rather than derived. NULL for Alpharus/Relevant
+-- Tech rows, which keep computing GGR as deposit - withdraw on the fly.
+-- ============================================================
+ALTER TABLE members ADD COLUMN IF NOT EXISTS company_net_win NUMERIC(15,2);
+
+-- ============================================================
 -- AI REPORT CACHE (avoids regenerating on every page visit;
 -- only regenerates when performance_data or marketing_efforts changes)
 -- ============================================================

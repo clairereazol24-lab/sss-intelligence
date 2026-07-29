@@ -88,14 +88,17 @@ export default function MembersClient({ partner }: { partner: string }) {
     try {
       const records = parsed.map((row: any) => ({
         partner: row['Partner'] || partner,
-        sub_affiliate: row['Sub Affiliate'],
-        sub_affiliate_name: row['Sub Affiliate Name'],
+        // Company's Daily Report has no Sub Affiliate column — it's a single-store
+        // report, so default to Company's one store when the column is absent.
+        sub_affiliate: row['Sub Affiliate'] || (partner === 'Company' ? 'LakiWinMarketing' : undefined),
+        sub_affiliate_name: row['Sub Affiliate Name'] || null,
         channel: row['Channel'] || null,
         ad_name: row['AD Name'] || null,
         username: row['Username'],
         dsp: row['DSP'] || row['Dsp'] || null,
         registered_time: row['Registered Time'] ? new Date(row['Registered Time']).toISOString() : null,
-        status: row['Status'] || null,
+        // Company's report calls this column "Account Information" instead of "Status".
+        status: row['Status'] || row['Account Information'] || null,
         member_rank: row['Member Rank'] || null,
         last_login_time: row['Last Login Time'] ? new Date(row['Last Login Time']).toISOString() : null,
         first_deposit_amount: parseFloat(row['First Deposit Amount']) || 0,
@@ -103,6 +106,10 @@ export default function MembersClient({ partner }: { partner: string }) {
         deposit_times: parseInt(row['Deposit Times']) || 0,
         withdraw: parseFloat(row['Withdraw']) || 0,
         withdraw_times: parseInt(row['Withdraw Times']) || 0,
+        // Company's report gives an authoritative per-member GGR (not deposit -
+        // withdraw, e.g. bonuses not yet withdrawn) — store it directly. Null for
+        // any CSV without this column, so other partners keep the computed value.
+        company_net_win: row['Company Net Win (GGR)'] !== undefined ? (parseFloat(row['Company Net Win (GGR)']) || 0) : null,
       })).filter(r => r.username && r.sub_affiliate)
 
       if (periodType === 'daily') {

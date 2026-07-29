@@ -1,7 +1,13 @@
 import { supabaseAdmin as supabase } from '@/lib/supabase-admin'
 import { NextRequest, NextResponse } from 'next/server'
 
-const DEFAULT_COLUMNS = 'username, sub_affiliate, sub_affiliate_name, dsp, status, registered_time, member_rank, last_login_time, first_deposit_amount, deposit, deposit_times, withdraw, withdraw_times'
+const DEFAULT_COLUMNS = 'username, sub_affiliate, sub_affiliate_name, dsp, status, registered_time, member_rank, last_login_time, first_deposit_amount, deposit, deposit_times, withdraw, withdraw_times, company_net_win'
+
+// Company's per-member GGR is an authoritative figure from its own report
+// (not deposit - withdraw, e.g. unwithdrawn bonuses) — use it directly when
+// present; every other partner has no company_net_win value and keeps the
+// computed deposit - withdraw.
+const memberGGR = (r: any) => (r.company_net_win != null ? r.company_net_win : (r.deposit || 0) - (r.withdraw || 0))
 
 type PeriodFilter =
   | { kind: 'exact'; period: string }
@@ -105,14 +111,16 @@ export async function GET(request: NextRequest) {
 
     // Top-50 mode (Dashboard); pass full=true for the complete sorted list, zero values excluded (Performance page)
     if (top === 'deposit') {
-      let sorted = [...allRows].sort((a, b) => (b.deposit || 0) - (a.deposit || 0))
+      let sorted = [...allRows]
+        .map(r => ({ ...r, ggr: memberGGR(r) }))
+        .sort((a, b) => (b.deposit || 0) - (a.deposit || 0))
       if (full) sorted = sorted.filter(r => (r.deposit || 0) !== 0)
       else sorted = sorted.slice(0, 50)
       return NextResponse.json({ members: sorted })
     }
     if (top === 'ggr') {
       let sorted = [...allRows]
-        .map(r => ({ ...r, ggr: (r.deposit || 0) - (r.withdraw || 0) }))
+        .map(r => ({ ...r, ggr: memberGGR(r) }))
         .sort((a, b) => b.ggr - a.ggr)
       if (full) sorted = sorted.filter(r => r.ggr !== 0)
       else sorted = sorted.slice(0, 50)

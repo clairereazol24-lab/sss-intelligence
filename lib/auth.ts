@@ -20,6 +20,7 @@ export const MODULES: ModuleDef[] = [
     children: [
       { label: 'Alpharus', href: '/sss-data/alpharus' },
       { label: 'Relevant Tech', href: '/sss-data/relevant-tech' },
+      { label: 'Company', href: '/sss-data/company' },
     ],
   },
   {
@@ -30,6 +31,7 @@ export const MODULES: ModuleDef[] = [
     children: [
       { label: 'Alpharus', href: '/members/alpharus' },
       { label: 'Relevant Tech', href: '/members/relevant-tech' },
+      { label: 'Company', href: '/members/company' },
     ],
   },
   {
@@ -40,6 +42,7 @@ export const MODULES: ModuleDef[] = [
     children: [
       { label: 'Alpharus', href: '/performance/alpharus' },
       { label: 'Relevant Tech', href: '/performance/relevant-tech' },
+      { label: 'Company', href: '/performance/company' },
     ],
   },
   {

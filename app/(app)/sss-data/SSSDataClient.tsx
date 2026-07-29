@@ -237,7 +237,7 @@ export default function SSSDataClient({ partner, canImport }: { partner: string;
             onChange={(e) => handleOverallToChange(e.target.value)}
             className="border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white shadow-sm dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100"
           />
-          {canImport && (
+          {canImport && partner !== 'Company' && (
             <>
               <input ref={fileRef} type="file" accept=".csv" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFile(f) }} />
               <button
@@ -248,12 +248,14 @@ export default function SSSDataClient({ partner, canImport }: { partner: string;
               </button>
             </>
           )}
-          <button
-            onClick={handleExport}
-            className="bg-white border border-gray-200 hover:bg-gray-50 text-gray-700 font-medium px-4 py-2 rounded-lg shadow-sm transition-colors text-sm whitespace-nowrap dark:bg-gray-800 dark:border-gray-700 dark:hover:bg-gray-700 dark:text-gray-200"
-          >
-            ⬇️ Export
-          </button>
+          {partner !== 'Company' && (
+            <button
+              onClick={handleExport}
+              className="bg-white border border-gray-200 hover:bg-gray-50 text-gray-700 font-medium px-4 py-2 rounded-lg shadow-sm transition-colors text-sm whitespace-nowrap dark:bg-gray-800 dark:border-gray-700 dark:hover:bg-gray-700 dark:text-gray-200"
+            >
+              ⬇️ Export
+            </button>
+          )}
         </div>
       </div>
 
@@ -286,7 +288,9 @@ export default function SSSDataClient({ partner, canImport }: { partner: string;
           </div>
         )}
         {!overallLoading && !overallError && (overallTotals?.store_count || 0) === 0 && (
-          <p className="text-xs text-gray-400 dark:text-gray-500 mt-3">No data yet — upload a CSV below.</p>
+          <p className="text-xs text-gray-400 dark:text-gray-500 mt-3">
+            {partner === 'Company' ? 'No members added yet — add members under Members.' : 'No data yet — upload a CSV below.'}
+          </p>
         )}
       </div>
 
@@ -298,7 +302,9 @@ export default function SSSDataClient({ partner, canImport }: { partner: string;
       <div className="bg-white rounded-xl border border-gray-200 p-5 mb-6 dark:bg-gray-800 dark:border-gray-700">
         <h2 className="font-semibold text-gray-700 dark:text-gray-200 mb-3">Store Summary</h2>
         {!overallLoading && !overallError && allStores.length === 0 && (
-          <p className="text-xs text-gray-400 dark:text-gray-500">No data yet — upload a CSV below.</p>
+          <p className="text-xs text-gray-400 dark:text-gray-500">
+            {partner === 'Company' ? 'No members added yet — add members under Members.' : 'No data yet — upload a CSV below.'}
+          </p>
         )}
         {allStores.length > 0 && (
           <div className="overflow-x-auto max-h-[480px] overflow-y-auto">

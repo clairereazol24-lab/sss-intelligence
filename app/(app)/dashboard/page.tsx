@@ -15,15 +15,17 @@ type TopMember = {
   dsp: string | null
   deposit: number
   withdraw: number
+  ggr?: number
 }
 
 const PARTNERS = [
   { key: 'Alpharus', label: 'Alpharus' },
   { key: 'Relevant Tech', label: 'Relevant Tech' },
+  { key: 'Company', label: 'Company' },
 ]
 
 export default function DashboardPage() {
-  const [perf, setPerf] = useState<Record<string, PerfTotals | null>>({ Alpharus: null, 'Relevant Tech': null })
+  const [perf, setPerf] = useState<Record<string, PerfTotals | null>>({ Alpharus: null, 'Relevant Tech': null, Company: null })
   const [top50, setTop50] = useState<TopMember[]>([])
   const [loading, setLoading] = useState(true)
   const [from, setFrom] = useState('')
@@ -103,7 +105,7 @@ export default function DashboardPage() {
       </div>
 
       {/* Per-partner */}
-      <div className="grid grid-cols-2 gap-4 mb-6">
+      <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-6">
         {PARTNERS.map(p => {
           const t = perf[p.key]
           return (
@@ -158,7 +160,7 @@ export default function DashboardPage() {
               </thead>
               <tbody>
                 {top50.map((m, i) => {
-                  const ggr = (m.deposit || 0) - (m.withdraw || 0)
+                  const ggr = m.ggr ?? ((m.deposit || 0) - (m.withdraw || 0))
                   return (
                     <tr key={m.username} className="border-t border-gray-100 dark:border-gray-700">
                       <td className="px-3 py-2.5 text-center text-gray-400 dark:text-gray-500">{i + 1}</td>
