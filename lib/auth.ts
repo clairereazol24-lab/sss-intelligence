@@ -50,6 +50,7 @@ export const MODULES: ModuleDef[] = [
     children: [
       { label: 'Alpharus', href: '/store-directory/alpharus' },
       { label: 'Relevant Tech', href: '/store-directory/relevant-tech' },
+      { label: 'Company', href: '/store-directory/company' },
     ],
   },
   { key: 'locked_retailers', label: 'Shortcut', href: '/locked-retailers', icon: '🔒' },
