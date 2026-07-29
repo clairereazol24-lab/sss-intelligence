@@ -261,7 +261,21 @@ export async function GET(request: NextRequest) {
     if (partner) lastRowQuery = lastRowQuery.eq('partner', partner)
     const { data: lastRow } = await lastRowQuery
 
-    const lastUpdated = lastRow && lastRow.length > 0 ? lastRow[0] : null
+    let lastUpdated = lastRow && lastRow.length > 0 ? lastRow[0] : null
+
+    // Company (and any partner with no performance_data at all) has no upload
+    // here to check — fall back to the latest-periodned Members upload instead.
+    if (!lastUpdated) {
+      let lastMemberQuery = supabase
+        .from('members')
+        .select('period, period_type')
+        .not('period', 'is', null)
+        .order('period', { ascending: false })
+        .limit(1)
+      if (partner) lastMemberQuery = lastMemberQuery.eq('partner', partner)
+      const { data: lastMemberRow } = await lastMemberQuery
+      if (lastMemberRow && lastMemberRow.length > 0) lastUpdated = lastMemberRow[0]
+    }
 
     return NextResponse.json({ sortedStores, sortedStoresByMembers, sortedStoresByGGR, sortedDSPs, sortedDSPsByDeposit, sortedDSPsByGGR, sortedDSPsByMembers, periods: uniquePeriods, overallTotals, allStores, lastUpdated })
   } catch (err: any) {
