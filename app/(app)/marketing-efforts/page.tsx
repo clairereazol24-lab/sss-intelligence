@@ -31,6 +31,8 @@ export default function MarketingEffortsPage() {
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
   const [search, setSearch] = useState('')
+  const [partnerFilter, setPartnerFilter] = useState('all')
+  const [typeFilter, setTypeFilter] = useState('all')
   const [selected, setSelected] = useState<VisitWithMetrics | null>(null)
 
   const [store, setStore] = useState<StoreOption | null>(null)
@@ -87,16 +89,38 @@ export default function MarketingEffortsPage() {
     }
   }
 
+  const partnerOptions = useMemo(
+    () => Array.from(new Set(visits.map(v => v.partner).filter((p): p is string => !!p))).sort(),
+    [visits]
+  )
+
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase()
-    if (!q) return visits
-    return visits.filter(v =>
-      v.sub_affiliate_name?.toLowerCase().includes(q) ||
-      v.sub_affiliate?.toLowerCase().includes(q) ||
-      v.partner?.toLowerCase().includes(q) ||
-      v.marketing_type?.toLowerCase().includes(q)
-    )
-  }, [visits, search])
+    return visits.filter(v => {
+      if (partnerFilter !== 'all' && v.partner !== partnerFilter) return false
+      if (typeFilter !== 'all' && v.marketing_type !== typeFilter) return false
+      if (!q) return true
+      return (
+        v.sub_affiliate_name?.toLowerCase().includes(q) ||
+        v.sub_affiliate?.toLowerCase().includes(q) ||
+        v.partner?.toLowerCase().includes(q) ||
+        v.marketing_type?.toLowerCase().includes(q)
+      )
+    })
+  }, [visits, search, partnerFilter, typeFilter])
+
+  const totals = useMemo(() => filtered.reduce(
+    (acc, v) => {
+      acc.beforeDeposit += v.before.deposit
+      acc.afterDeposit += v.after.deposit
+      acc.beforeGGR += v.before.ggr
+      acc.afterGGR += v.after.ggr
+      acc.beforeMembers += v.before.members
+      acc.afterMembers += v.after.members
+      return acc
+    },
+    { beforeDeposit: 0, afterDeposit: 0, beforeGGR: 0, afterGGR: 0, beforeMembers: 0, afterMembers: 0 }
+  ), [filtered])
 
   return (
     <div className="p-6">
@@ -108,8 +132,17 @@ export default function MarketingEffortsPage() {
         <button onClick={() => setModal(true)} className="bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors">+ Add Visit</button>
       </div>
 
-      <div className="mb-4">
+      <div className="mb-4 flex flex-wrap items-center gap-3">
         <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search store, partner, or marketing type..." className="border border-gray-200 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg px-3 py-2 text-sm w-full max-w-sm" />
+        <select value={partnerFilter} onChange={(e) => setPartnerFilter(e.target.value)} className="border border-gray-200 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg px-3 py-2 text-sm">
+          <option value="all">All Partners</option>
+          {partnerOptions.map(p => <option key={p} value={p}>{p}</option>)}
+        </select>
+        <select value={typeFilter} onChange={(e) => setTypeFilter(e.target.value)} className="border border-gray-200 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg px-3 py-2 text-sm">
+          <option value="all">All Marketing Types</option>
+          <option value="Community">Community</option>
+          <option value="Booth Activation">Booth Activation</option>
+        </select>
       </div>
 
       <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden overflow-x-auto">
@@ -145,6 +178,16 @@ export default function MarketingEffortsPage() {
               </tr>
             ))}
           </tbody>
+          {!loading && filtered.length > 0 && (
+            <tfoot>
+              <tr className="border-t-2 border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 font-semibold">
+                <td className="px-4 py-3 text-gray-700 dark:text-gray-200" colSpan={4}>Total ({filtered.length} visit{filtered.length === 1 ? '' : 's'})</td>
+                <td className="px-4 py-3 text-right"><MetricCell before={totals.beforeDeposit} after={totals.afterDeposit} money /></td>
+                <td className="px-4 py-3 text-right"><MetricCell before={totals.beforeGGR} after={totals.afterGGR} money /></td>
+                <td className="px-4 py-3 text-right"><MetricCell before={totals.beforeMembers} after={totals.afterMembers} money={false} /></td>
+              </tr>
+            </tfoot>
+          )}
         </table>
       </div>
 
