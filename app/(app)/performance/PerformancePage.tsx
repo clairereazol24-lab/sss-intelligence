@@ -317,13 +317,26 @@ export default function PerformancePage({ partner }: { partner?: string }) {
       ])
       XLSX.utils.book_append_sheet(wb, ws, name)
     }
-    addStore('Stores by Deposit',   stores,          'Total Deposit',      (s) => s.total_deposit)
-    addStore('Stores by Members',   storesByMembers, 'Registered Members', (s) => s.registered_members)
-    addStore('Stores by GGR',       storesByGGR,     'GGR',                (s) => s.company_net_win)
-    addDSP(  'DSPs by Deposit',     dspsByDeposit,   'Total Deposit',      (d) => d.total_deposit)
-    addDSP(  'DSPs by Members',     dspsByMembers,   'Registered Members', (d) => d.registered_members)
-    addDSP(  'DSPs by GGR',         dspsByGGR,       'Total GGR',          (d) => d.total_grr)
-    addDSP(  'DSPs by Store Count', dsps,            'Stores',             (d) => d.store_count)
+    const addMembers = (name: string, rows: MemberRow[], metricLabel: string, metricVal: (m: MemberRow) => string | number) => {
+      const ws = XLSX.utils.aoa_to_sheet([
+        ['#', 'Username', 'Store', 'DSP', metricLabel],
+        ...rows.map((m, i) => [i + 1, m.username, m.sub_affiliate_name || m.sub_affiliate, m.dsp || '', metricVal(m)]),
+      ])
+      XLSX.utils.book_append_sheet(wb, ws, name)
+    }
+    if (partner === 'Company') {
+      // Company has no DSP breakdown and effectively one store — only member-level data is meaningful.
+      addMembers('Members by Deposit', membersByDeposit, 'Deposit', (m) => m.deposit)
+      addMembers('Members by GGR',     membersByGGR,     'GGR',     (m) => m.ggr ?? (m.deposit - m.withdraw))
+    } else {
+      addStore('Stores by Deposit',   stores,          'Total Deposit',      (s) => s.total_deposit)
+      addStore('Stores by Members',   storesByMembers, 'Registered Members', (s) => s.registered_members)
+      addStore('Stores by GGR',       storesByGGR,     'GGR',                (s) => s.company_net_win)
+      addDSP(  'DSPs by Deposit',     dspsByDeposit,   'Total Deposit',      (d) => d.total_deposit)
+      addDSP(  'DSPs by Members',     dspsByMembers,   'Registered Members', (d) => d.registered_members)
+      addDSP(  'DSPs by GGR',         dspsByGGR,       'Total GGR',          (d) => d.total_grr)
+      addDSP(  'DSPs by Store Count', dsps,            'Stores',             (d) => d.store_count)
+    }
     const label = partner ? partner.replace(' ', '_') : 'All'
     XLSX.writeFile(wb, `Performance_${label}_${selectedPeriod === 'all' ? 'All_Time' : selectedPeriod}.xlsx`)
   }
@@ -335,7 +348,7 @@ export default function PerformancePage({ partner }: { partner?: string }) {
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-bold text-gray-800 dark:text-gray-100">Performance</h1>
-          <p className="text-sm text-gray-500 dark:text-gray-400">{title} · All stores and DSPs</p>
+          <p className="text-sm text-gray-500 dark:text-gray-400">{title} · {partner === 'Company' ? 'Top Members' : 'All stores and DSPs'}</p>
         </div>
         <div className="flex items-center gap-3">
           <select
@@ -358,6 +371,16 @@ export default function PerformancePage({ partner }: { partner?: string }) {
 
       {loading ? (
         <div className="text-center py-20 text-gray-400 dark:text-gray-500">Loading...</div>
+      ) : partner === 'Company' ? (
+        // Company has no DSP breakdown and effectively one store — only member-level data is meaningful.
+        <div className="grid grid-cols-1 gap-6 max-w-3xl mx-auto">
+          <Card emoji="💵" title="Members by Deposit">
+            <MemberTable rows={membersByDeposit} metricLabel="Deposit" metric={(m) => fmt(m.deposit)} />
+          </Card>
+          <Card emoji="📉" title="Members by GGR">
+            <MemberTable rows={membersByGGR} metricLabel="GGR" metric={(m) => { const g = m.ggr ?? (m.deposit - m.withdraw); return <span className={g >= 0 ? 'text-green-600' : 'text-red-500'}>{fmt(g)}</span> }} />
+          </Card>
+        </div>
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-[2fr_3fr] gap-6">
           {/* Left column — DSP */}
