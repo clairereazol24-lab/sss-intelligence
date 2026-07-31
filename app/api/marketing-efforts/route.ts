@@ -14,7 +14,7 @@ export async function GET() {
   while (true) {
     const { data, error } = await supabase
       .from('marketing_efforts')
-      .select('id, date_visit, partner, dsp, sub_affiliate, sub_affiliate_name, marketing_type, created_at')
+      .select('id, date_visit, partner, dsp, sub_affiliate, sub_affiliate_name, marketing_type, notes, created_at')
       .order('date_visit', { ascending: false })
       .range(start, start + PAGE - 1)
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })
@@ -37,7 +37,7 @@ export async function POST(request: NextRequest) {
   if (!auth) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
   const body = await request.json()
-  const { date_visit, partner, dsp, sub_affiliate, sub_affiliate_name, marketing_type } = body
+  const { date_visit, partner, dsp, sub_affiliate, sub_affiliate_name, marketing_type, notes } = body
 
   if (!sub_affiliate || !marketing_type || !date_visit) {
     return NextResponse.json({ error: 'sub_affiliate, marketing_type, and date_visit are required.' }, { status: 400 })
@@ -55,6 +55,7 @@ export async function POST(request: NextRequest) {
       sub_affiliate,
       sub_affiliate_name: sub_affiliate_name ?? null,
       marketing_type,
+      notes: notes?.trim() || null,
       created_by: auth.userId,
     })
     .select()

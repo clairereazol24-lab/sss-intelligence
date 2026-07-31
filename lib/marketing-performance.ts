@@ -8,6 +8,7 @@ export type MarketingVisit = {
   sub_affiliate: string
   sub_affiliate_name: string | null
   marketing_type: 'Community' | 'Booth Activation'
+  notes: string | null
   created_at: string
 }
 

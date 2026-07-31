@@ -38,6 +38,7 @@ export default function MarketingEffortsPage() {
   const [store, setStore] = useState<StoreOption | null>(null)
   const [dateVisit, setDateVisit] = useState(() => new Date().toISOString().slice(0, 10))
   const [marketingType, setMarketingType] = useState<'Community' | 'Booth Activation'>('Community')
+  const [notes, setNotes] = useState('')
 
   const fetchVisits = async () => {
     setLoading(true)
@@ -70,6 +71,7 @@ export default function MarketingEffortsPage() {
           sub_affiliate: store.sub_affiliate,
           sub_affiliate_name: store.store_name,
           marketing_type: marketingType,
+          notes,
         }),
       })
       if (!res.ok) {
@@ -81,6 +83,7 @@ export default function MarketingEffortsPage() {
       setStore(null)
       setDateVisit(new Date().toISOString().slice(0, 10))
       setMarketingType('Community')
+      setNotes('')
       fetchVisits()
     } catch {
       setError('Network error while saving.')
@@ -156,13 +159,14 @@ export default function MarketingEffortsPage() {
               <th className="px-4 py-3 text-gray-500 dark:text-gray-400 font-medium text-right">Deposit</th>
               <th className="px-4 py-3 text-gray-500 dark:text-gray-400 font-medium text-right">GGR</th>
               <th className="px-4 py-3 text-gray-500 dark:text-gray-400 font-medium text-right">Members</th>
+              <th className="px-4 py-3 text-gray-500 dark:text-gray-400 font-medium text-center">Notes</th>
             </tr>
           </thead>
           <tbody>
             {loading ? (
-              <tr><td colSpan={7} className="px-4 py-12 text-center text-gray-400 dark:text-gray-500">Loading...</td></tr>
+              <tr><td colSpan={8} className="px-4 py-12 text-center text-gray-400 dark:text-gray-500">Loading...</td></tr>
             ) : filtered.length === 0 ? (
-              <tr><td colSpan={7} className="px-4 py-12 text-center text-gray-400 dark:text-gray-500">No visits logged yet.</td></tr>
+              <tr><td colSpan={8} className="px-4 py-12 text-center text-gray-400 dark:text-gray-500">No visits logged yet.</td></tr>
             ) : filtered.map(v => (
               <tr key={v.id} onClick={() => setSelected(v)} className="border-t border-gray-50 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer">
                 <td className="px-4 py-3 text-gray-600 dark:text-gray-300 whitespace-nowrap">{v.date_visit}</td>
@@ -175,6 +179,7 @@ export default function MarketingEffortsPage() {
                 <td className="px-4 py-3 text-right"><MetricCell before={v.before.deposit} after={v.after.deposit} money /></td>
                 <td className="px-4 py-3 text-right"><MetricCell before={v.before.ggr} after={v.after.ggr} money /></td>
                 <td className="px-4 py-3 text-right"><MetricCell before={v.before.members} after={v.after.members} money={false} /></td>
+                <td className="px-4 py-3 text-center text-gray-600 dark:text-gray-300 max-w-[200px] truncate" title={v.notes ?? undefined}>{v.notes || '—'}</td>
               </tr>
             ))}
           </tbody>
@@ -185,6 +190,7 @@ export default function MarketingEffortsPage() {
                 <td className="px-4 py-3 text-right"><MetricCell before={totals.beforeDeposit} after={totals.afterDeposit} money /></td>
                 <td className="px-4 py-3 text-right"><MetricCell before={totals.beforeGGR} after={totals.afterGGR} money /></td>
                 <td className="px-4 py-3 text-right"><MetricCell before={totals.beforeMembers} after={totals.afterMembers} money={false} /></td>
+                <td className="px-4 py-3"></td>
               </tr>
             </tfoot>
           )}
@@ -213,6 +219,16 @@ export default function MarketingEffortsPage() {
                   <option value="Community">Community</option>
                   <option value="Booth Activation">Booth Activation</option>
                 </select>
+              </div>
+              <div>
+                <label className="text-xs font-medium text-gray-500 dark:text-gray-400 block mb-1">Notes</label>
+                <textarea
+                  value={notes}
+                  onChange={(e) => setNotes(e.target.value)}
+                  rows={3}
+                  placeholder="Any notes about this visit..."
+                  className="w-full border border-gray-200 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg px-3 py-2 text-sm resize-none"
+                />
               </div>
               {error && <p className="text-xs text-red-600">{error}</p>}
             </div>

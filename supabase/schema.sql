@@ -57,6 +57,7 @@ CREATE TABLE IF NOT EXISTS marketing_efforts (
   sub_affiliate VARCHAR(100) NOT NULL,
   sub_affiliate_name VARCHAR(200),
   marketing_type VARCHAR(20) NOT NULL CHECK (marketing_type IN ('Community', 'Booth Activation')),
+  notes TEXT,
   created_by UUID REFERENCES auth.users(id),
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
@@ -82,6 +83,9 @@ ALTER TABLE marketing_efforts ADD COLUMN IF NOT EXISTS marketing_type VARCHAR(20
   CHECK (marketing_type IN ('Community', 'Booth Activation'));
 ALTER TABLE marketing_efforts ADD COLUMN IF NOT EXISTS created_by UUID REFERENCES auth.users(id);
 CREATE INDEX IF NOT EXISTS idx_marketing_sub_affiliate ON marketing_efforts(sub_affiliate, partner);
+
+-- Re-added 2026-07-31: free-text note per visit, entered at creation time.
+ALTER TABLE marketing_efforts ADD COLUMN IF NOT EXISTS notes TEXT;
 CREATE INDEX IF NOT EXISTS idx_marketing_date_visit ON marketing_efforts(date_visit);
 
 -- ============================================================

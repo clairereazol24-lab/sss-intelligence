@@ -74,6 +74,10 @@ export default function VisitDrawer({ visit, onClose, onDeleted }: {
             <p className="text-xs text-gray-400 dark:text-gray-500 mb-1">DSP</p>
             <p className="text-sm text-gray-800 dark:text-gray-100">{visit.dsp || '—'}</p>
           </div>
+          <div>
+            <p className="text-xs text-gray-400 dark:text-gray-500 mb-1">Notes</p>
+            <p className="text-sm text-gray-800 dark:text-gray-100 whitespace-pre-wrap">{visit.notes || '—'}</p>
+          </div>
 
           <div className="border-t border-gray-100 dark:border-gray-700 pt-4">
             <div className="grid grid-cols-3 gap-2 text-xs font-medium text-gray-400 dark:text-gray-500 pb-2">
