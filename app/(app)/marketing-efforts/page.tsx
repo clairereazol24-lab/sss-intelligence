@@ -56,6 +56,23 @@ export default function MarketingEffortsPage() {
 
   useEffect(() => { fetchVisits() }, [])
 
+  const handleNotesChange = (id: string, value: string) => {
+    setVisits(prev => prev.map(v => (v.id === id ? { ...v, notes: value } : v)))
+  }
+
+  const handleNotesBlur = async (id: string, value: string) => {
+    try {
+      const res = await fetch(`/api/marketing-efforts/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ notes: value }),
+      })
+      if (!res.ok) setError('Failed to save note.')
+    } catch {
+      setError('Network error while saving note.')
+    }
+  }
+
   const handleSave = async () => {
     setError('')
     if (!store) { setError('Pick a store first.'); return }
@@ -135,6 +152,8 @@ export default function MarketingEffortsPage() {
         <button onClick={() => setModal(true)} className="bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors">+ Add Visit</button>
       </div>
 
+      {error && !modal && <p className="text-xs text-red-600 mb-3">{error}</p>}
+
       <div className="mb-4 flex flex-wrap items-center gap-3">
         <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search store, partner, or marketing type..." className="border border-gray-200 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg px-3 py-2 text-sm w-full max-w-sm" />
         <select value={partnerFilter} onChange={(e) => setPartnerFilter(e.target.value)} className="border border-gray-200 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg px-3 py-2 text-sm">
@@ -149,7 +168,17 @@ export default function MarketingEffortsPage() {
       </div>
 
       <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden overflow-x-auto">
-        <table className="w-full text-sm" style={{ minWidth: '1000px' }}>
+        <table className="w-full text-sm table-fixed" style={{ minWidth: '1000px' }}>
+          <colgroup>
+            <col style={{ width: '100px' }} />
+            <col style={{ width: '180px' }} />
+            <col style={{ width: '110px' }} />
+            <col style={{ width: '140px' }} />
+            <col style={{ width: '130px' }} />
+            <col style={{ width: '130px' }} />
+            <col style={{ width: '110px' }} />
+            <col />
+          </colgroup>
           <thead>
             <tr className="bg-gray-50 dark:bg-gray-700 text-left">
               <th className="px-4 py-3 text-gray-500 dark:text-gray-400 font-medium">Date Visit</th>
@@ -179,7 +208,16 @@ export default function MarketingEffortsPage() {
                 <td className="px-4 py-3 text-right"><MetricCell before={v.before.deposit} after={v.after.deposit} money /></td>
                 <td className="px-4 py-3 text-right"><MetricCell before={v.before.ggr} after={v.after.ggr} money /></td>
                 <td className="px-4 py-3 text-right"><MetricCell before={v.before.members} after={v.after.members} money={false} /></td>
-                <td className="px-4 py-3 text-center text-gray-600 dark:text-gray-300 max-w-[200px] truncate" title={v.notes ?? undefined}>{v.notes || '—'}</td>
+                <td className="px-2 py-2" onClick={(e) => e.stopPropagation()}>
+                  <input
+                    type="text"
+                    value={v.notes ?? ''}
+                    onChange={(e) => handleNotesChange(v.id, e.target.value)}
+                    onBlur={(e) => handleNotesBlur(v.id, e.target.value)}
+                    placeholder="Add a note..."
+                    className="w-full text-center bg-transparent border border-transparent hover:border-gray-200 focus:border-gray-300 dark:hover:border-gray-600 dark:focus:border-gray-500 focus:bg-white dark:focus:bg-gray-700 rounded-lg px-2 py-1.5 text-sm text-gray-600 dark:text-gray-300 outline-none"
+                  />
+                </td>
               </tr>
             ))}
           </tbody>
