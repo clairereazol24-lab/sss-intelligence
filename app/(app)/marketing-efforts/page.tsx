@@ -56,20 +56,26 @@ export default function MarketingEffortsPage() {
 
   useEffect(() => { fetchVisits() }, [])
 
-  const handleNotesChange = (id: string, value: string) => {
-    setVisits(prev => prev.map(v => (v.id === id ? { ...v, notes: value } : v)))
-  }
+  const [notesEditor, setNotesEditor] = useState<{ id: string; value: string } | null>(null)
+  const [notesSaving, setNotesSaving] = useState(false)
 
-  const handleNotesBlur = async (id: string, value: string) => {
+  const saveNotesEditor = async () => {
+    if (!notesEditor) return
+    setNotesSaving(true)
     try {
-      const res = await fetch(`/api/marketing-efforts/${id}`, {
+      const res = await fetch(`/api/marketing-efforts/${notesEditor.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ notes: value }),
+        body: JSON.stringify({ notes: notesEditor.value }),
       })
-      if (!res.ok) setError('Failed to save note.')
+      if (!res.ok) { setError('Failed to save note.'); return }
+      const savedValue = notesEditor.value.trim() || null
+      setVisits(prev => prev.map(v => (v.id === notesEditor.id ? { ...v, notes: savedValue } : v)))
+      setNotesEditor(null)
     } catch {
       setError('Network error while saving note.')
+    } finally {
+      setNotesSaving(false)
     }
   }
 
@@ -208,15 +214,13 @@ export default function MarketingEffortsPage() {
                 <td className="px-4 py-3 text-right"><MetricCell before={v.before.deposit} after={v.after.deposit} money /></td>
                 <td className="px-4 py-3 text-right"><MetricCell before={v.before.ggr} after={v.after.ggr} money /></td>
                 <td className="px-4 py-3 text-right"><MetricCell before={v.before.members} after={v.after.members} money={false} /></td>
-                <td className="px-2 py-2" onClick={(e) => e.stopPropagation()}>
-                  <input
-                    type="text"
-                    value={v.notes ?? ''}
-                    onChange={(e) => handleNotesChange(v.id, e.target.value)}
-                    onBlur={(e) => handleNotesBlur(v.id, e.target.value)}
-                    placeholder="Add a note..."
-                    className="w-full text-center bg-transparent border border-transparent hover:border-gray-200 focus:border-gray-300 dark:hover:border-gray-600 dark:focus:border-gray-500 focus:bg-white dark:focus:bg-gray-700 rounded-lg px-2 py-1.5 text-sm text-gray-600 dark:text-gray-300 outline-none"
-                  />
+                <td
+                  className="px-4 py-3 text-center cursor-pointer"
+                  onClick={(e) => { e.stopPropagation(); setNotesEditor({ id: v.id, value: v.notes ?? '' }) }}
+                >
+                  <span className="block truncate text-gray-600 dark:text-gray-300 hover:underline decoration-dotted" title={v.notes ?? undefined}>
+                    {v.notes || <span className="text-gray-300 dark:text-gray-600">Add note</span>}
+                  </span>
                 </td>
               </tr>
             ))}
@@ -273,6 +277,26 @@ export default function MarketingEffortsPage() {
             <div className="flex gap-2 mt-5 justify-end">
               <button onClick={() => { setModal(false); setError('') }} className="px-4 py-2 text-sm text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">Cancel</button>
               <button onClick={handleSave} disabled={saving || !store} className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-blue-300">{saving ? 'Saving...' : 'Save'}</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {notesEditor && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+          <div className="bg-white dark:bg-gray-800 rounded-xl p-6 w-full max-w-md shadow-xl">
+            <h2 className="font-bold text-gray-800 dark:text-gray-100 mb-4">Edit Note</h2>
+            <textarea
+              value={notesEditor.value}
+              onChange={(e) => setNotesEditor({ ...notesEditor, value: e.target.value })}
+              rows={4}
+              autoFocus
+              placeholder="Any notes about this visit..."
+              className="w-full border border-gray-200 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg px-3 py-2 text-sm resize-none"
+            />
+            <div className="flex gap-2 mt-5 justify-end">
+              <button onClick={() => setNotesEditor(null)} className="px-4 py-2 text-sm text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">Cancel</button>
+              <button onClick={saveNotesEditor} disabled={notesSaving} className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-blue-300">{notesSaving ? 'Saving...' : 'Save'}</button>
             </div>
           </div>
         </div>
