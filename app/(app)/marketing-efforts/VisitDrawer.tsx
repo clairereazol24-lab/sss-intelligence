@@ -23,14 +23,39 @@ function MetricRow({ label, before, after, money }: { label: string; before: num
   )
 }
 
-export default function VisitDrawer({ visit, onClose, onDeleted }: {
+export default function VisitDrawer({ visit, onClose, onDeleted, onNotesSaved }: {
   visit: VisitWithMetrics
   onClose: () => void
   onDeleted: (id: string) => void
+  onNotesSaved: (id: string, notes: string | null) => void
 }) {
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
   const [deleting, setDeleting] = useState(false)
   const [deleteError, setDeleteError] = useState('')
+
+  const [notesDraft, setNotesDraft] = useState(visit.notes ?? '')
+  const [notesSaving, setNotesSaving] = useState(false)
+  const [notesError, setNotesError] = useState('')
+
+  const saveNotes = async () => {
+    setNotesSaving(true)
+    setNotesError('')
+    try {
+      const res = await fetch(`/api/marketing-efforts/${visit.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ notes: notesDraft }),
+      })
+      if (!res.ok) { setNotesError('Failed to save.'); return }
+      const saved = notesDraft.trim() || null
+      setNotesDraft(saved ?? '')
+      onNotesSaved(visit.id, saved)
+    } catch {
+      setNotesError('Network error.')
+    } finally {
+      setNotesSaving(false)
+    }
+  }
 
   const confirmDelete = async () => {
     setDeleteConfirmOpen(false)
@@ -76,7 +101,23 @@ export default function VisitDrawer({ visit, onClose, onDeleted }: {
           </div>
           <div>
             <p className="text-xs text-gray-400 dark:text-gray-500 mb-1">Notes</p>
-            <p className="text-sm text-gray-800 dark:text-gray-100 whitespace-pre-wrap">{visit.notes || '—'}</p>
+            <textarea
+              value={notesDraft}
+              onChange={(e) => setNotesDraft(e.target.value)}
+              rows={3}
+              placeholder="Any notes about this visit..."
+              className="w-full border border-gray-200 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg px-3 py-2 text-sm resize-none"
+            />
+            <div className="flex items-center justify-end gap-2 mt-2">
+              {notesError && <span className="text-xs text-red-600 mr-auto">{notesError}</span>}
+              <button
+                onClick={saveNotes}
+                disabled={notesSaving || notesDraft === (visit.notes ?? '')}
+                className="px-3 py-1.5 text-xs font-medium bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-blue-300"
+              >
+                {notesSaving ? 'Saving…' : 'Save Note'}
+              </button>
+            </div>
           </div>
 
           <div className="border-t border-gray-100 dark:border-gray-700 pt-4">
