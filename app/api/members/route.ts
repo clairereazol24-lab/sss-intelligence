@@ -99,7 +99,19 @@ export async function GET(request: NextRequest) {
     if (period && period !== 'all') {
       allRows = await fetchAllMembers(partner, DEFAULT_COLUMNS, { kind: 'exact', period })
     } else if (from && to) {
-      allRows = await fetchAllMembers(partner, DEFAULT_COLUMNS, { kind: 'range', from, to })
+      // De-dup to the latest period per username within the range — without this, a
+      // username with multiple period rows in range (e.g. Company's daily-additive rows)
+      // would appear once per row instead of once at its latest cumulative total.
+      const rangeRows = await fetchAllMembers(partner, `${DEFAULT_COLUMNS}, period, partner`, { kind: 'range', from, to })
+      const latestInRange = new Map<string, any>()
+      for (const r of rangeRows as any[]) {
+        const key = `${r.username}__${r.partner ?? ''}`
+        const existing = latestInRange.get(key)
+        const rP: string | null = r.period ?? null
+        const exP: string | null = existing ? (existing.period ?? null) : null
+        if (!existing || (rP !== null && (exP === null || rP > exP))) latestInRange.set(key, r)
+      }
+      allRows = Array.from(latestInRange.values())
     } else {
       allRows = await fetchAllMembersLatestFallback(partner, DEFAULT_COLUMNS)
     }
@@ -148,11 +160,12 @@ export async function POST(request: NextRequest) {
 
     const partnerVal: string = records[0]?.partner || ''
 
-    // Fetch existing rows across ALL periods for this partner, so the lock-to-first-upload
-    // logic below can find each username's true earliest record, not just the last one fetched.
+    // Fetch existing rows across ALL periods for this partner once, reused below both for
+    // the lock-to-first-upload logic and (for Company daily uploads) the cumulative-baseline
+    // lookup — avoids scanning the whole table twice per upload.
     const existingRows = await fetchAllMembers(
       partnerVal,
-      'username, registered_time, first_deposit_amount, period'
+      'username, registered_time, first_deposit_amount, period, deposit, withdraw, deposit_times, withdraw_times, company_net_win'
     )
     const existingMap: Record<string, any> = {}
     for (const e of existingRows) {
@@ -175,16 +188,27 @@ export async function POST(request: NextRequest) {
     // today (any earlier period, any period_type) and add today's delta onto it. Excluding
     // period >= today makes same-day re-uploads idempotent: re-running today always
     // recomputes from the same untouched prior baseline.
+    //
+    // Also watch for the reverse case: a row already stored for a period AFTER today's —
+    // uploads are expected to happen in chronological order, and an out-of-order upload
+    // would silently fail to propagate into that later period's already-computed totals.
+    // Surface it as a warning rather than guessing how to fix it up automatically.
     const cumulativeBaseline: Record<string, any> = {}
+    let backfillWarning: string | null = null
     if (period_type === 'daily' && partnerVal === 'Company') {
-      const priorRows = await fetchAllMembers(
-        partnerVal,
-        'username, period, deposit, withdraw, deposit_times, withdraw_times, company_net_win'
-      )
-      for (const r of priorRows as any[]) {
-        if (r.period == null || r.period >= period) continue
+      let newestExistingPeriod: string | null = null
+      for (const r of existingRows as any[]) {
+        if (r.period == null) continue
+        if (r.period > period) {
+          if (newestExistingPeriod === null || r.period > newestExistingPeriod) newestExistingPeriod = r.period
+          continue
+        }
+        if (r.period >= period) continue
         const existing = cumulativeBaseline[r.username]
         if (!existing || r.period > existing.period) cumulativeBaseline[r.username] = r
+      }
+      if (newestExistingPeriod) {
+        backfillWarning = `This upload is for ${period}, but data already exists for a later period (${newestExistingPeriod}). That later period's cumulative totals will NOT include this upload's numbers — re-upload ${newestExistingPeriod}'s file after this one if you need it corrected.`
       }
     }
 
@@ -234,7 +258,7 @@ export async function POST(request: NextRequest) {
       upserted += batch.length
     }
 
-    return NextResponse.json({ count: upserted })
+    return NextResponse.json({ count: upserted, ...(backfillWarning ? { warning: backfillWarning } : {}) })
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 500 })
   }

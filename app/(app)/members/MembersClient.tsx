@@ -49,7 +49,7 @@ export default function MembersClient({ partner }: { partner: string }) {
   const fileRef = useRef<HTMLInputElement>(null)
 
   const today = new Date()
-  const [periodType, setPeriodType] = useState<'monthly' | 'daily'>('monthly')
+  const [periodType, setPeriodType] = useState<'monthly' | 'daily'>(partner === 'Company' ? 'daily' : 'monthly')
   const [date, setDate] = useState(today.toISOString().slice(0, 10))
 
   const fetchMembers = async () => {
@@ -120,7 +120,7 @@ export default function MembersClient({ partner }: { partner: string }) {
         })
         const data = await res.json()
         if (!res.ok) throw new Error(data.error || 'Upload failed.')
-        setResult(`✅ ${data.count} member records uploaded for period ${date}.`)
+        setResult(`✅ ${data.count} member records uploaded for period ${date}.${data.warning ? ` ⚠️ ${data.warning}` : ''}`)
       } else {
         // Monthly: derive each row's period from its own Registered Time instead of
         // one manual label for the whole batch, so a single upload spanning several
