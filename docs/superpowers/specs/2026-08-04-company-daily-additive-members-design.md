@@ -31,8 +31,17 @@ The baseline lookup excludes `period >= today's date`, so re-running today's upl
 
 - `app/api/upload/route.ts` (SSS Data / `performance_data`) — untouched. Company never used this pipeline; other partners' behavior isn't part of this change.
 - `app/api/performance/route.ts` GET — untouched. Its "latest period per username wins" read logic already produces the correct cumulative figure once each stored row is itself a correct cumulative snapshot.
-- `app/api/members/route.ts` GET — untouched, same reasoning.
+- `lib/marketing-performance.ts` — untouched, but its `computeCompanyMetrics` already documents Company member rows as "running totals-to-date, never summed across periods." Before this change that assumption wasn't actually true for Company's daily rows; this change makes the stored data match the contract that code was already written against.
 - Monthly upload mode (cohort-by-registered-time) — untouched.
+
+## Follow-up fixes from final review (folded into this branch)
+
+A final whole-branch review found four gaps in the read paths and UI surrounding this change, all fixed in the same branch before merge:
+
+- **`app/(app)/members/MembersClient.tsx`** — the Daily/Monthly picker now defaults to Daily specifically when `partner === 'Company'`. Originally scoped as "unchanged" in this spec, but a Company upload left on Monthly would silently write a raw (non-cumulative) snapshot that then poisons the next real daily upload's baseline — the one failure mode serious enough to require touching the UI.
+- **`app/api/members/route.ts` POST** — now detects the out-of-order case (uploading a period earlier than one already stored) and returns a `warning` string in the response, surfaced in the Members page's success message. The additive design can't self-heal from a backfill; silently doing nothing was worse than saying so.
+- **`app/api/members/route.ts` GET**, `from`/`to` range branch — now de-dups to the latest period per username (scoped per partner), matching the no-period fallback path's existing behavior. Without this, a username with several period rows in range would appear once per row instead of once at its latest cumulative total.
+- **`app/api/members/route.ts` POST** — the two full-table scans (lock-to-earliest-record lookup and cumulative-baseline lookup) now share a single fetch.
 
 ## Implementation sketch (`app/api/members/route.ts` POST)
 
