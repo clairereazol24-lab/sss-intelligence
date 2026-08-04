@@ -169,17 +169,47 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // Company's daily uploads report that day's NEW activity, not a running total — its
+    // source report can only be pulled for a bounded window, so we can't just re-pull a
+    // full snapshot indefinitely. Find each username's last cumulative total from before
+    // today (any earlier period, any period_type) and add today's delta onto it. Excluding
+    // period >= today makes same-day re-uploads idempotent: re-running today always
+    // recomputes from the same untouched prior baseline.
+    const cumulativeBaseline: Record<string, any> = {}
+    if (period_type === 'daily' && partnerVal === 'Company') {
+      const priorRows = await fetchAllMembers(
+        partnerVal,
+        'username, period, deposit, withdraw, deposit_times, withdraw_times, company_net_win'
+      )
+      for (const r of priorRows as any[]) {
+        if (r.period == null || r.period >= period) continue
+        const existing = cumulativeBaseline[r.username]
+        if (!existing || r.period > existing.period) cumulativeBaseline[r.username] = r
+      }
+    }
+
     // Replace all fields with the new upload's values, except registered_time/first_deposit_amount
     // which stay locked to the earliest-ever record for that username, and stamp period/period_type.
     const mergedRecords = records.map((r: any) => {
       const ex = existingMap[r.username]
-      const base = ex
+      let base = ex
         ? {
             ...r,
             registered_time: ex.registered_time || r.registered_time,
             first_deposit_amount: ex.first_deposit_amount || r.first_deposit_amount,
           }
         : r
+      const baseline = cumulativeBaseline[r.username]
+      if (baseline) {
+        base = {
+          ...base,
+          deposit: (baseline.deposit || 0) + (r.deposit || 0),
+          withdraw: (baseline.withdraw || 0) + (r.withdraw || 0),
+          deposit_times: (baseline.deposit_times || 0) + (r.deposit_times || 0),
+          withdraw_times: (baseline.withdraw_times || 0) + (r.withdraw_times || 0),
+          company_net_win: (baseline.company_net_win || 0) + (r.company_net_win || 0),
+        }
+      }
       return { ...base, period, period_type: period_type || null }
     })
 
