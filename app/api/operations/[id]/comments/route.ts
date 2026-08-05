@@ -1,11 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase-admin'
 import { requireOpsAccess } from '@/lib/ops-access'
-import { sendOpsTelegramMessage } from '@/lib/telegram-ops'
+import { sendOpsTelegramMessage, escapeHtml, truncateText } from '@/lib/telegram-ops'
 
 async function notifyCollaboratorsAndMentions(taskId: string, authorId: string, body: string, type: 'update' | 'comment') {
-  const { data: task } = await supabaseAdmin.from('ops_tasks').select('title').eq('id', taskId).maybeSingle()
+  const [{ data: task }, { data: profiles }] = await Promise.all([
+    supabaseAdmin.from('ops_tasks').select('title').eq('id', taskId).maybeSingle(),
+    supabaseAdmin.from('profiles').select('id, username, name'),
+  ])
   const taskTitle = task?.title || 'a task'
+  const author = (profiles || []).find((p: any) => p.id === authorId)
+  const authorName = author?.name || author?.username || 'Someone'
 
   const { data: collabRows } = await supabaseAdmin.from('ops_collaborators').select('user_id').eq('task_id', taskId)
   const collaboratorIds = (collabRows || []).map((c: any) => c.user_id).filter((id: string) => id !== authorId)
@@ -24,7 +29,6 @@ async function notifyCollaboratorsAndMentions(taskId: string, authorId: string, 
 
   const mentionMatches = Array.from(new Set((body.match(/@[A-Z]\w*/g) || []).map((m) => m.slice(1).toLowerCase())))
   if (mentionMatches.length > 0) {
-    const { data: profiles } = await supabaseAdmin.from('profiles').select('id, username, name')
     const mentionedIds = (profiles || [])
       .filter((p: any) => {
         const first = (p.name || '').split(' ')[0].toLowerCase()
@@ -50,7 +54,9 @@ async function notifyCollaboratorsAndMentions(taskId: string, authorId: string, 
     }
   }
 
-  await sendOpsTelegramMessage(`💬 New Comment posted on "${taskTitle}"`)
+  await sendOpsTelegramMessage(
+    `💬 New Comment on "${escapeHtml(taskTitle)}"\nBy: <b>${escapeHtml(authorName)}</b>\n${escapeHtml(truncateText(body, 300))}`
+  )
 }
 
 export async function GET(_request: NextRequest, { params }: { params: { id: string } }) {

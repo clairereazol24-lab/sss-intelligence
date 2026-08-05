@@ -1,15 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase-admin'
-import { sendOpsTelegramMessage } from '@/lib/telegram-ops'
-
-function escapeHtml(text: string): string {
-  return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-}
-
-function truncate(text: string, max: number): string {
-  const trimmed = text.trim()
-  return trimmed.length > max ? `${trimmed.slice(0, max)}…` : trimmed
-}
+import { sendOpsTelegramMessage, escapeHtml, truncateText } from '@/lib/telegram-ops'
 
 export async function GET(request: NextRequest) {
   const authHeader = request.headers.get('authorization')
@@ -60,7 +51,7 @@ export async function GET(request: NextRequest) {
     for (const item of taskItems) {
       const label = item.type === 'update' ? 'Update' : 'Comment'
       const author = escapeHtml(nameById[item.user_id] || 'Someone')
-      const content = escapeHtml(truncate(item.body, 140))
+      const content = escapeHtml(truncateText(item.body, 140))
       lines.push(`• ${label} by <b>${author}</b>: ${content}`)
     }
   }

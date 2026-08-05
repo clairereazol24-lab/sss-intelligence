@@ -2,11 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase-admin'
 import { requireCalendarAccess } from '@/lib/calendar-access'
 import { fetchCalendarEvents } from '@/lib/calendar-events'
-import { sendOpsTelegramMessage } from '@/lib/telegram-ops'
-
-function escapeHtml(text: string): string {
-  return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-}
+import { sendOpsTelegramMessage, escapeHtml } from '@/lib/telegram-ops'
 
 export async function GET(request: NextRequest) {
   const auth = await requireCalendarAccess()
