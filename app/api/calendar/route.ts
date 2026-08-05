@@ -2,6 +2,11 @@ import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase-admin'
 import { requireCalendarAccess } from '@/lib/calendar-access'
 import { fetchCalendarEvents } from '@/lib/calendar-events'
+import { sendOpsTelegramMessage } from '@/lib/telegram-ops'
+
+function escapeHtml(text: string): string {
+  return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+}
 
 export async function GET(request: NextRequest) {
   const auth = await requireCalendarAccess()
@@ -41,6 +46,19 @@ export async function POST(request: NextRequest) {
     .select('*')
     .single()
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+
+  const scheduledBy = auth.access.name || auth.access.username || 'Someone'
+  const lines = [
+    '📅 <b>New Event Scheduled</b>',
+    `<b>${escapeHtml(data.title)}</b>`,
+    `Date: ${escapeHtml(data.date)}${data.time ? ` at ${escapeHtml(data.time)}` : ''}`,
+    `Scheduled by: <b>${escapeHtml(scheduledBy)}</b>`,
+  ]
+  if (data.details) lines.push(`Details: ${escapeHtml(data.details)}`)
+  if (Array.isArray(data.attendees) && data.attendees.length > 0) {
+    lines.push(`Attendees: ${escapeHtml(data.attendees.join(', '))}`)
+  }
+  await sendOpsTelegramMessage(lines.join('\n'))
 
   return NextResponse.json({ event: data }, { status: 201 })
 }
