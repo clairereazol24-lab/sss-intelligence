@@ -182,6 +182,7 @@ export default function CalendarClient({
 
   async function handleSave() {
     if (!form.title.trim()) { setFormError('Event title is required.'); return }
+    if (!form.date) { setFormError('Event date is required.'); return }
     setSaving(true)
     setFormError(null)
     const res = await fetch('/api/calendar', {
@@ -190,8 +191,17 @@ export default function CalendarClient({
       body: JSON.stringify(panelMode === 'create' ? form : { id: editingId, ...form }),
     })
     if (res.ok) {
-      await fetchEvents(year, month)
-      backToList()
+      // Save may have rescheduled the event to a different date/month than the one
+      // currently in view — navigate there so the list panel reflects where it landed
+      // instead of showing the old date (possibly now empty).
+      const [y, m] = form.date.split('-').map(Number)
+      setYear(y)
+      setMonth(m)
+      await fetchEvents(y, m)
+      setSelectedDate(form.date)
+      setEditingId(null)
+      setFormError(null)
+      setPanelMode('list')
     } else {
       const d = await res.json().catch(() => ({}))
       setFormError(d.error ?? 'Save failed.')
@@ -314,6 +324,13 @@ export default function CalendarClient({
           {panelMode !== 'list' && (
             <>
               <div className="flex-1 overflow-y-auto px-5 py-4 space-y-4">
+                <div>
+                  <label className="block text-[11px] font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500 mb-1">Date</label>
+                  <input type="date" value={form.date} onChange={(e) => setField('date', e.target.value)} disabled={!canEditForm} className="w-full text-sm rounded-lg border border-gray-200 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 px-3 py-2 outline-none focus:ring-2 focus:ring-blue-300 disabled:opacity-50 disabled:cursor-not-allowed" />
+                  {panelMode === 'edit' && form.date !== selectedDate && (
+                    <p className="text-[11px] text-blue-600 dark:text-blue-400 mt-1">Saving will move this event to {fmtDate(form.date)}.</p>
+                  )}
+                </div>
                 <div>
                   <label className="block text-[11px] font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500 mb-1">Event Title</label>
                   <input type="text" value={form.title} onChange={(e) => setField('title', e.target.value)} placeholder="Event name…" disabled={!canEditForm} className="w-full text-sm rounded-lg border border-gray-200 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 px-3 py-2 outline-none focus:ring-2 focus:ring-blue-300 disabled:opacity-50 disabled:cursor-not-allowed" />

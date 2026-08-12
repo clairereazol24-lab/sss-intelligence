@@ -409,7 +409,30 @@ export default function TaskDetailClient({ taskId, onClose, initialTitle, initia
       <div className="mt-6 pt-6 border-t border-gray-200 dark:border-gray-700">
         <h2 className="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-3">Activity</h2>
 
-        <div className="space-y-4">
+        <div className="relative">
+          <textarea
+            value={updateBody}
+            onChange={(e) => handleUpdateBodyChange(e.target.value)}
+            onKeyDown={(e) => handleBoldShortcut(e, updateBody, setUpdateBody)}
+            placeholder="Add a progress update... (use @Name to mention someone, Ctrl+B to bold)"
+            rows={3}
+            className="w-full border border-gray-200 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 rounded-lg px-3 py-2 text-sm resize-y min-h-[72px] max-h-[50vh]"
+          />
+          {mentionSuggestions.length > 0 && (
+            <div className="absolute z-10 bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg shadow-lg mt-1 w-48">
+              {mentionSuggestions.map((u) => (
+                <button key={u.id} onClick={() => applyMentionSuggestion(u)} className="block w-full text-left px-3 py-1.5 text-sm hover:bg-gray-100 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200">
+                  {u.name || u.username}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+        <button onClick={handlePostUpdate} disabled={postingUpdate || !updateBody.trim()} className="w-full mt-2 py-2 text-sm font-medium bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-blue-300 disabled:dark:bg-blue-900/40">
+          {postingUpdate ? 'Saving...' : 'Save Update'}
+        </button>
+
+        <div className="space-y-4 mt-6">
           {feed.length === 0 && <p className="text-xs text-gray-400 dark:text-gray-500">No activity yet.</p>}
           {feed.map((entry) => (
             <div key={entry.id} className="flex gap-3">
@@ -456,29 +479,6 @@ export default function TaskDetailClient({ taskId, onClose, initialTitle, initia
             </div>
           ))}
         </div>
-
-        <div className="relative mt-4">
-          <textarea
-            value={updateBody}
-            onChange={(e) => handleUpdateBodyChange(e.target.value)}
-            onKeyDown={(e) => handleBoldShortcut(e, updateBody, setUpdateBody)}
-            placeholder="Add a progress update... (use @Name to mention someone, Ctrl+B to bold)"
-            rows={2}
-            className="w-full border border-gray-200 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 rounded-lg px-3 py-2 text-sm resize-none"
-          />
-          {mentionSuggestions.length > 0 && (
-            <div className="absolute z-10 bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg shadow-lg mt-1 w-48">
-              {mentionSuggestions.map((u) => (
-                <button key={u.id} onClick={() => applyMentionSuggestion(u)} className="block w-full text-left px-3 py-1.5 text-sm hover:bg-gray-100 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200">
-                  {u.name || u.username}
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
-        <button onClick={handlePostUpdate} disabled={postingUpdate || !updateBody.trim()} className="w-full mt-2 py-2 text-sm font-medium bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-blue-300 disabled:dark:bg-blue-900/40">
-          {postingUpdate ? 'Saving...' : 'Save Update'}
-        </button>
       </div>
 
       <div className="mt-6">
