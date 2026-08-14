@@ -12,6 +12,11 @@ type Store = {
 }
 
 const STATUS_OPTIONS = ['Fully Deployed', 'For Deployment', 'Not Deployed']
+const normalizeStatus = (raw: unknown): string => {
+  const trimmed = typeof raw === 'string' ? raw.trim() : ''
+  const match = STATUS_OPTIONS.find(o => o.toLowerCase() === trimmed.toLowerCase())
+  return match || 'Not Deployed'
+}
 const statusColor = (s: string) =>
   s === 'Fully Deployed' ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' :
   s === 'For Deployment' ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400' :
@@ -47,11 +52,11 @@ export default function StoreDirectoryPage({ partner }: { partner?: string }) {
 
   useEffect(() => { fetchStores() }, [partner])
 
-  const subAffiliateKey = bulkHeaders.find(h => h.toLowerCase() === 'sub affiliate')
-  const storeNameKey = bulkHeaders.find(h => h.toLowerCase() === 'store name')
-  const partnerKey = bulkHeaders.find(h => h.toLowerCase() === 'partner')
-  const dspKey = bulkHeaders.find(h => h.toLowerCase() === 'dsp')
-  const statusKey = bulkHeaders.find(h => h.toLowerCase() === 'deployment status')
+  const subAffiliateKey = bulkHeaders.find(h => h.trim().toLowerCase() === 'sub affiliate')
+  const storeNameKey = bulkHeaders.find(h => h.trim().toLowerCase() === 'store name')
+  const partnerKey = bulkHeaders.find(h => h.trim().toLowerCase() === 'partner')
+  const dspKey = bulkHeaders.find(h => h.trim().toLowerCase() === 'dsp')
+  const statusKey = bulkHeaders.find(h => ['deployment status', 'status'].includes(h.trim().toLowerCase()))
 
   const handleBulkFile = (f: File) => {
     setBulkError(null)
@@ -91,7 +96,7 @@ export default function StoreDirectoryPage({ partner }: { partner?: string }) {
       store_name: row[storeNameKey],
       partner: partner || (partnerKey ? row[partnerKey] : null) || null,
       dsp: (dspKey ? row[dspKey] : null) || null,
-      deployment_status: statusKey && STATUS_OPTIONS.includes(row[statusKey]) ? row[statusKey] : 'Not Deployed',
+      deployment_status: normalizeStatus(statusKey ? row[statusKey] : undefined),
     }))
     const res = await fetch('/api/stores/bulk', {
       method: 'POST',
@@ -264,7 +269,7 @@ export default function StoreDirectoryPage({ partner }: { partner?: string }) {
                         <td className="px-3 py-2 text-gray-700 dark:text-gray-300">{storeNameKey ? row[storeNameKey] : '—'}</td>
                         <td className="px-3 py-2 text-gray-700 dark:text-gray-300">{partner || (partnerKey && row[partnerKey]) || '—'}</td>
                         <td className="px-3 py-2 text-gray-700 dark:text-gray-300">{(dspKey && row[dspKey]) || '—'}</td>
-                        <td className="px-3 py-2 text-gray-700 dark:text-gray-300">{statusKey && STATUS_OPTIONS.includes(row[statusKey]) ? row[statusKey] : 'Not Deployed'}</td>
+                        <td className="px-3 py-2 text-gray-700 dark:text-gray-300">{normalizeStatus(statusKey ? row[statusKey] : undefined)}</td>
                       </tr>
                     ))}
                   </tbody>
