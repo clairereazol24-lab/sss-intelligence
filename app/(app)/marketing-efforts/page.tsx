@@ -8,6 +8,17 @@ function fmt(n: number) {
   return `₱${n.toLocaleString('en-PH', { maximumFractionDigits: 0 })}`
 }
 
+const PINNED_STORES_KEY = 'sss-marketing-pinned-stores'
+
+function PinIcon({ filled }: { filled: boolean }) {
+  return (
+    <svg viewBox="0 0 24 24" width="16" height="16" fill={filled ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M12 17v5" />
+      <path d="M9 10.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24V16a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V7a1 1 0 0 1 1-1 2 2 0 0 0 0-4H8a2 2 0 0 0 0 4 1 1 0 0 1 1 1z" />
+    </svg>
+  )
+}
+
 function MetricCell({ before, after, money }: { before: number; after: number; money: boolean }) {
   const delta = after - before
   const format = (n: number) => (money ? fmt(n) : n.toLocaleString())
@@ -34,6 +45,7 @@ export default function MarketingEffortsPage() {
   const [partnerFilter, setPartnerFilter] = useState('all')
   const [typeFilter, setTypeFilter] = useState('all')
   const [selected, setSelected] = useState<VisitWithMetrics | null>(null)
+  const [pinnedStores, setPinnedStores] = useState<Set<string>>(new Set())
 
   const [store, setStore] = useState<StoreOption | null>(null)
   const [dateVisit, setDateVisit] = useState(() => new Date().toISOString().slice(0, 10))
@@ -55,6 +67,23 @@ export default function MarketingEffortsPage() {
   }
 
   useEffect(() => { fetchVisits() }, [])
+
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(PINNED_STORES_KEY)
+      if (raw) setPinnedStores(new Set(JSON.parse(raw)))
+    } catch {}
+  }, [])
+
+  const togglePin = (subAffiliate: string) => {
+    setPinnedStores(prev => {
+      const next = new Set(prev)
+      if (next.has(subAffiliate)) next.delete(subAffiliate)
+      else next.add(subAffiliate)
+      try { localStorage.setItem(PINNED_STORES_KEY, JSON.stringify(Array.from(next))) } catch {}
+      return next
+    })
+  }
 
   const handleNotesSaved = (id: string, notes: string | null) => {
     setVisits(prev => prev.map(v => (v.id === id ? { ...v, notes } : v)))
@@ -103,7 +132,7 @@ export default function MarketingEffortsPage() {
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase()
-    return visits.filter(v => {
+    const matches = visits.filter(v => {
       if (partnerFilter !== 'all' && v.partner !== partnerFilter) return false
       if (typeFilter !== 'all' && v.marketing_type !== typeFilter) return false
       if (!q) return true
@@ -114,7 +143,13 @@ export default function MarketingEffortsPage() {
         v.marketing_type?.toLowerCase().includes(q)
       )
     })
-  }, [visits, search, partnerFilter, typeFilter])
+    if (pinnedStores.size === 0) return matches
+    return matches.slice().sort((a, b) => {
+      const aPinned = pinnedStores.has(a.sub_affiliate) ? 0 : 1
+      const bPinned = pinnedStores.has(b.sub_affiliate) ? 0 : 1
+      return aPinned - bPinned
+    })
+  }, [visits, search, partnerFilter, typeFilter, pinnedStores])
 
   const totals = useMemo(() => filtered.reduce(
     (acc, v) => {
@@ -187,8 +222,19 @@ export default function MarketingEffortsPage() {
               <tr key={v.id} onClick={() => setSelected(v)} className="border-t border-gray-50 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer">
                 <td className="px-4 py-3 text-gray-600 dark:text-gray-300 whitespace-nowrap">{v.date_visit}</td>
                 <td className="px-4 py-3">
-                  <div className="font-medium text-gray-800 dark:text-gray-100">{v.sub_affiliate_name || v.sub_affiliate}</div>
-                  <div className="text-xs text-gray-400 dark:text-gray-500">{v.sub_affiliate}</div>
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      onClick={(e) => { e.stopPropagation(); togglePin(v.sub_affiliate) }}
+                      title={pinnedStores.has(v.sub_affiliate) ? 'Unpin store' : 'Pin store to top'}
+                      className={pinnedStores.has(v.sub_affiliate) ? 'text-blue-600 shrink-0' : 'text-gray-300 dark:text-gray-600 hover:text-gray-400 dark:hover:text-gray-500 shrink-0'}
+                    >
+                      <PinIcon filled={pinnedStores.has(v.sub_affiliate)} />
+                    </button>
+                    <div>
+                      <div className="font-medium text-gray-800 dark:text-gray-100">{v.sub_affiliate_name || v.sub_affiliate}</div>
+                      <div className="text-xs text-gray-400 dark:text-gray-500">{v.sub_affiliate}</div>
+                    </div>
+                  </div>
                 </td>
                 <td className="px-4 py-3 text-gray-600 dark:text-gray-300">{v.partner || '—'}</td>
                 <td className="px-4 py-3 text-gray-600 dark:text-gray-300">{v.marketing_type}</td>
