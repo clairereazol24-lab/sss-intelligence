@@ -200,6 +200,7 @@ export default function MarketingEffortsPage() {
             <col style={{ width: '130px' }} />
             <col style={{ width: '110px' }} />
             <col />
+            <col style={{ width: '36px' }} />
           </colgroup>
           <thead>
             <tr className="bg-gray-50 dark:bg-gray-700 text-left">
@@ -211,30 +212,20 @@ export default function MarketingEffortsPage() {
               <th className="px-4 py-3 text-gray-500 dark:text-gray-400 font-medium text-right">GGR</th>
               <th className="px-4 py-3 text-gray-500 dark:text-gray-400 font-medium text-right">Members</th>
               <th className="px-4 py-3 text-gray-500 dark:text-gray-400 font-medium text-center">Notes</th>
+              <th className="py-3"></th>
             </tr>
           </thead>
           <tbody>
             {loading ? (
-              <tr><td colSpan={8} className="px-4 py-12 text-center text-gray-400 dark:text-gray-500">Loading...</td></tr>
+              <tr><td colSpan={9} className="px-4 py-12 text-center text-gray-400 dark:text-gray-500">Loading...</td></tr>
             ) : filtered.length === 0 ? (
-              <tr><td colSpan={8} className="px-4 py-12 text-center text-gray-400 dark:text-gray-500">No visits logged yet.</td></tr>
+              <tr><td colSpan={9} className="px-4 py-12 text-center text-gray-400 dark:text-gray-500">No visits logged yet.</td></tr>
             ) : filtered.map(v => (
               <tr key={v.id} onClick={() => setSelected(v)} className="border-t border-gray-50 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer">
                 <td className="px-4 py-3 text-gray-600 dark:text-gray-300 whitespace-nowrap">{v.date_visit}</td>
                 <td className="px-4 py-3">
-                  <div className="flex items-center gap-1.5">
-                    <button
-                      onClick={(e) => { e.stopPropagation(); togglePin(v.sub_affiliate) }}
-                      title={pinnedStores.has(v.sub_affiliate) ? 'Unpin store' : 'Pin store to top'}
-                      className={pinnedStores.has(v.sub_affiliate) ? 'text-blue-600 shrink-0' : 'text-gray-300 dark:text-gray-600 hover:text-gray-400 dark:hover:text-gray-500 shrink-0'}
-                    >
-                      <PinIcon filled={pinnedStores.has(v.sub_affiliate)} />
-                    </button>
-                    <div>
-                      <div className="font-medium text-gray-800 dark:text-gray-100">{v.sub_affiliate_name || v.sub_affiliate}</div>
-                      <div className="text-xs text-gray-400 dark:text-gray-500">{v.sub_affiliate}</div>
-                    </div>
-                  </div>
+                  <div className="font-medium text-gray-800 dark:text-gray-100">{v.sub_affiliate_name || v.sub_affiliate}</div>
+                  <div className="text-xs text-gray-400 dark:text-gray-500">{v.sub_affiliate}</div>
                 </td>
                 <td className="px-4 py-3 text-gray-600 dark:text-gray-300">{v.partner || '—'}</td>
                 <td className="px-4 py-3 text-gray-600 dark:text-gray-300">{v.marketing_type}</td>
@@ -243,6 +234,15 @@ export default function MarketingEffortsPage() {
                 <td className="px-4 py-3 text-right"><MetricCell before={v.before.members} after={v.after.members} money={false} /></td>
                 <td className="px-4 py-3 text-center text-gray-600 dark:text-gray-300">
                   <span className="block truncate" title={v.notes ?? undefined}>{v.notes || '—'}</span>
+                </td>
+                <td className="pr-1.5 py-3 text-right">
+                  <button
+                    onClick={(e) => { e.stopPropagation(); togglePin(v.sub_affiliate) }}
+                    title={pinnedStores.has(v.sub_affiliate) ? 'Unpin store' : 'Pin store to top'}
+                    className={pinnedStores.has(v.sub_affiliate) ? 'text-blue-600' : 'text-gray-300 dark:text-gray-600 hover:text-gray-400 dark:hover:text-gray-500'}
+                  >
+                    <PinIcon filled={pinnedStores.has(v.sub_affiliate)} />
+                  </button>
                 </td>
               </tr>
             ))}
@@ -255,6 +255,7 @@ export default function MarketingEffortsPage() {
                 <td className="px-4 py-3 text-right"><MetricCell before={totals.beforeGGR} after={totals.afterGGR} money /></td>
                 <td className="px-4 py-3 text-right"><MetricCell before={totals.beforeMembers} after={totals.afterMembers} money={false} /></td>
                 <td className="px-4 py-3"></td>
+                <td></td>
               </tr>
             </tfoot>
           )}
