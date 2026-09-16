@@ -187,6 +187,7 @@ export default function OperationsBoard({
                 key={selectedId}
                 taskId={selectedId}
                 onClose={closeTask}
+                onTaskChanged={fetchTasks}
                 initialTitle={tasks.find((t) => t.id === selectedId)?.title}
                 initialPriority={tasks.find((t) => t.id === selectedId)?.priority}
               />

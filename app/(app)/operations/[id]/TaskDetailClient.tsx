@@ -58,7 +58,7 @@ function handleBoldShortcut(e: React.KeyboardEvent<HTMLTextAreaElement>, value: 
   })
 }
 
-export default function TaskDetailClient({ taskId, onClose, initialTitle, initialPriority }: { taskId: string; onClose: () => void; initialTitle?: string; initialPriority?: 'low' | 'medium' | 'high' }) {
+export default function TaskDetailClient({ taskId, onClose, onTaskChanged, initialTitle, initialPriority }: { taskId: string; onClose: () => void; onTaskChanged?: () => void; initialTitle?: string; initialPriority?: 'low' | 'medium' | 'high' }) {
   const [detail, setDetail] = useState<Detail | null>(null)
   const [allUsers, setAllUsers] = useState<OpsCollaboratorUser[]>([])
   const [isAdmin, setIsAdmin] = useState(false)
@@ -149,6 +149,7 @@ export default function TaskDetailClient({ taskId, onClose, initialTitle, initia
       }
       setEditing(false)
       fetchDetail()
+      onTaskChanged?.()
     } finally {
       setSaving(false)
     }
@@ -227,6 +228,7 @@ export default function TaskDetailClient({ taskId, onClose, initialTitle, initia
       return
     }
     fetchDetail()
+    onTaskChanged?.()
   }
 
   const confirmDelete = async () => {
@@ -238,6 +240,7 @@ export default function TaskDetailClient({ taskId, onClose, initialTitle, initia
       setError(data.error || 'Failed to delete task.')
       return
     }
+    onTaskChanged?.()
     onClose()
   }
 
