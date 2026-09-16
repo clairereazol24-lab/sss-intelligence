@@ -84,7 +84,6 @@ export default function OperationsBoard({
   }
 
   const visibleTasks = tasks.filter((t) => (tab === 'done' ? t.is_archived : !t.is_archived))
-  const doneCount = tasks.filter((t) => t.is_archived).length
 
   const selectTask = (id: string) => {
     setSelectedId(id)
@@ -143,7 +142,7 @@ export default function OperationsBoard({
                     : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
                 }`}
               >
-                Done{doneCount > 0 ? ` (${doneCount})` : ''}
+                Done
               </button>
             </div>
             <div className="space-y-3 overflow-y-auto pr-1">
