@@ -30,6 +30,7 @@ export default function OperationsBoard({
 }) {
   const router = useRouter()
   const [selectedId, setSelectedId] = useState<string | null>(initialSelectedId ?? null)
+  const [tab, setTab] = useState<'active' | 'done'>('active')
   const [tasks, setTasks] = useState<BoardTask[]>(initialTasks ?? [])
   const [loading, setLoading] = useState(!initialTasks)
   const [isAdmin, setIsAdmin] = useState(!!initialIsAdmin)
@@ -82,7 +83,8 @@ export default function OperationsBoard({
     }
   }
 
-  const visibleTasks = tasks.filter((t) => !t.is_archived)
+  const visibleTasks = tasks.filter((t) => (tab === 'done' ? t.is_archived : !t.is_archived))
+  const doneCount = tasks.filter((t) => t.is_archived).length
 
   const selectTask = (id: string) => {
     setSelectedId(id)
@@ -121,7 +123,33 @@ export default function OperationsBoard({
         </div>
       ) : (
         <div className="flex flex-1 min-h-0 gap-4">
-          <div className={`w-full md:w-80 flex-shrink-0 space-y-3 overflow-y-auto pr-1 ${selectedId ? 'hidden md:block' : 'block'}`}>
+          <div className={`w-full md:w-80 flex-shrink-0 flex flex-col ${selectedId ? 'hidden md:flex' : 'flex'}`}>
+            <div className="flex gap-1 mb-3 border-b border-gray-200 dark:border-gray-700">
+              <button
+                onClick={() => setTab('active')}
+                className={`px-3 py-1.5 text-sm font-medium border-b-2 -mb-px transition-colors ${
+                  tab === 'active'
+                    ? 'border-blue-600 text-blue-600 dark:text-blue-400'
+                    : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
+                }`}
+              >
+                Active
+              </button>
+              <button
+                onClick={() => setTab('done')}
+                className={`px-3 py-1.5 text-sm font-medium border-b-2 -mb-px transition-colors ${
+                  tab === 'done'
+                    ? 'border-blue-600 text-blue-600 dark:text-blue-400'
+                    : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
+                }`}
+              >
+                Done{doneCount > 0 ? ` (${doneCount})` : ''}
+              </button>
+            </div>
+            <div className="space-y-3 overflow-y-auto pr-1">
+            {visibleTasks.length === 0 && tab === 'done' && (
+              <p className="text-sm text-gray-400 dark:text-gray-500 px-1">No archived tasks yet.</p>
+            )}
             {visibleTasks.map((t) => (
               <div
                 key={t.id}
@@ -140,7 +168,7 @@ export default function OperationsBoard({
                       New Updates
                     </span>
                   )}
-                  {t.is_archived && <span className="text-xs text-gray-400">Archived</span>}
+                  {tab === 'active' && t.is_archived && <span className="text-xs text-gray-400">Archived</span>}
                 </div>
                 <div className="flex items-center gap-3 text-xs text-gray-500 dark:text-gray-400 mt-2">
                   <span>💬 {t.comment_count}</span>
@@ -148,6 +176,7 @@ export default function OperationsBoard({
                 </div>
               </div>
             ))}
+            </div>
           </div>
 
           <div
