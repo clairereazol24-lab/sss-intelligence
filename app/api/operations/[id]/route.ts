@@ -69,12 +69,8 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
   // before it ever reaches the DATE column, otherwise Postgres rejects '' as an invalid date.
   const deadline = body.deadline === undefined ? undefined : (body.deadline || null)
   // Normalize to an actual boolean so a truthy-but-non-boolean value (e.g. the string "true")
-  // can't bypass the archive guard below and still get written into the boolean column.
+  // doesn't get written into the boolean column as-is.
   const is_archived = body.is_archived === undefined ? undefined : Boolean(body.is_archived)
-
-  if (is_archived === true && !existing.is_special) {
-    return NextResponse.json({ error: 'Only Special Tasks can be archived.' }, { status: 400 })
-  }
 
   const { error: updateError } = await supabaseAdmin
     .from('ops_tasks')

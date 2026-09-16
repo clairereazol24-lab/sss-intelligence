@@ -370,11 +370,9 @@ export default function TaskDetailClient({ taskId, onClose, onTaskChanged, initi
             {isAdmin && (
               <div className="flex gap-2">
                 <button onClick={() => setEditing(true)} className="text-xs text-blue-600 dark:text-blue-400 hover:underline">Edit</button>
-                {task.is_special && (
-                  <button onClick={handleArchiveToggle} className="text-xs text-gray-500 dark:text-gray-400 hover:underline">
-                    {task.is_archived ? 'Restore' : 'Archive'}
-                  </button>
-                )}
+                <button onClick={handleArchiveToggle} className="text-xs text-gray-500 dark:text-gray-400 hover:underline">
+                  {task.is_archived ? 'Restore' : 'Archive'}
+                </button>
                 {task.is_special && <button onClick={() => setDeleteConfirmOpen(true)} className="text-xs text-red-400 hover:text-red-600">Delete</button>}
               </div>
             )}
