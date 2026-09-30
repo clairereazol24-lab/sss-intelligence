@@ -1,7 +1,10 @@
 import { supabaseAdmin as supabase } from '@/lib/supabase-admin'
 import { NextRequest, NextResponse } from 'next/server'
+import { hasDataPermission } from '@/lib/data-access'
 
 export async function POST(request: NextRequest) {
+  if (!hasDataPermission('data_import')) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+
   try {
     const { stores, mode } = await request.json()
 

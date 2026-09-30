@@ -1,6 +1,7 @@
 'use client'
 import { useEffect, useRef, useState } from 'react'
 import * as XLSX from 'xlsx'
+import { useDataPermissions } from '@/components/DataPermissionsProvider'
 
 type StoreRow = {
   sub_affiliate: string
@@ -227,6 +228,7 @@ function Card({ emoji, title, children }: { emoji: string; title: string; childr
 }
 
 export default function PerformancePage({ partner }: { partner?: string }) {
+  const { canExport } = useDataPermissions()
   const [periods, setPeriods] = useState<string[]>([])
   const [selectedPeriod, setSelectedPeriod] = useState('all')
   const [stores, setStores] = useState<StoreRow[]>([])
@@ -359,13 +361,15 @@ export default function PerformancePage({ partner }: { partner?: string }) {
             <option value="all">All Time</option>
             {periods.map(p => <option key={p} value={p}>{p}</option>)}
           </select>
-          <button
-            onClick={exportAll}
-            disabled={loading}
-            className="text-sm text-green-700 dark:text-green-400 border border-green-200 dark:border-green-700 hover:bg-green-50 dark:hover:bg-green-900/30 disabled:opacity-50 font-medium px-4 py-2 rounded-lg transition-colors"
-          >
-            ↓ Export Data
-          </button>
+          {canExport && (
+            <button
+              onClick={exportAll}
+              disabled={loading}
+              className="text-sm text-green-700 dark:text-green-400 border border-green-200 dark:border-green-700 hover:bg-green-50 dark:hover:bg-green-900/30 disabled:opacity-50 font-medium px-4 py-2 rounded-lg transition-colors"
+            >
+              ↓ Export Data
+            </button>
+          )}
         </div>
       </div>
 

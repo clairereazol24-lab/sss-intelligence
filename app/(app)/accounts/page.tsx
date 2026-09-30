@@ -1,6 +1,6 @@
 'use client'
 import { useEffect, useState } from 'react'
-import { MODULES } from '@/lib/auth'
+import { MODULES, DATA_PERMISSIONS } from '@/lib/auth'
 
 type Account = {
   id: string
@@ -8,6 +8,7 @@ type Account = {
   name: string | null
   role: 'admin' | 'member'
   modules: string[]
+  dataPermissions: string[]
 }
 
 const inputCls = 'border border-gray-200 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg px-3 py-1.5 text-sm w-full'
@@ -27,12 +28,14 @@ export default function AccountsPage() {
   const [editName, setEditName] = useState('')
   const [editPassword, setEditPassword] = useState('')
   const [editModules, setEditModules] = useState<string[]>([])
+  const [editDataPerms, setEditDataPerms] = useState<string[]>([])
 
   const [showAdd, setShowAdd] = useState(false)
   const [addUsername, setAddUsername] = useState('')
   const [addName, setAddName] = useState('')
   const [addPassword, setAddPassword] = useState('')
   const [addModules, setAddModules] = useState<string[]>([])
+  const [addDataPerms, setAddDataPerms] = useState<string[]>([])
 
   const fetchAccounts = async () => {
     setLoading(true)
@@ -60,6 +63,7 @@ export default function AccountsPage() {
     setEditName(acct.name ?? '')
     setEditPassword('')
     setEditModules(acct.modules)
+    setEditDataPerms(acct.dataPermissions)
     setShowAdd(false)
   }
 
@@ -69,7 +73,7 @@ export default function AccountsPage() {
     setError('')
     try {
       const editingAccount = accounts.find(a => a.id === editingId)
-      const body: Record<string, unknown> = { username: editUsername, name: editName }
+      const body: Record<string, unknown> = { username: editUsername, name: editName, dataPermissions: editDataPerms }
       if (editPassword) body.password = editPassword
       if (editingAccount?.role !== 'admin') body.modules = editModules
       const res = await fetch(`/api/accounts/${editingId}`, {
@@ -95,12 +99,12 @@ export default function AccountsPage() {
       const res = await fetch('/api/accounts', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username: addUsername, name: addName, password: addPassword, modules: addModules }),
+        body: JSON.stringify({ username: addUsername, name: addName, password: addPassword, modules: addModules, dataPermissions: addDataPerms }),
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || 'Failed to create account.')
       setShowAdd(false)
-      setAddUsername(''); setAddName(''); setAddPassword(''); setAddModules([])
+      setAddUsername(''); setAddName(''); setAddPassword(''); setAddModules([]); setAddDataPerms([])
       fetchAccounts()
     } catch (err: any) {
       setError(err.message)
@@ -111,7 +115,7 @@ export default function AccountsPage() {
 
   const cancelAdd = () => {
     setShowAdd(false)
-    setAddUsername(''); setAddName(''); setAddPassword(''); setAddModules([])
+    setAddUsername(''); setAddName(''); setAddPassword(''); setAddModules([]); setAddDataPerms([])
   }
 
   const confirmDelete = async () => {
@@ -132,7 +136,22 @@ export default function AccountsPage() {
     }
   }
 
-  const thCls = 'text-left px-4 py-3 font-semibold text-gray-700 dark:text-gray-200 bg-gray-50 dark:bg-gray-700/50 text-sm'
+  // Shown for admins too — Import/Export isn't implied by "All Access".
+  const dataPermCheckboxes = (list: string[], setList: (m: string[]) => void) => (
+    <div className="mt-2 pt-2 border-t border-gray-100 dark:border-gray-700">
+      <p className="text-xs text-gray-400 dark:text-gray-500 mb-1">Import / Export</p>
+      <div className="flex flex-wrap gap-2">
+        {DATA_PERMISSIONS.map((p) => (
+          <label key={p.key} className="flex items-center gap-1.5 text-xs text-gray-600 dark:text-gray-300">
+            <input type="checkbox" checked={list.includes(p.key)} onChange={() => toggleModule(list, setList, p.key)} />
+            {p.label}
+          </label>
+        ))}
+      </div>
+    </div>
+  )
+
+  const thCls ='text-left px-4 py-3 font-semibold text-gray-700 dark:text-gray-200 bg-gray-50 dark:bg-gray-700/50 text-sm'
 
   return (
     <div className="p-6">
@@ -197,6 +216,7 @@ export default function AccountsPage() {
                             ))}
                           </div>
                         )}
+                        {dataPermCheckboxes(editDataPerms, setEditDataPerms)}
                       </td>
                       <td className="px-4 py-3">
                         <div className="flex gap-2">
@@ -234,6 +254,15 @@ export default function AccountsPage() {
                           ))}
                         </div>
                       )}
+                      {acct.dataPermissions.length > 0 && (
+                        <div className="flex flex-col gap-1 mt-1">
+                          {DATA_PERMISSIONS.filter((p) => acct.dataPermissions.includes(p.key)).map((p) => (
+                            <span key={p.key} className="bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-400 text-xs px-2 py-0.5 rounded w-fit">
+                              {p.label}
+                            </span>
+                          ))}
+                        </div>
+                      )}
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex gap-2">
@@ -265,6 +294,7 @@ export default function AccountsPage() {
                         </label>
                       ))}
                     </div>
+                    {dataPermCheckboxes(addDataPerms, setAddDataPerms)}
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex gap-2">

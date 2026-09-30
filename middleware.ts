@@ -76,6 +76,7 @@ export async function middleware(request: NextRequest) {
   forwardedHeaders.set('x-user-username', access.username)
   forwardedHeaders.set('x-user-name', access.name ?? '')
   forwardedHeaders.set('x-user-modules', access.allowedModules.join(','))
+  forwardedHeaders.set('x-user-data-permissions', access.dataPermissions.join(','))
 
   return withCookies(NextResponse.next({ request: { headers: forwardedHeaders } }))
 }

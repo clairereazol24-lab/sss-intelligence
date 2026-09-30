@@ -1,7 +1,7 @@
 import { createClient as createAdminClient } from '@supabase/supabase-js'
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient as createServerClient } from '@/lib/supabase-server'
-import { getUserAccess } from '@/lib/auth'
+import { getUserAccess, isDataPermissionKey } from '@/lib/auth'
 
 export const runtime = 'nodejs'
 
@@ -23,7 +23,7 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
   if (!admin) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
   try {
-    const { username, name, modules, password } = await request.json()
+    const { username, name, modules, dataPermissions, password } = await request.json()
     const userId = params.id
 
     const profileUpdate: { username?: string; name?: string | null } = {}
@@ -48,19 +48,40 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
       if (pwError) throw pwError
     }
 
-    if (modules) {
-      const { error: deleteError } = await supabaseAdmin
-        .from('module_permissions')
-        .delete()
-        .eq('user_id', userId)
-      if (deleteError) throw deleteError
+    // Module grants and Import/Export toggles share module_permissions, so each
+    // replace is scoped to its own keys — saving one must never wipe the other.
+    const { data: existing, error: existingError } = await supabaseAdmin
+      .from('module_permissions')
+      .select('module')
+      .eq('user_id', userId)
+    if (existingError) throw existingError
+    const existingKeys: string[] = (existing || []).map((r: any) => r.module)
 
-      if ((modules as string[]).length > 0) {
+    const replaceGrants = async (next: string[], isOwnKey: (k: string) => boolean) => {
+      const stale = existingKeys.filter((k) => isOwnKey(k) && !next.includes(k))
+      const added = next.filter((k) => !existingKeys.includes(k))
+      if (stale.length > 0) {
+        const { error: deleteError } = await supabaseAdmin
+          .from('module_permissions')
+          .delete()
+          .eq('user_id', userId)
+          .in('module', stale)
+        if (deleteError) throw deleteError
+      }
+      if (added.length > 0) {
         const { error: insertError } = await supabaseAdmin
           .from('module_permissions')
-          .insert((modules as string[]).map((module) => ({ user_id: userId, module })))
+          .insert(added.map((module) => ({ user_id: userId, module })))
         if (insertError) throw insertError
       }
+    }
+
+    if (modules) {
+      const isModuleKey = (k: string) => !isDataPermissionKey(k)
+      await replaceGrants((modules as string[]).filter(isModuleKey), isModuleKey)
+    }
+    if (dataPermissions) {
+      await replaceGrants((dataPermissions as string[]).filter(isDataPermissionKey), isDataPermissionKey)
     }
 
     return NextResponse.json({ success: true })

@@ -1,5 +1,6 @@
 import { supabaseAdmin as supabase } from '@/lib/supabase-admin'
 import { NextRequest, NextResponse } from 'next/server'
+import { hasDataPermission } from '@/lib/data-access'
 
 const CSV_COLUMNS = [
   'sub_affiliate', 'store_name', 'period', 'period_type',
@@ -23,6 +24,8 @@ function toCsv(rows: Record<string, any>[]) {
 }
 
 export async function GET(request: NextRequest) {
+  if (!hasDataPermission('data_export')) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+
   try {
     const { searchParams } = new URL(request.url)
     const period = searchParams.get('period')

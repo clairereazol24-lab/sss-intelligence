@@ -1,6 +1,7 @@
 'use client'
 import { useState, useRef, useEffect } from 'react'
 import Papa from 'papaparse'
+import { useDataPermissions } from '@/components/DataPermissionsProvider'
 
 type Member = {
   username: string
@@ -36,6 +37,7 @@ const statusColor = (s: string) => {
 }
 
 export default function MembersClient({ partner }: { partner: string }) {
+  const { canImport } = useDataPermissions()
   const [members, setMembers] = useState<Member[]>([])
   const [summary, setSummary] = useState<Summary | null>(null)
   const [loading, setLoading] = useState(false)
@@ -183,15 +185,17 @@ export default function MembersClient({ partner }: { partner: string }) {
           <h1 className="text-2xl font-bold text-gray-800 dark:text-gray-100 mb-1">{partner}</h1>
           <p className="text-xs text-gray-400 dark:text-gray-500">Members</p>
         </div>
-        <div className="flex items-center gap-3">
-          <input ref={fileRef} type="file" accept=".csv" className="hidden" onChange={e => { const f = e.target.files?.[0]; if (f) handleFile(f) }} />
-          <button
-            onClick={() => fileRef.current?.click()}
-            className="bg-blue-600 hover:bg-blue-700 text-white font-medium px-4 py-2 rounded-lg transition-colors text-sm whitespace-nowrap"
-          >
-            📥 Import Members
-          </button>
-        </div>
+        {canImport && (
+          <div className="flex items-center gap-3">
+            <input ref={fileRef} type="file" accept=".csv" className="hidden" onChange={e => { const f = e.target.files?.[0]; if (f) handleFile(f) }} />
+            <button
+              onClick={() => fileRef.current?.click()}
+              className="bg-blue-600 hover:bg-blue-700 text-white font-medium px-4 py-2 rounded-lg transition-colors text-sm whitespace-nowrap"
+            >
+              📥 Import Members
+            </button>
+          </div>
+        )}
       </div>
 
       {file && parsed.length > 0 && (

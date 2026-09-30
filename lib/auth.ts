@@ -64,16 +64,27 @@ export const MODULES: ModuleDef[] = [
   { key: 'marketing_efforts', label: 'Marketing Performance', href: '/marketing-efforts', icon: '📣' },
 ]
 
+// Per-account Import/Export toggles, stored as extra rows in module_permissions.
+// Unlike modules, these apply to admins too — CSV import can wipe/replace live
+// data (see the Alpharus wipe incident), so it's never granted by role alone.
+export type DataPermissionKey = 'data_import' | 'data_export'
+
+export const DATA_PERMISSIONS: { key: DataPermissionKey; label: string }[] = [
+  { key: 'data_import', label: 'Can Import' },
+  { key: 'data_export', label: 'Can Export' },
+]
+
+export function isDataPermissionKey(key: string): key is DataPermissionKey {
+  return DATA_PERMISSIONS.some((p) => p.key === key)
+}
+
 export type UserAccess = {
   role: 'admin' | 'member'
   username: string
   name: string | null
   allowedModules: ModuleKey[]
+  dataPermissions: DataPermissionKey[]
 }
-
-// SSS Data's CSV import can wipe/replace live performance data (see the Alpharus
-// wipe incident) — restrict it to this one account rather than the whole admin role.
-export const DATA_IMPORT_ALLOWED_USERNAME = 'claire@racphil.com'
 
 export async function getUserAccess(supabase: SupabaseClient, userId: string): Promise<UserAccess | null> {
   const { data: profile } = await supabase
@@ -84,20 +95,24 @@ export async function getUserAccess(supabase: SupabaseClient, userId: string): P
 
   if (!profile) return null
 
-  if (profile.role === 'admin') {
-    return { role: 'admin', username: profile.username, name: profile.name ?? null, allowedModules: MODULES.map((m) => m.key) }
-  }
-
   const { data: perms } = await supabase
     .from('module_permissions')
     .select('module')
     .eq('user_id', userId)
 
+  const keys: string[] = (perms || []).map((p: any) => p.module)
+  const dataPermissions = keys.filter(isDataPermissionKey)
+
+  if (profile.role === 'admin') {
+    return { role: 'admin', username: profile.username, name: profile.name ?? null, allowedModules: MODULES.map((m) => m.key), dataPermissions }
+  }
+
   return {
     role: 'member',
     username: profile.username,
     name: profile.name ?? null,
-    allowedModules: (perms || []).map((p: any) => p.module as ModuleKey),
+    allowedModules: keys.filter((k) => !isDataPermissionKey(k)) as ModuleKey[],
+    dataPermissions,
   }
 }
 

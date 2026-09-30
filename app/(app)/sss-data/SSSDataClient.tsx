@@ -1,6 +1,7 @@
 'use client'
 import { useState, useRef, useEffect } from 'react'
 import Papa from 'papaparse'
+import { useDataPermissions } from '@/components/DataPermissionsProvider'
 
 const REQUIRED_COLS = ['Sub Affiliate', 'Sub Affiliate Name', 'Total Deposit', 'Total Withdraw',
   'Valid Bet Amount', 'Company Net Win (GGR)', 'Payout Amount', 'Total Promotion Amount',
@@ -37,7 +38,8 @@ type LastUpdated = {
   period_type: string
 }
 
-export default function SSSDataClient({ partner, canImport }: { partner: string; canImport: boolean }) {
+export default function SSSDataClient({ partner }: { partner: string }) {
+  const { canImport, canExport } = useDataPermissions()
   const [file, setFile] = useState<File | null>(null)
   const [parsed, setParsed] = useState<any[]>([])
   const [headers, setHeaders] = useState<string[]>([])
@@ -248,7 +250,7 @@ export default function SSSDataClient({ partner, canImport }: { partner: string;
               </button>
             </>
           )}
-          {partner !== 'Company' && (
+          {canExport && partner !== 'Company' && (
             <button
               onClick={handleExport}
               className="bg-white border border-gray-200 hover:bg-gray-50 text-gray-700 font-medium px-4 py-2 rounded-lg shadow-sm transition-colors text-sm whitespace-nowrap dark:bg-gray-800 dark:border-gray-700 dark:hover:bg-gray-700 dark:text-gray-200"

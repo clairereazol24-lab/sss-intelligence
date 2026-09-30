@@ -297,3 +297,14 @@ ALTER PUBLICATION supabase_realtime ADD TABLE calendar_events;
 ALTER TABLE module_permissions DROP CONSTRAINT IF EXISTS module_permissions_module_check;
 ALTER TABLE module_permissions ADD CONSTRAINT module_permissions_module_check
   CHECK (module IN ('dashboard', 'sss_data', 'members', 'performance', 'store_directory', 'ai_report', 'marketing_efforts', 'locked_retailers', 'operations', 'calendar'));
+
+-- Per-account Import/Export toggles (System Access page), stored as extra
+-- module_permissions rows. Apply to admins too. Seed the one account that
+-- previously had hardcoded import access so nobody loses access on deploy.
+ALTER TABLE module_permissions DROP CONSTRAINT IF EXISTS module_permissions_module_check;
+ALTER TABLE module_permissions ADD CONSTRAINT module_permissions_module_check
+  CHECK (module IN ('dashboard', 'sss_data', 'members', 'performance', 'store_directory', 'ai_report', 'marketing_efforts', 'locked_retailers', 'operations', 'calendar', 'data_import', 'data_export'));
+INSERT INTO module_permissions (user_id, module)
+SELECT id, m FROM profiles, unnest(ARRAY['data_import', 'data_export']) AS m
+WHERE username = 'claire@racphil.com'
+ON CONFLICT DO NOTHING;

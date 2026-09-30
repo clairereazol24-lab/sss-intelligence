@@ -1,5 +1,6 @@
 import { supabaseAdmin as supabase } from '@/lib/supabase-admin'
 import { NextRequest, NextResponse } from 'next/server'
+import { hasDataPermission } from '@/lib/data-access'
 
 const DEFAULT_COLUMNS = 'username, sub_affiliate, sub_affiliate_name, dsp, status, registered_time, member_rank, last_login_time, first_deposit_amount, deposit, deposit_times, withdraw, withdraw_times, company_net_win'
 
@@ -149,6 +150,8 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
+  if (!hasDataPermission('data_import')) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+
   try {
     const { records, period, period_type } = await request.json()
     if (!records || records.length === 0) {

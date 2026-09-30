@@ -1,5 +1,5 @@
 import { headers } from 'next/headers'
-import { hasModuleAccess, type ModuleKey, type UserAccess } from '@/lib/auth'
+import { hasModuleAccess, isDataPermissionKey, type ModuleKey, type UserAccess } from '@/lib/auth'
 
 export type MarketingAccess = { userId: string; access: UserAccess }
 
@@ -16,6 +16,7 @@ export async function requireMarketingAccess(): Promise<MarketingAccess | null> 
     username: h.get('x-user-username') || '',
     name: h.get('x-user-name') || null,
     allowedModules: (h.get('x-user-modules') || '').split(',').filter(Boolean) as ModuleKey[],
+    dataPermissions: (h.get('x-user-data-permissions') || '').split(',').filter(isDataPermissionKey),
   }
   if (!hasModuleAccess(access, 'marketing_efforts')) return null
   return { userId, access }

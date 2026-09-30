@@ -1,4 +1,5 @@
 import Sidebar from '@/components/Sidebar'
+import { DataPermissionsProvider } from '@/components/DataPermissionsProvider'
 import { createClient } from '@/lib/supabase-server'
 import { getUserAccess, MODULES } from '@/lib/auth'
 import { supabaseAdmin } from '@/lib/supabase-admin'
@@ -15,7 +16,9 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   return (
     <div className="flex h-screen bg-gray-50 dark:bg-gray-900 overflow-hidden">
       <Sidebar modules={visibleModules} role={access?.role ?? 'member'} username={access?.username ?? ''} name={access?.name ?? null} />
-      <main className="flex-1 overflow-y-auto">{children}</main>
+      <main className="flex-1 overflow-y-auto">
+        <DataPermissionsProvider permissions={access?.dataPermissions ?? []}>{children}</DataPermissionsProvider>
+      </main>
     </div>
   )
 }

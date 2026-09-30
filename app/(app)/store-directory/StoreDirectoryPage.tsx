@@ -1,6 +1,7 @@
 'use client'
 import { useEffect, useRef, useState } from 'react'
 import Papa from 'papaparse'
+import { useDataPermissions } from '@/components/DataPermissionsProvider'
 
 type Store = {
   id: string
@@ -23,6 +24,7 @@ const statusColor = (s: string) =>
   'bg-gray-100 text-gray-500 dark:bg-gray-700 dark:text-gray-400'
 
 export default function StoreDirectoryPage({ partner }: { partner?: string }) {
+  const { canImport } = useDataPermissions()
   const [stores, setStores] = useState<Store[]>([])
   const [filter, setFilter] = useState('all')
   const [search, setSearch] = useState('')
@@ -148,8 +150,12 @@ export default function StoreDirectoryPage({ partner }: { partner?: string }) {
           <p className="text-sm text-gray-500 dark:text-gray-400">{title} · {stores.length} stores</p>
         </div>
         <div className="flex items-center gap-3">
-          <input ref={bulkFileRef} type="file" accept=".csv" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) handleBulkFile(f) }} />
-          <button onClick={() => bulkFileRef.current?.click()} className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-200 text-sm font-medium px-4 py-2 rounded-lg shadow-sm transition-colors">📤 Bulk Import</button>
+          {canImport && (
+            <>
+              <input ref={bulkFileRef} type="file" accept=".csv" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) handleBulkFile(f) }} />
+              <button onClick={() => bulkFileRef.current?.click()} className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-200 text-sm font-medium px-4 py-2 rounded-lg shadow-sm transition-colors">📤 Bulk Import</button>
+            </>
+          )}
         </div>
       </div>
 

@@ -1,7 +1,7 @@
 import { createClient as createAdminClient } from '@supabase/supabase-js'
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient as createServerClient } from '@/lib/supabase-server'
-import { getUserAccess } from '@/lib/auth'
+import { getUserAccess, isDataPermissionKey } from '@/lib/auth'
 
 export const runtime = 'nodejs'
 
@@ -33,15 +33,19 @@ export async function GET() {
       .select('user_id, module')
     if (permError) throw permError
 
-    const accounts = (profiles || []).map((p: any) => ({
-      id: p.id,
-      username: p.username,
-      name: p.name ?? null,
-      role: p.role as 'admin' | 'member',
-      modules: (perms || [])
+    const accounts = (profiles || []).map((p: any) => {
+      const keys: string[] = (perms || [])
         .filter((perm: any) => perm.user_id === p.id)
-        .map((perm: any) => perm.module as string),
-    }))
+        .map((perm: any) => perm.module as string)
+      return {
+        id: p.id,
+        username: p.username,
+        name: p.name ?? null,
+        role: p.role as 'admin' | 'member',
+        modules: keys.filter((k) => !isDataPermissionKey(k)),
+        dataPermissions: keys.filter(isDataPermissionKey),
+      }
+    })
 
     return NextResponse.json({ accounts })
   } catch (err: any) {
@@ -54,7 +58,7 @@ export async function POST(request: NextRequest) {
   if (!admin) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
   try {
-    const { username, name, password, modules } = await request.json()
+    const { username, name, password, modules, dataPermissions } = await request.json()
 
     if (!username || !password) {
       return NextResponse.json({ error: 'Email and password are required.' }, { status: 400 })
@@ -74,10 +78,14 @@ export async function POST(request: NextRequest) {
       .insert({ id: userId, username: (username as string).trim().toLowerCase(), name: name || null, role: 'member' })
     if (profileError) throw profileError
 
-    if (modules && (modules as string[]).length > 0) {
+    const grants = [
+      ...((modules as string[] | undefined) || []).filter((k) => !isDataPermissionKey(k)),
+      ...((dataPermissions as string[] | undefined) || []).filter(isDataPermissionKey),
+    ]
+    if (grants.length > 0) {
       const { error: permError } = await supabaseAdmin
         .from('module_permissions')
-        .insert((modules as string[]).map((module) => ({ user_id: userId, module })))
+        .insert(grants.map((module) => ({ user_id: userId, module })))
       if (permError) throw permError
     }
 
