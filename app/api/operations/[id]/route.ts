@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase-admin'
-import { requireOpsAccess, requireOpsAdmin } from '@/lib/ops-access'
+import { requireOpsAccess } from '@/lib/ops-access'
 
 export async function GET(_request: NextRequest, { params }: { params: { id: string } }) {
   const auth = await requireOpsAccess()
@@ -52,7 +52,7 @@ export async function GET(_request: NextRequest, { params }: { params: { id: str
 }
 
 export async function PATCH(request: NextRequest, { params }: { params: { id: string } }) {
-  const auth = await requireOpsAdmin()
+  const auth = await requireOpsAccess()
   if (!auth) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
   const { data: existing, error: existingError } = await supabaseAdmin
@@ -100,7 +100,7 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
     activityEntries.push({
       task_id: params.id,
       user_id: auth.userId,
-      action_text: is_archived ? 'archived this task' : 'restored this task from archive',
+      action_text: is_archived ? 'marked this task as done' : 'reopened this task',
     })
   }
 
@@ -160,7 +160,7 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
 }
 
 export async function DELETE(_request: NextRequest, { params }: { params: { id: string } }) {
-  const auth = await requireOpsAdmin()
+  const auth = await requireOpsAccess()
   if (!auth) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
   const { data: existing } = await supabaseAdmin.from('ops_tasks').select('is_special').eq('id', params.id).maybeSingle()

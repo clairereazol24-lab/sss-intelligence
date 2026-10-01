@@ -6,5 +6,5 @@ export default async function Page() {
   const auth = await requireOpsAccess()
   const initialTasks = auth ? await fetchOpsTaskList(auth) : undefined
 
-  return <OperationsBoard initialTasks={initialTasks} initialIsAdmin={auth?.access.role === 'admin'} />
+  return <OperationsBoard initialTasks={initialTasks} />
 }

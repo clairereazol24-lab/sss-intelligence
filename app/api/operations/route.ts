@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase-admin'
-import { requireOpsAccess, requireOpsAdmin } from '@/lib/ops-access'
+import { requireOpsAccess } from '@/lib/ops-access'
 import { fetchOpsTaskList } from '@/lib/ops-tasks'
 
 export async function GET() {
@@ -13,7 +13,7 @@ export async function GET() {
 }
 
 export async function POST(request: NextRequest) {
-  const auth = await requireOpsAdmin()
+  const auth = await requireOpsAccess()
   if (!auth) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
   const { title, description, priority, deadline } = await request.json()

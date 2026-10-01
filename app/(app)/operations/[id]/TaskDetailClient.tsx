@@ -61,7 +61,6 @@ function handleBoldShortcut(e: React.KeyboardEvent<HTMLTextAreaElement>, value: 
 export default function TaskDetailClient({ taskId, onClose, onTaskChanged, initialTitle, initialPriority }: { taskId: string; onClose: () => void; onTaskChanged?: () => void; initialTitle?: string; initialPriority?: 'low' | 'medium' | 'high' }) {
   const [detail, setDetail] = useState<Detail | null>(null)
   const [allUsers, setAllUsers] = useState<OpsCollaboratorUser[]>([])
-  const [isAdmin, setIsAdmin] = useState(false)
   const [editing, setEditing] = useState(false)
   const [saving, setSaving] = useState(false)
   const [showActivity, setShowActivity] = useState(false)
@@ -87,7 +86,6 @@ export default function TaskDetailClient({ taskId, onClose, onTaskChanged, initi
     if (!res.ok) return
     const data: Detail = await res.json()
     setDetail(data)
-    setIsAdmin(!!data.isAdmin)
     setCurrentUserId(data.currentUserId)
     setForm({
       title: data.task.title,
@@ -224,7 +222,7 @@ export default function TaskDetailClient({ taskId, onClose, onTaskChanged, initi
     })
     if (!res.ok) {
       const data = await res.json()
-      setError(data.error || 'Failed to update archive status.')
+      setError(data.error || 'Failed to update task status.')
       return
     }
     fetchDetail()
@@ -367,15 +365,38 @@ export default function TaskDetailClient({ taskId, onClose, onTaskChanged, initi
             <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${PRIORITY_STYLES[task.priority]}`}>
               {task.priority.charAt(0).toUpperCase() + task.priority.slice(1)}
             </span>
-            {isAdmin && (
-              <div className="flex gap-2">
-                <button onClick={() => setEditing(true)} className="text-xs text-blue-600 dark:text-blue-400 hover:underline">Edit</button>
-                <button onClick={handleArchiveToggle} className="text-xs text-gray-500 dark:text-gray-400 hover:underline">
-                  {task.is_archived ? 'Restore' : 'Archive'}
+            <div className="flex gap-1.5">
+              <button
+                onClick={handleArchiveToggle}
+                title={task.is_archived ? 'Reopen task' : 'Mark as done'}
+                aria-label={task.is_archived ? 'Reopen task' : 'Mark as done'}
+                className={`w-8 h-8 flex items-center justify-center rounded-lg border transition-colors ${
+                  task.is_archived
+                    ? 'bg-green-600 border-green-600 text-white hover:bg-green-700'
+                    : 'border-green-300 text-green-600 hover:bg-green-50 dark:border-green-800 dark:text-green-400 dark:hover:bg-green-900/30'
+                }`}
+              >
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
+              </button>
+              <button
+                onClick={() => setEditing(true)}
+                title="Edit task"
+                aria-label="Edit task"
+                className="w-8 h-8 flex items-center justify-center rounded-lg border border-blue-200 text-blue-600 hover:bg-blue-50 dark:border-blue-800 dark:text-blue-400 dark:hover:bg-blue-900/30 transition-colors"
+              >
+                <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 20h9" /><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" /></svg>
+              </button>
+              {task.is_special && (
+                <button
+                  onClick={() => setDeleteConfirmOpen(true)}
+                  title="Delete task"
+                  aria-label="Delete task"
+                  className="w-8 h-8 flex items-center justify-center rounded-lg border border-red-200 text-red-500 hover:bg-red-50 dark:border-red-900 dark:text-red-400 dark:hover:bg-red-900/30 transition-colors"
+                >
+                  <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6" /><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" /><path d="M10 11v6" /><path d="M14 11v6" /><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" /></svg>
                 </button>
-                {task.is_special && <button onClick={() => setDeleteConfirmOpen(true)} className="text-xs text-red-400 hover:text-red-600">Delete</button>}
-              </div>
-            )}
+              )}
+            </div>
           </div>
 
           {task.description && <p className="text-sm text-gray-600 dark:text-gray-300 mt-2">{task.description}</p>}
@@ -392,7 +413,7 @@ export default function TaskDetailClient({ taskId, onClose, onTaskChanged, initi
 
           <div className="flex items-center gap-4 mt-4 text-xs text-gray-500 dark:text-gray-400">
             {task.deadline && <span>Deadline: <strong className="text-gray-700 dark:text-gray-200">{task.deadline}</strong></span>}
-            {task.is_archived && <span className="text-gray-400">Archived</span>}
+            {task.is_archived && <span className="text-green-600 dark:text-green-400 font-medium">✓ Done</span>}
           </div>
 
           {collaborators.length > 0 && (

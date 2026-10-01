@@ -10,7 +10,6 @@ export default async function Page({ params }: { params: { id: string } }) {
     <OperationsBoard
       initialSelectedId={params.id}
       initialTasks={initialTasks}
-      initialIsAdmin={auth?.access.role === 'admin'}
     />
   )
 }

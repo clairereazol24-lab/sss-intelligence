@@ -22,18 +22,15 @@ const PRIORITY_BORDER: Record<string, string> = {
 export default function OperationsBoard({
   initialSelectedId,
   initialTasks,
-  initialIsAdmin,
 }: {
   initialSelectedId?: string
   initialTasks?: BoardTask[]
-  initialIsAdmin?: boolean
 }) {
   const router = useRouter()
   const [selectedId, setSelectedId] = useState<string | null>(initialSelectedId ?? null)
   const [tab, setTab] = useState<'active' | 'done'>('active')
   const [tasks, setTasks] = useState<BoardTask[]>(initialTasks ?? [])
   const [loading, setLoading] = useState(!initialTasks)
-  const [isAdmin, setIsAdmin] = useState(!!initialIsAdmin)
   const [modal, setModal] = useState(false)
   const [form, setForm] = useState({ title: '', description: '', priority: 'medium', deadline: '' })
   const [saving, setSaving] = useState(false)
@@ -44,7 +41,6 @@ export default function OperationsBoard({
     if (!res.ok) { setLoading(false); return }
     const data = await res.json()
     setTasks(data.tasks || [])
-    setIsAdmin(!!data.isAdmin)
     setLoading(false)
   }
 
@@ -103,11 +99,9 @@ export default function OperationsBoard({
           <p className="text-sm text-gray-500 dark:text-gray-400">Operational workspaces for SSS activities</p>
         </div>
         <div className="flex items-center gap-3">
-          {isAdmin && (
-            <button onClick={() => setModal(true)} className="bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors">
-              + New Special Task
-            </button>
-          )}
+          <button onClick={() => setModal(true)} className="bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors">
+            + New Special Task
+          </button>
         </div>
       </div>
 
