@@ -35,11 +35,15 @@ export async function POST(request: NextRequest) {
   if (!hasDataPermission('data_import')) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
   try {
-    const { records, period, periodType, mode = 'new' } = await request.json()
+    const { records: rawRecords, period, periodType, mode = 'new' } = await request.json()
 
-    if (!records || !period || !periodType) {
+    if (!rawRecords || !period || !periodType) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
     }
+
+    // Skip blank CSV lines (no store) — otherwise they insert as partner-null rows and
+    // make the next partner's upload for the same period collide on the null partner.
+    const records = rawRecords.filter((r: any) => String(r.sub_affiliate ?? '').trim() !== '')
 
     if (records.length === 0) {
       return NextResponse.json({ error: 'Cannot upload an empty file.' }, { status: 400 })
